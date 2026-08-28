@@ -1,0 +1,23 @@
+flowchart TD
+  Home["首页"]
+  Search["统一资源搜索"]
+  Goal["任务分类"]
+  Kind["类型筛选：产品 / Skill / 开源"]
+  Resource["资源详情"]
+  Playbook["场景方案"]
+  Ingest["内部：AI 收录助手"]
+  Rank["外部：模型目录 / 评测 / 排行"]
+
+  Home --> Search
+  Home --> Goal
+  Home --> Kind
+  Home --> Playbook
+  Home --> Rank
+  Search --> Resource
+  Goal --> Resource
+  Kind --> Resource
+  Playbook --> Resource
+  Resource --> Goal
+  Resource --> Resource
+  Resource --> Rank
+  Ingest -.->|"生成草稿 / 人工审核 / PR"| Resource

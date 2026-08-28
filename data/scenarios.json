@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "id": "read-long-docs",
+      "order": 1,
+      "title": { "en": "Understand a long document", "zh": "读懂一份长文档" },
+      "summary": { "en": "Work from trusted files, then expand with current sources only when needed.", "zh": "先基于可信文件理解，再按需补充外部资料。" },
+      "outcome": { "en": "From PDF to cited brief", "zh": "从 PDF 到可引用摘要" },
+      "resourceSlugs": ["notebooklm", "claude", "perplexity"]
+    },
+    {
+      "id": "ship-with-ai",
+      "order": 2,
+      "title": { "en": "Ship a feature with an agent", "zh": "用 Agent 交付一个功能" },
+      "summary": { "en": "Choose an editor, a coding agent and reusable project instructions.", "zh": "组合编辑器、编程 Agent 和可复用的项目指令。" },
+      "outcome": { "en": "From issue to reviewed change", "zh": "从需求到可审查改动" },
+      "resourceSlugs": ["cursor", "codex", "openai-skills"]
+    },
+    {
+      "id": "make-product-video",
+      "order": 3,
+      "title": { "en": "Make a product video", "zh": "做一条产品视频" },
+      "summary": { "en": "Build the visual direction, motion and narration as one repeatable workflow.", "zh": "把视觉方向、动态生成和旁白组织成一条工作流。" },
+      "outcome": { "en": "From brief to publishable cut", "zh": "从 Brief 到可发布成片" },
+      "resourceSlugs": ["midjourney", "kling", "elevenlabs"]
+    }
+  ]
+}
