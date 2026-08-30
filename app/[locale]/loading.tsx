@@ -1,19 +1,29 @@
 export default function Loading() {
   return (
     <>
-      <header className="home-hero" aria-hidden="true">
-        <span className="skeleton-line skeleton-tagline" />
+      <header className="compact-intro" aria-hidden="true">
+        <span className="skeleton-line skeleton-tagline compact-intro-kicker" />
+        <div>
+          <span className="skeleton-line skeleton-display" />
+          <span className="skeleton-line skeleton-line-short" />
+        </div>
       </header>
-      <div className="home-stack" aria-hidden="true">
-        <div className="skeleton-search" />
-        {Array.from({ length: 3 }, (_, section) => (
-          <section key={section} className="category-block">
-            <div className="category-head">
-              <span className="skeleton-line skeleton-line-title" />
-              <span className="skeleton-line skeleton-line-count" />
-            </div>
-            <div className="tool-grid">
+      <section className="catalog-only" aria-hidden="true">
+        <div className="library-shell">
+          <aside className="scene-rail">
+            <span className="skeleton-line skeleton-line-title" />
+            <nav>
               {Array.from({ length: 3 }, (_, index) => (
+                <span key={index} className="skeleton-line" />
+              ))}
+            </nav>
+          </aside>
+          <div className="library-main">
+            <header className="library-toolbar">
+              <span className="skeleton-line skeleton-line-title" />
+            </header>
+            <div className="tool-grid">
+              {Array.from({ length: 6 }, (_, index) => (
                 <div key={index} className="catalog-card is-skeleton">
                   <span className="catalog-stage">
                     <span className="logo-frame">
@@ -27,9 +37,9 @@ export default function Loading() {
                 </div>
               ))}
             </div>
-          </section>
-        ))}
-      </div>
+          </div>
+        </div>
+      </section>
     </>
   );
 }

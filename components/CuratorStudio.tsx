@@ -1,357 +1,498 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { curatorRequest } from "@/lib/curator-client";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Badge, Button, Checkbox, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { ToolLogo } from "@/components/ToolLogo";
+import { useMediaQuery } from "@/components/Transitions";
+import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
+import {
+  KIND_LABEL,
+  PHASE_LABEL,
+  curatorRequest,
+  curatorEventUrl,
+  type AgentInfo,
+  type AgentTool,
+  type CatalogItem,
+  type CuratorDraft,
+  type CuratorIngestBlock,
+  type CuratorRun,
+  type CuratorRunEvent,
+  type SaveResult,
+} from "@/lib/curator-client";
+import { COPY_LIMITS, words } from "@/lib/curator-issues";
 
-type DraftKind = "tool" | "skill" | "open-source" | "model";
-type Category = "code" | "chat" | "image" | "video" | "research" | "agents";
-type Pricing = "free" | "freemium" | "paid" | "api";
-type Platform = "web" | "app" | "api" | "cli";
-type AgentTool = "codex" | "claude";
+const platforms: CatalogItem["platforms"] = ["web", "app", "api", "cli"];
 
-type Draft = {
-  name: string;
-  slug: string;
-  url: string;
-  kind: DraftKind;
-  category: Category;
-  pricing: Pricing;
-  platforms: Platform[];
-  verdict: { en: string; zh: string };
-  summary: { en: string; zh: string };
-  relatedSlugs: string[];
-  confidence: number;
-  rationale: string;
-  sourceLogoUrl?: string;
+const ingestBlockLabels: Record<CuratorIngestBlock, string> = {
+  tool: "工具卡片",
+  skill: "技能文章",
+  project: "项目文章",
+  prompt: "提示词模板",
 };
 
-type AgentInfo = {
-  id: AgentTool;
-  label: string;
-  available: boolean;
-  defaultModel: string;
-  models: Array<{ id: string; label: string }>;
+const defaultDraft: CuratorDraft = {
+  name: "",
+  slug: "",
+  url: "",
+  kind: "tool",
+  blockType: "tool",
+  pricing: "freemium",
+  platforms: ["web"],
+  verdict: { zh: "", en: "" },
+  summary: { zh: "", en: "" },
+  confidence: 0,
+  rationale: "",
 };
 
-type AnalyzeResult = {
-  draft: Draft;
-  agent: { mode: "codex" | "claude" | "rules"; tool?: AgentTool; model?: string; message?: string };
-  source: { title: string; description: string; finalUrl: string };
-};
-
-const TOOL_KEY = "ai-nav-curator-tool";
-const modelKey = (tool: AgentTool) => `ai-nav-curator-model-${tool}`;
-const categories: Array<{ value: Category; label: string }> = [
-  { value: "code", label: "编程开发" },
-  { value: "chat", label: "写作办公" },
-  { value: "image", label: "图像设计" },
-  { value: "video", label: "视频音频" },
-  { value: "research", label: "搜索研究" },
-  { value: "agents", label: "自动化" },
-];
-const kinds: Array<{ value: DraftKind; label: string }> = [
-  { value: "tool", label: "AI 产品" },
-  { value: "skill", label: "Skill" },
-  { value: "open-source", label: "开源项目" },
-  { value: "model", label: "模型" },
-];
-const platforms: Platform[] = ["web", "app", "api", "cli"];
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  return curatorRequest<T>(path, init);
+function formatRunStatus(run: CuratorRun) {
+  if (run.status === "awaiting_review") return "等待确认";
+  if (run.status === "saved") return "已保存";
+  if (run.status === "failed") return "失败";
+  if (run.status === "cancelled") return "已取消";
+  return PHASE_LABEL[run.phase];
 }
 
-function storedTool(): AgentTool {
-  return localStorage.getItem(TOOL_KEY) === "claude" ? "claude" : "codex";
+function hostOf(value: string) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
 }
 
-function storedModel(tool: AgentTool): string {
-  return localStorage.getItem(modelKey(tool)) || "";
-}
-
-function agentHeadline(agent: AnalyzeResult["agent"] | null): string {
-  if (!agent) return "草稿";
-  if (agent.mode === "rules") return agent.message || "规则草稿";
-  const name = agent.mode === "claude" ? "Claude Code" : "Codex";
-  return agent.model ? `${name} · ${agent.model}` : name;
+function urlProblem(value: string) {
+  let parsed: URL;
+  try {
+    parsed = new URL(value.trim());
+  } catch {
+    return "请输入完整链接，例如 https://example.com";
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "只支持 http 和 https 链接";
+  const host = parsed.hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".local") || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host) || host === "[::1]") {
+    return "这是本机或内网地址，公开站无法访问";
+  }
+  return "";
 }
 
 export function CuratorStudio() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const resumeRunId = params.get("run") || "";
+  const requestedBlock = params.get("block") || "";
+  const isNarrow = useMediaQuery("(max-width: 48rem)");
+
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [source, setSource] = useState<AnalyzeResult["source"] | null>(null);
-  const [agentMode, setAgentMode] = useState<AnalyzeResult["agent"] | null>(null);
-  const [tools, setTools] = useState<AgentInfo[]>([]);
   const [tool, setTool] = useState<AgentTool>("codex");
-  const [model, setModel] = useState("");
-  const [service, setService] = useState<"checking" | "online" | "offline">("checking");
-  const [busy, setBusy] = useState<"analyze" | "save" | null>(null);
-  const [saved, setSaved] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const currentTool = useMemo(
-    () => tools.find((item) => item.id === tool) ?? tools[0],
-    [tools, tool],
+  const [targetBlock, setTargetBlock] = useState<"auto" | CuratorIngestBlock>(
+    requestedBlock in ingestBlockLabels ? (requestedBlock as CuratorIngestBlock) : "auto",
   );
-  const models = currentTool?.models ?? [];
+  const [model, setModel] = useState("");
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [catalog, setCatalog] = useState<Array<{ id: string; slug: string; title: string; sourceUrl?: string; payload?: { url?: string } }>>([]);
+  const [recentRuns, setRecentRuns] = useState<CuratorRun[]>([]);
+  const [run, setRun] = useState<CuratorRun | null>(null);
+  const [events, setEvents] = useState<CuratorRunEvent[]>([]);
+  const [draft, setDraft] = useState<CuratorDraft>(defaultDraft);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [urlError, setUrlError] = useState("");
+  const [workPane, setWorkPane] = useState<"process" | "draft">("process");
+  const [forceStart, setForceStart] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    request<{ ok: boolean; tools: AgentInfo[] }>("/health")
-      .then((payload) => {
-        setService("online");
-        setTools(payload.tools || []);
-        const preferred = storedTool();
-        const available = (payload.tools || []).filter((item) => item.available);
-        const nextTool = available.some((item) => item.id === preferred)
-          ? preferred
-          : available[0]?.id || "codex";
-        setTool(nextTool);
-        const nextModels = (payload.tools || []).find((item) => item.id === nextTool);
-        setModel(storedModel(nextTool) || nextModels?.defaultModel || nextModels?.models[0]?.id || "");
+    Promise.all([
+      curatorRequest<{ tools: AgentInfo[] }>("/agents"),
+      curatorRequest<{ items: Array<{ id: string; slug: string; title: string; sourceUrl?: string; payload?: { url?: string } }> }>("/content?pageSize=50"),
+      curatorRequest<{ items: CuratorRun[] }>("/runs").catch(() => ({ items: [] })),
+    ])
+      .then(([agentData, catalogData, runsData]) => {
+        const available = (agentData.tools || []).filter((item) => item.available);
+        setAgents(agentData.tools || []);
+        setCatalog(catalogData.items || []);
+        setRecentRuns(runsData.items || []);
+        if (available[0]) {
+          setTool(available[0].id);
+          setModel(available[0].defaultModel || available[0].models[0]?.id || "");
+        }
       })
-      .catch(() => setService("offline"));
+      .catch((caught) => setMessage(caught instanceof Error ? caught.message : "无法连接 Curator"));
   }, []);
 
-  function chooseTool(next: AgentTool) {
-    setTool(next);
-    localStorage.setItem(TOOL_KEY, next);
-    const info = tools.find((item) => item.id === next);
-    const nextModel = storedModel(next) || info?.defaultModel || info?.models[0]?.id || "";
-    setModel(nextModel);
-  }
+  useEffect(() => {
+    if (!resumeRunId) return;
+    curatorRequest<CuratorRun>(`/runs/${resumeRunId}`)
+      .then((current) => {
+        setRun(current);
+        if (current.input?.block) setTargetBlock(current.input.block);
+        if (current.draft) {
+          setDraft(current.draft);
+          setWorkPane("draft");
+        }
+      })
+      .catch(() => setMessage("找不到这次分析记录，可能已被清理。"));
+  }, [resumeRunId]);
 
-  function chooseModel(next: string) {
-    setModel(next);
-    localStorage.setItem(modelKey(tool), next);
-  }
+  useEffect(() => {
+    if (!run) return;
+    eventSourceRef.current?.close();
+    const runId = run.id;
+    const source = new EventSource(curatorEventUrl(runId));
+    eventSourceRef.current = source;
+    source.onmessage = (event) => {
+      const next = JSON.parse(event.data) as CuratorRunEvent;
+      setEvents((current) => current.some((item) => item.sequence === next.sequence) ? current : [...current, next]);
+      if (next.type === "draft.patch" || next.type === "run.completed") {
+        const nextDraft = next.data?.draft as CuratorDraft | undefined;
+        if (nextDraft) setDraft(nextDraft);
+      }
+      if (next.type === "run.completed") setWorkPane("draft");
+      if (["run.completed", "run.failed", "run.cancelled"].includes(next.type)) {
+        source.close();
+        curatorRequest<CuratorRun>(`/runs/${runId}`).then(setRun).catch(() => undefined);
+      }
+    };
+    source.onerror = () => {
+      if (source.readyState === EventSource.CLOSED) return;
+      curatorRequest<CuratorRun>(`/runs/${runId}`).then((current) => {
+        setRun(current);
+        if (["awaiting_review", "failed", "cancelled", "saved"].includes(current.status)) source.close();
+      }).catch(() => undefined);
+    };
+    return () => source.close();
+  }, [run?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function analyze(event: FormEvent) {
+  const currentAgent = agents.find((item) => item.id === tool);
+  const running = Boolean(run && ["queued", "running"].includes(run.status));
+  const warnings = events.filter((event) => event.level === "warning" || event.level === "error");
+  const evidence = events.filter((event) => event.type === "evidence.added");
+  const toolOutput = events.filter((event) => event.type === "tool.output");
+
+  const duplicates = useMemo(() => {
+    const value = url.trim();
+    if (!value) return [];
+    const host = hostOf(value);
+    const normalized = value.replace(/\/+$/, "").toLowerCase();
+    return catalog.filter((item) => {
+      const itemUrl = item.sourceUrl || item.payload?.url || "";
+      const itemHost = hostOf(itemUrl);
+      return (host && itemHost === host) || itemUrl.replace(/\/+$/, "").toLowerCase() === normalized;
+    });
+  }, [catalog, url]);
+
+  async function start(event: FormEvent) {
     event.preventDefault();
-    setBusy("analyze");
+    const problem = urlProblem(url);
+    setUrlError(problem);
+    if (problem) return;
+    if (duplicates.length && !forceStart) {
+      setForceStart(true);
+      return;
+    }
+    setBusy(true);
     setMessage("");
-    setSaved(false);
+    setEvents([]);
+    setDraft({ ...defaultDraft, blockType: targetBlock === "auto" ? "tool" : targetBlock });
+    setWorkPane("process");
     try {
-      const result = await request<AnalyzeResult>("/analyze", {
+      const created = await curatorRequest<CuratorRun>("/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, note, tool, model }),
+        body: JSON.stringify({ url, note, block: targetBlock, tool, model }),
       });
-      setDraft(result.draft);
-      setSource(result.source);
-      setAgentMode(result.agent);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "链接分析失败");
+      setRun(created);
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : "分析没有开始");
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
+  async function cancel() {
+    if (!run) return;
+    setRun(await curatorRequest<CuratorRun>(`/runs/${run.id}/cancel`, { method: "POST" }));
+  }
+
+  async function retry(fromPhase: "fetch" | "generate") {
+    if (!run) return;
+    setEvents([]);
+    setMessage("");
+    setWorkPane("process");
+    setRun(await curatorRequest<CuratorRun>(`/runs/${run.id}/retry`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromPhase, block: targetBlock, tool, model }),
+    }));
+  }
+
   async function save() {
-    if (!draft) return;
-    setBusy("save");
+    if (!run) return;
+    setBusy(true);
     setMessage("");
     try {
-      const result = await request<{ target: string; message: string }>("/save", {
+      const result = await curatorRequest<SaveResult & { run: CuratorRun }>(`/runs/${run.id}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ draft }),
       });
-      setSaved(true);
-      setMessage(`${result.message} · ${result.target}`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存失败");
+      setRun(result.run);
+      const savedBlock = result.run.draft?.blockType || draftBlock;
+      router.push(`/curator/resources/${savedBlock}/${encodeURIComponent(result.slug || draft.slug)}`);
+    } catch (caught) {
+      setMessage(caught instanceof Error ? caught.message : "保存失败");
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
-  function update<K extends keyof Draft>(key: K, value: Draft[K]) {
-    setDraft((current) => current ? { ...current, [key]: value } : current);
+  function reset() {
+    setUrl("");
+    setNote("");
+    setTargetBlock("auto");
+    setRun(null);
+    setEvents([]);
+    setDraft(defaultDraft);
+    setMessage("");
+    setUrlError("");
+    setForceStart(false);
   }
 
-  function updateLocalized(key: "verdict" | "summary", locale: "en" | "zh", value: string) {
-    setDraft((current) => current ? {
+  function update<K extends keyof CuratorDraft>(key: K, value: CuratorDraft[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateLocalized(field: "verdict" | "summary", locale: "zh" | "en", value: string) {
+    setDraft((current) => ({ ...current, [field]: { ...current[field], [locale]: value } }));
+  }
+
+  function setDraftBlock(value: string) {
+    const next = value as CuratorIngestBlock;
+    setDraft((current) => ({
       ...current,
-      [key]: { ...current[key], [locale]: value },
-    } : current);
+      blockType: next,
+      kind: next === "project" ? "open-source" : next,
+    }));
   }
 
-  function togglePlatform(platform: Platform) {
-    if (!draft) return;
-    const next = draft.platforms.includes(platform)
-      ? draft.platforms.filter((item) => item !== platform)
-      : [...draft.platforms, platform];
-    update("platforms", next);
-  }
+  const timeline = useMemo(() => {
+    const latest = new Map<CuratorRunEvent["phase"], CuratorRunEvent>();
+    for (const event of events) latest.set(event.phase, event);
+    return Object.entries(PHASE_LABEL).map(([phase, label]) => ({
+      phase: phase as CuratorRunEvent["phase"],
+      label,
+      event: latest.get(phase as CuratorRunEvent["phase"]),
+    }));
+  }, [events]);
 
-  const toolOffline = Boolean(currentTool) && !currentTool.available;
+  const missing = [
+    !draft.name.trim() && "名称",
+    !draft.verdict.zh.trim() && "中文定位",
+    !draft.verdict.en.trim() && "English verdict",
+    !draft.summary.zh.trim() && "中文简介",
+    !draft.summary.en.trim() && "English summary",
+  ].filter(Boolean) as string[];
 
+  const draftBlock = draft.blockType || (draft.kind === "open-source" ? "project" : draft.kind === "skill" || draft.kind === "prompt" ? draft.kind : "tool");
+  const isLongformDraft = draftBlock === "skill" || draftBlock === "project";
+  const isPromptDraft = draftBlock === "prompt";
   return (
-    <section className="curator-shell">
-        <div className="curator-intro">
-          <p className="curator-kicker">CURATOR / 收录</p>
-          <h1>整理一条 AI 资源</h1>
-          <p>选本机 Agent 和模型，粘贴链接，确认文案后写入数据。</p>
-        </div>
+    <section className="curator-page">
+      <header className="curator-page-heading is-compact">
+        <div><Text className="curator-eyebrow-mantine">新收录</Text><Title order={1} mt={4}>整理一条资源</Title></div>
+        {run ? <Badge color={run.status === "failed" ? "red" : run.status === "saved" ? "teal" : "curator"} variant="light">{formatRunStatus(run)}</Badge> : null}
+      </header>
 
-        <form className="curator-composer" onSubmit={analyze}>
-          <div className="curator-agent-row">
-            <label>
-              Agent
-              <select value={tool} onChange={(event) => chooseTool(event.target.value as AgentTool)}>
-                {tools.map((item) => (
-                  <option key={item.id} value={item.id} disabled={!item.available}>
-                    {item.label}{item.available ? "" : "（未安装）"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              模型
-              {models.length ? (
-                <select value={model} onChange={(event) => chooseModel(event.target.value)}>
-                  <option value="">使用工具默认</option>
-                  {models.map((item) => (
-                    <option key={item.id} value={item.id}>{item.label}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  value={model}
-                  onChange={(event) => chooseModel(event.target.value)}
-                  placeholder="从本机 Agent 读取，或手动填写"
-                />
-              )}
-            </label>
-          </div>
-          <label htmlFor="curator-url">资源链接</label>
-          <input
-            id="curator-url"
-            type="url"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            placeholder="https://github.com/..."
-            required
-          />
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="可选：告诉 Agent 你为什么想收录，或者希望它重点判断什么"
-            rows={3}
-          />
-          <div className="curator-composer-footer">
-            <span>{toolOffline ? `${currentTool?.label} 不在 PATH 里` : "模型条目会进入单独待转移清单"}</span>
-            <button type="submit" disabled={busy !== null || service === "offline" || toolOffline}>
-              {busy === "analyze" ? "正在阅读与分类…" : "分析链接"}
-            </button>
-          </div>
-        </form>
-
-        {service === "offline" ? (
-          <div className="curator-notice">
-            在项目目录运行 <code>npm run curator</code>，然后重新打开这个页面。
-          </div>
-        ) : null}
-
-        {draft ? (
-          <section className="curator-review" aria-labelledby="curator-review-title">
-            <header className="curator-review-head">
+      {!run ? (
+        <div className="curator-ingest-start">
+          <form className="curator-ingest-form" onSubmit={start}>
+            <Select label="收录到板块" aria-label="收录到板块" value={targetBlock} onChange={(value) => setTargetBlock((value || "auto") as "auto" | CuratorIngestBlock)} data={[{ value: "auto", label: "自动判断" }, ...(Object.keys(ingestBlockLabels) as CuratorIngestBlock[]).map((block) => ({ value: block, label: ingestBlockLabels[block] }))]} />
+            <div className="curator-url-row">
+              <TextInput
+                id="curator-url"
+                type="url"
+                label="资源链接"
+                value={url}
+                onChange={(event) => { setUrl(event.currentTarget.value); setUrlError(""); setForceStart(false); }}
+                placeholder="https://"
+                required
+                autoFocus
+                error={urlError || undefined}
+              />
+              <Button type="submit" disabled={busy || !currentAgent?.available}>
+                {busy ? "正在开始" : duplicates.length && forceStart ? "仍然分析" : "分析资源"}
+              </Button>
+            </div>
+            {duplicates.length ? (
+              <Alert color="yellow">
+                <div>
+                  <strong>目录里已经有同域名的资源</strong>
+                  <ul>
+                    {duplicates.slice(0, 3).map((item) => (
+                      <li key={item.slug}>
+                        <Link href={`/curator/resources/${item.payload?.url ? "tool" : "project"}/${item.slug}`}>{item.title}</Link>
+                        <span>{item.sourceUrl || item.payload?.url}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <span>确认不是重复收录，再点一次「仍然分析」。</span>
+                </div>
+              </Alert>
+            ) : null}
+            {!currentAgent?.available ? <Alert color="yellow">当前 Agent 不可用，先在运行设置里换一个。</Alert> : null}
+            <Textarea id="curator-note" label="整理备注" description="可选" minRows={3} value={note} onChange={(event) => setNote(event.currentTarget.value)} placeholder="需要重点判断的内容" />
+            <details className="curator-run-settings">
+              <summary>运行设置</summary>
               <div>
-                <p>{agentHeadline(agentMode)} · 置信度 {Math.round(draft.confidence * 100)}%</p>
-                <h2 id="curator-review-title">确认这条资源怎么归档</h2>
+                <Select label="Agent" aria-label="Agent" value={tool} onChange={(value) => { const next = (value || tool) as AgentTool; setTool(next); const info = agents.find((item) => item.id === next); setModel(info?.defaultModel || info?.models[0]?.id || ""); }} data={agents.map((item) => ({ value: item.id, label: `${item.label}${item.available ? "" : "（不可用）"}`, disabled: !item.available }))} />
+                <Select label="模型" aria-label="模型" value={model || "__default__"} onChange={(value) => setModel(value === "__default__" || !value ? "" : value)} data={[{ value: "__default__", label: "默认模型" }, ...(currentAgent?.models || []).map((item) => ({ value: item.id, label: item.label }))]} />
               </div>
-              <a href={source?.finalUrl || draft.url} target="_blank" rel="noreferrer">打开原链接 ↗</a>
+            </details>
+          </form>
+
+          <aside className="curator-panel">
+            <header className="curator-panel-header"><div><p className="curator-eyebrow">最近</p><h2>最近分析</h2></div></header>
+            {recentRuns.length ? (
+              <ul className="curator-row-list">
+                {recentRuns.slice(0, 6).map((item) => (
+                  <li className="curator-row" key={item.id}>
+                    <Link href={`/curator/ingest/?run=${item.id}`}>
+                      <span className={`curator-row-dot ${item.status === "failed" ? "is-block" : item.status === "awaiting_review" ? "is-warn" : "is-ok"}`} aria-hidden="true" />
+                      <div className="curator-row-main">
+                        <strong>{item.draft?.name || item.source?.title || item.input?.url || "资源分析"}</strong>
+                      </div>
+                      <span className="curator-status-pill">{formatRunStatus(item)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : <div className="curator-empty-state"><strong>暂无记录</strong></div>}
+          </aside>
+        </div>
+      ) : (
+        <div className="curator-workspace" data-pane={isNarrow ? workPane : "both"}>
+          <Tabs className="curator-work-switch" value={workPane} onChange={(value) => setWorkPane((value || "process") as "process" | "draft")}>
+            <Tabs.List aria-label="分析视图">
+              <Tabs.Tab value="process">分析过程</Tabs.Tab>
+              <Tabs.Tab value="draft">当前草稿{draft.name ? "" : "（等待中）"}</Tabs.Tab>
+            </Tabs.List>
+          </Tabs>
+          <aside className="curator-agent-panel">
+            <header className="curator-panel-header">
+              <div><p className="curator-eyebrow">{run.agent?.mode === "rules" ? "规则草稿" : run.agent?.model || currentAgent?.label || "Agent"}</p><h2>分析过程</h2></div>
+              {running ? <Button type="button" variant="default" onClick={cancel}>取消分析</Button> : null}
+            </header>
+            {run.agent?.mode === "rules" ? <Alert color="yellow">已使用规则草稿，不是 Agent 结果。文案需要人工重写。</Alert> : null}
+            <ol className="curator-timeline">
+              {timeline.map((item) => {
+                const active = run.phase === item.phase && running;
+                const complete = Boolean(item.event && item.event.type !== "phase.started" && item.event.level !== "error");
+                return (
+                  <li key={item.phase} className={active ? "is-active" : complete ? "is-complete" : item.event?.level === "error" ? "is-error" : ""}>
+                    <span aria-hidden="true" />
+                    <div><strong>{item.label}</strong>{item.event ? <p>{item.event.message}</p> : null}</div>
+                  </li>
+                );
+              })}
+            </ol>
+            {!events.length && run.status !== "queued" ? <p className="curator-panel-note">这次分析来自上一次会话，过程记录已折叠。</p> : null}
+            {warnings.length ? <section className="curator-run-notes"><h3>需要检查</h3>{warnings.map((item) => <p key={item.sequence}>{item.message}</p>)}</section> : null}
+            {evidence.length ? (
+              <details className="curator-evidence">
+                <summary>查看证据</summary>
+                {evidence.map((item) => <div key={item.sequence}><strong>{item.message}</strong>{item.data ? <pre>{JSON.stringify(item.data, null, 2)}</pre> : null}</div>)}
+              </details>
+            ) : null}
+            {toolOutput.length ? (
+              <details className="curator-evidence">
+                <summary>技术信息</summary>
+                {toolOutput.map((item) => {
+                  const data = (item.data || {}) as { stdout?: string; stderr?: string };
+                  return (
+                    <div key={item.sequence}>
+                      <strong>{item.message}</strong>
+                      {data.stderr ? <pre>{data.stderr}</pre> : null}
+                      {data.stdout ? <pre>{data.stdout}</pre> : null}
+                    </div>
+                  );
+                })}
+              </details>
+            ) : null}
+            {!running ? (
+              <div className="curator-retry-row">
+                {run.status === "failed" || run.status === "cancelled" ? <Button type="button" onClick={() => retry("fetch")}>重新分析</Button> : null}
+                {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>换设置重新生成</Button> : null}
+                <Button type="button" variant="default" onClick={reset}>换一个链接</Button>
+              </div>
+            ) : null}
+          </aside>
+
+          <section className="curator-draft-panel" aria-busy={running}>
+            <header className="curator-draft-header">
+              <div className="curator-draft-identity">
+                <ToolLogo tool={{ id: draft.slug || "draft", name: draft.name || "新资源", url: draft.url || url, logo: draft.sourceLogoUrl }} size={44} />
+                <div><p>{ingestBlockLabels[draftBlock as CuratorIngestBlock] || KIND_LABEL[draft.kind as CatalogItem["kind"]]}</p><h2>{draft.name || "等待 Agent 输出"}</h2></div>
+              </div>
+              {draft.confidence ? <span className="curator-status-pill">置信度 {Math.round(draft.confidence * 100)}%</span> : null}
             </header>
 
-            <div className="curator-source-line">
-              <strong>{source?.title || draft.name}</strong>
-              <span>{source?.description || "页面没有提供简介"}</span>
-            </div>
+            {draft.name ? (
+              <div>
+                <Paper withBorder p="md" mb="md"><Title order={3} mb="md">公开内容</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                  <TextInput label="名称" value={draft.name} onChange={(event) => update("name", event.currentTarget.value)} />
+                  <TextInput label="Slug" value={draft.slug} onChange={(event) => update("slug", event.currentTarget.value)} />
+                  <TextInput label="中文定位" description={`${draft.verdict.zh.length}/${COPY_LIMITS.verdictZh} 字`} error={draft.verdict.zh.length > COPY_LIMITS.verdictZh ? "超过建议长度" : undefined} value={draft.verdict.zh} onChange={(event) => updateLocalized("verdict", "zh", event.currentTarget.value)} />
+                  <TextInput label="English verdict" description={`${words(draft.verdict.en)}/${COPY_LIMITS.verdictEn} words`} error={words(draft.verdict.en) > COPY_LIMITS.verdictEn ? "超过建议长度" : undefined} value={draft.verdict.en} onChange={(event) => updateLocalized("verdict", "en", event.currentTarget.value)} />
+                  <Textarea label="中文简介" description={`${draft.summary.zh.length}/${COPY_LIMITS.summaryZh} 字`} error={draft.summary.zh.length > COPY_LIMITS.summaryZh ? "超过建议长度" : undefined} minRows={3} value={draft.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} />
+                  <Textarea label="English summary" description={`${words(draft.summary.en)}/${COPY_LIMITS.summaryEn} words`} error={words(draft.summary.en) > COPY_LIMITS.summaryEn ? "超过建议长度" : undefined} minRows={3} value={draft.summary.en} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} />
+                </SimpleGrid></Paper>
+                <Paper withBorder p="md" mb="md"><Title order={3} mb="md">收录属性</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                  <Select label="收录板块" aria-label="收录板块" value={draftBlock} onChange={(value) => setDraftBlock((value || "tool") as CuratorIngestBlock)} data={[{ value: "tool", label: "工具卡片" }, { value: "skill", label: "技能文章" }, { value: "project", label: "项目文章" }, { value: "prompt", label: "提示词模板" }]} />
+                  {draftBlock === "tool" ? <Select label="定价" aria-label="定价" value={draft.pricing} onChange={(value) => update("pricing", (value || "free") as CuratorDraft["pricing"])} data={[{ value: "free", label: "免费" }, { value: "freemium", label: "免费增值" }, { value: "paid", label: "付费" }, { value: "api", label: "按量计费" }]} /> : null}
+                </SimpleGrid>{draftBlock === "tool" ? <Checkbox.Group label="平台" value={draft.platforms} onChange={(value) => update("platforms", value as CatalogItem["platforms"])} mt="md"><Group mt="xs">{platforms.map((platform) => <Checkbox key={platform} value={platform} label={platform.toUpperCase()} />)}</Group></Checkbox.Group> : null}</Paper>
+                {isLongformDraft ? (
+                  <Paper withBorder p="md" mb="md">
+                    <Title order={3} mb="md">正文（Markdown）</Title>
+                    <Textarea className="curator-markdown-input" label="正文" minRows={16} value={draft.body || ""} onChange={(event) => update("body", event.currentTarget.value)} placeholder="说明它解决什么问题、怎么用、适用边界和相关链接。" />
+                    <Text size="sm" fw={600} mt="lg" mb="xs">相关链接</Text>
+                    <StructuredLinks value={draft.links || []} onChange={(links) => update("links", links)} />
+                  </Paper>
+                ) : null}
+                {isPromptDraft ? (
+                  <Paper withBorder p="md" mb="md">
+                    <Title order={3} mb="md">提示词模板</Title>
+                    <Textarea className="curator-markdown-input" label="Prompt" minRows={10} value={draft.prompt || ""} onChange={(event) => update("prompt", event.currentTarget.value)} placeholder="使用 {{variable}} 标记需要填写的变量。" />
+                    <Text size="sm" fw={600} mt="lg" mb="xs">变量</Text>
+                    <VariablesEditor value={draft.variables || []} onChange={(variables) => update("variables", variables)} />
+                    <Text size="sm" fw={600} mt="lg" mb="xs">示例</Text>
+                    <ExamplesEditor value={draft.examples || []} onChange={(examples) => update("examples", examples)} />
+                    <Text size="sm" fw={600} mt="lg" mb="xs">相关链接</Text>
+                    <StructuredLinks value={draft.links || []} onChange={(links) => update("links", links)} />
+                  </Paper>
+                ) : null}
+                {draft.rationale ? <p className="curator-panel-note">Agent 判断依据：{draft.rationale}</p> : null}
+              </div>
+            ) : <div className="curator-draft-loading"><span /><span /><span /></div>}
 
-            <div className="curator-form-grid">
-              <label>
-                名称
-                <input value={draft.name} onChange={(event) => update("name", event.target.value)} />
-              </label>
-              <label>
-                Slug
-                <input value={draft.slug} onChange={(event) => update("slug", event.target.value)} />
-              </label>
-              <label>
-                资源类型
-                <select value={draft.kind} onChange={(event) => update("kind", event.target.value as DraftKind)}>
-                  {kinds.map((kind) => <option key={kind.value} value={kind.value}>{kind.label}</option>)}
-                </select>
-              </label>
-              <label>
-                使用场景
-                <select value={draft.category} onChange={(event) => update("category", event.target.value as Category)}>
-                  {categories.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
-                </select>
-              </label>
-              <label>
-                定价
-                <select value={draft.pricing} onChange={(event) => update("pricing", event.target.value as Pricing)}>
-                  <option value="free">免费</option>
-                  <option value="freemium">免费增值</option>
-                  <option value="paid">付费</option>
-                  <option value="api">按 API 用量</option>
-                </select>
-              </label>
-              <fieldset>
-                <legend>平台</legend>
-                <div className="curator-checks">
-                  {platforms.map((platform) => (
-                    <label key={platform}>
-                      <input type="checkbox" checked={draft.platforms.includes(platform)} onChange={() => togglePlatform(platform)} />
-                      {platform.toUpperCase()}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <label className="is-wide">
-                中文一句话定位
-                <input value={draft.verdict.zh} onChange={(event) => updateLocalized("verdict", "zh", event.target.value)} />
-              </label>
-              <label className="is-wide">
-                English verdict
-                <input value={draft.verdict.en} onChange={(event) => updateLocalized("verdict", "en", event.target.value)} />
-              </label>
-              <label className="is-wide">
-                中文简介
-                <textarea rows={3} value={draft.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.target.value)} />
-              </label>
-              <label className="is-wide">
-                English summary
-                <textarea rows={3} value={draft.summary.en} onChange={(event) => updateLocalized("summary", "en", event.target.value)} />
-              </label>
-              <label className="is-wide">
-                关联资源 Slug
-                <input
-                  value={draft.relatedSlugs.join(", ")}
-                  onChange={(event) => update("relatedSlugs", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))}
-                  placeholder="cursor, claude-code"
-                />
-              </label>
-            </div>
-
-            <div className="curator-rationale">
-              <span>为什么这样分</span>
-              <p>{draft.rationale}</p>
-            </div>
-
-            <footer className="curator-review-footer">
-              <p>{draft.kind === "model" ? "确认后写入模型待转移清单。" : "确认后写入站点 JSON。要在首页看到，再点生成预览。"}</p>
-              <button type="button" onClick={save} disabled={busy !== null}>
-                {busy === "save" ? "正在保存…" : draft.kind === "model" ? "加入模型清单" : "确认并加入站点"}
-              </button>
+            {message ? <Alert color="red" role="status">{message}</Alert> : null}
+            {missing.length && draft.name ? <Alert color="yellow">还需要补齐：{missing.join("、")}</Alert> : null}
+            <footer className="curator-save-bar">
+              <span>{running ? "分析进行中" : run.status === "awaiting_review" ? "确认后保存" : formatRunStatus(run)}</span>
+              <div>
+                <Button type="button" variant="default" onClick={reset}>返回</Button>
+                <Button type="button" onClick={save} disabled={busy || running || run.status !== "awaiting_review" || missing.length > 0}>
+                  {busy ? "正在保存" : "保存资源"}
+                </Button>
+              </div>
             </footer>
           </section>
-        ) : null}
+        </div>
+      )}
 
-        {saved ? <p className="curator-message">已入库。用顶栏「生成预览」查看公开站。</p> : null}
-        {message ? <p className="curator-message" role="status">{message}</p> : null}
+      {!run && message ? <Alert color="red" role="alert">{message}</Alert> : null}
     </section>
   );
 }

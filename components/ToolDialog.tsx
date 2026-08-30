@@ -1,10 +1,21 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useRef } from "react";
-import { ToolLogo } from "@/components/ToolLogo";
-import { localePath, ui } from "@/lib/i18n";
-import { text, type Locale, type Tool } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useMounted } from "@/components/Transitions";
+import { ToolDialogPanel } from "@/components/ToolSurfaces";
+import { ui } from "@/lib/i18n";
+import type { Locale, Tool } from "@/lib/types";
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function closeDuration() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
+  return parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue("--modal-close-dur"),
+  ) || 150;
+}
 
 export function ToolDialog({
   tool,
@@ -16,85 +27,138 @@ export function ToolDialog({
   onClose: () => void;
 }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const restoreRef = useRef<HTMLElement | null>(null);
+  const [shown, setShown] = useState<Tool | null>(tool);
+  const [phase, setPhase] = useState<"idle" | "open" | "closing">("idle");
+  const [tracked, setTracked] = useState<Tool | null>(tool);
+  const mounted = useMounted();
   const t = ui(locale);
-  const kind = tool?.kind ?? "tool";
+
+  if (tool !== tracked) {
+    setTracked(tool);
+    if (tool) {
+      setShown(tool);
+      setPhase("idle");
+    } else if (phase !== "idle") {
+      setPhase("closing");
+    }
+  }
 
   useEffect(() => {
     if (!tool) return;
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) restoreRef.current = active;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setPhase("open"));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [tool]);
+
+  useEffect(() => {
+    if (phase !== "closing") return;
+    const timer = window.setTimeout(() => {
+      setShown(null);
+      setPhase("idle");
+    }, closeDuration());
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+
+  useEffect(() => {
+    if (!shown) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const root = document.getElementById("site-root");
+    root?.setAttribute("inert", "");
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const items = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
+
     window.addEventListener("keydown", onKeyDown);
-    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => closeButtonRef.current?.focus());
+    });
 
     return () => {
       cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
+      root?.removeAttribute("inert");
       window.removeEventListener("keydown", onKeyDown);
+      restoreRef.current?.focus({
+        preventScroll: true,
+      });
     };
-  }, [onClose, tool]);
+  }, [onClose, shown]);
 
-  if (!tool) return null;
+  if (!shown || !mounted) return null;
 
-  return (
+  const modalClass =
+    phase === "open" ? " is-open" : phase === "closing" ? " is-closing" : "";
+
+  return createPortal(
     <div
-      className="dialog-backdrop"
+      className={`dialog-backdrop${modalClass}`}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
     >
       <section
-        className="tool-dialog"
+        ref={dialogRef}
+        className={`tool-dialog t-modal${modalClass}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={`tool-dialog-${tool.id}`}
+        aria-labelledby={`tool-dialog-${shown.id}`}
       >
-        <header className="dialog-header">
-          <div className="dialog-tool-heading">
-            <span className="dialog-logo">
-              <ToolLogo tool={tool} size={48} />
-            </span>
-            <div>
-              <p className="dialog-eyebrow">{t.resourceKinds[kind]} / {t.pricing[tool.pricing]}</p>
-              <h2 id={`tool-dialog-${tool.id}`}>{tool.name}</h2>
-            </div>
-          </div>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            className="dialog-close"
-            aria-label={t.close}
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </header>
-        <div className="dialog-rule" />
-        <p className="dialog-verdict">{text(tool.verdict, locale)}</p>
-        <p className="dialog-summary">{text(tool.summary, locale)}</p>
-        <div className="dialog-tags">
-          <span className={`price-tag price-${tool.pricing}`}>{t.pricing[tool.pricing]}</span>
-          {tool.platforms.map((platform) => (
-            <span key={platform} className="platform-tag">{t.platform[platform]}</span>
-          ))}
-        </div>
-        <div className="dialog-actions">
-          <a href={tool.url} className="btn-open t-learn" rel="noreferrer" target="_blank">
-            {t.openTool}
-            <span className="dialog-action-arrow" aria-hidden="true">↗</span>
-          </a>
-          <Link href={localePath(locale, `/t/${tool.slug}`)} className="dialog-details" transitionTypes={["nav-forward"]}>
-            {t.viewDetails}
-          </Link>
-          <button type="button" className="dialog-cancel" onClick={onClose}>
-            {t.close}
-          </button>
-        </div>
+        <ToolDialogPanel
+          tool={shown}
+          locale={locale}
+          headingId={`tool-dialog-${shown.id}`}
+          onClose={onClose}
+          closeSlot={
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="dialog-close"
+              aria-label={t.close}
+              onClick={onClose}
+            >
+              <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12">
+                <path
+                  d="M3 3l6 6M9 3l-6 6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          }
+        />
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

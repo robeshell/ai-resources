@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { HomeTools } from "@/components/HomeTools";
-import { loadCategories, loadResources, loadSite } from "@/lib/data";
+import { StaggerReveal } from "@/components/Transitions";
+import { loadResources } from "@/lib/data";
+import { loadPublicContent } from "@/lib/public-content";
 import { ui } from "@/lib/i18n";
 import { isLocale } from "@/lib/types";
 
@@ -9,21 +11,20 @@ export default async function LocaleHome({
 }: PageProps<"/[locale]">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const categories = loadCategories();
   const resources = loadResources();
-  const site = loadSite();
+  const content = loadPublicContent();
   const t = ui(locale);
 
   return (
     <>
-      <header className="compact-intro">
-        <p className="compact-intro-kicker">{t.compactIntroKicker}</p>
+      <StaggerReveal as="header" className="compact-intro">
+        <p className="compact-intro-kicker t-stagger-line t-stagger-line--1">{t.compactIntroKicker}</p>
         <div>
-          <h1>{t.compactIntroTitle}</h1>
-          <p>{t.compactIntroBody}</p>
+          <h1 className="t-stagger-line t-stagger-line--2">{t.compactIntroTitle}</h1>
+          <p className="t-stagger-line t-stagger-line--3">{t.compactIntroBody}</p>
         </div>
-      </header>
-      <HomeTools all={resources} categories={categories} locale={locale} rankingUrl={site.rankingUrl} />
+      </StaggerReveal>
+      <HomeTools all={resources} content={content} locale={locale} />
     </>
   );
 }

@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { ViewTransition } from "react";
 import { usePathname } from "next/navigation";
+import { AccentPicker } from "@/components/AccentPicker";
 import { SiteHeader } from "@/components/SiteHeader";
 import { loadSite } from "@/lib/data";
 import { ui } from "@/lib/i18n";
@@ -18,8 +20,12 @@ export function SiteChrome({
   const site = loadSite();
   const pathname = usePathname() || `/${locale}`;
 
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  }, [locale]);
+
   return (
-    <div className="min-h-full">
+    <div id="site-root">
       <a href="#main" className="skip-link">
         {t.skip}
       </a>
@@ -29,7 +35,7 @@ export function SiteChrome({
       />
       <main
         id="main"
-        className="site-content mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12"
+        className="site-content"
         style={{ scrollMarginTop: "var(--header-height)" }}
       >
         <ViewTransition
@@ -49,9 +55,10 @@ export function SiteChrome({
           {children}
         </ViewTransition>
       </main>
-      <footer className="site-footer mx-auto max-w-7xl px-4 sm:px-8">
-        <span>{t.footerNote}</span>
-        <span>{t.updatedLabel} / {site.updatedAt.replaceAll("-", ".")}</span>
+      <footer className="site-footer">
+        <span className="footer-note">{t.footerNote}</span>
+        <AccentPicker locale={locale} />
+        <span className="footer-updated">{t.updatedLabel} / {site.updatedAt.replaceAll("-", ".")}</span>
       </footer>
     </div>
   );

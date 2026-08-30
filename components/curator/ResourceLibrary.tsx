@@ -1,212 +1,152 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CATEGORY_LABEL, KIND_LABEL, curatorRequest, type CatalogItem } from "@/lib/curator-client";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert, Badge, Box, Button, Checkbox, Flex, Group, Pagination, Paper, Select,
+  SimpleGrid, Skeleton, Stack, Table, Tabs, Text, TextInput, Title,
+} from "@mantine/core";
+import { BLOCK_LABELS, curatorRequest, type CuratorContentItem } from "@/lib/curator-client";
+import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS, type ContentStatus, type EnabledContentBlockId } from "@/lib/content-blocks";
 
-const categories = Object.entries(CATEGORY_LABEL) as Array<[CatalogItem["category"], string]>;
-const kinds = Object.entries(KIND_LABEL) as Array<[CatalogItem["kind"], string]>;
-const platforms: CatalogItem["platforms"][number][] = ["web", "app", "api", "cli"];
+type LibraryBlock = "all" | EnabledContentBlockId;
+type LibraryStatus = "all" | ContentStatus;
+type LibraryItem = CuratorContentItem & { issueCount: number };
+type LibraryPage = { items: LibraryItem[]; total: number; page: number; pageSize: 20 | 50; pages: number };
+type Notice = { text: string; tone: "success" | "error" } | null;
+
+const BLOCKS: Array<{ value: LibraryBlock; label: string }> = [
+  { value: "all", label: "全部内容" },
+  ...ENABLED_CONTENT_BLOCK_IDS.map((value) => ({ value, label: contentBlocks[value].label.zh })),
+];
+const STATUS_LABEL: Record<ContentStatus, string> = { draft: "草稿", active: "已发布", archived: "已归档" };
+const STATUS_COLOR: Record<ContentStatus, string> = { draft: "gray", active: "teal", archived: "red" };
+
+function summaryOf(item: LibraryItem) {
+  const payload = item.payload as { summary?: { zh?: string }; tagline?: { zh?: string } };
+  return payload.summary?.zh || payload.tagline?.zh || item.sourceUrl || "暂无摘要";
+}
+
+function ContentIdentity({ item }: { item: LibraryItem }) {
+  return <Link href={`/curator/resources/${item.blockType}/${encodeURIComponent(item.slug)}`} className="curator-content-link">
+    <Stack gap={2}><Text fw={600} size="sm" c="dark.8">{item.title}</Text><Text size="sm" c="dimmed" lineClamp={1}>{summaryOf(item)}</Text></Stack>
+  </Link>;
+}
 
 export function ResourceLibrary() {
-  const [items, setItems] = useState<CatalogItem[]>([]);
-  const [selected, setSelected] = useState<CatalogItem | null>(null);
-  const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<string>("all");
-  const [category, setCategory] = useState<string>("all");
-  const [status, setStatus] = useState<string>("active");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const block = (BLOCKS.some((item) => item.value === searchParams.get("block")) ? searchParams.get("block") : "all") as LibraryBlock;
+  const status = (["all", "draft", "active", "archived"].includes(searchParams.get("status") || "") ? searchParams.get("status") : "all") as LibraryStatus;
+  const sort = ["updated-desc", "updated-asc", "title-asc"].includes(searchParams.get("sort") || "") ? searchParams.get("sort")! : "updated-desc";
+  const issues = searchParams.get("issues") === "true";
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const pageSize = searchParams.get("pageSize") === "50" ? 50 : 20;
+  const query = searchParams.get("query") || "";
+  const [search, setSearch] = useState(query);
+  const [result, setResult] = useState<LibraryPage>({ items: [], total: 0, page, pageSize, pages: 1 });
+  const [selected, setSelected] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<Notice>(null);
 
-  async function refresh(keepSlug?: string) {
-    const payload = await curatorRequest<{ items: CatalogItem[] }>("/catalog");
-    const next = payload.items || [];
-    setItems(next);
-    const current = keepSlug ? next.find((item) => item.slug === keepSlug) : null;
-    setSelected(current || next.find((item) => item.status !== "archived") || next[0] || null);
-  }
+  const updateParams = useCallback((changes: Record<string, string | number | boolean | null>) => {
+    const next = new URLSearchParams(searchParams.toString());
+    Object.entries(changes).forEach(([key, value]) => {
+      if (value === null || value === "" || value === false || value === "all" || (key === "page" && value === 1)) next.delete(key);
+      else next.set(key, String(value));
+    });
+    router.replace(`/curator/resources/${next.size ? `?${next.toString()}` : ""}`);
+  }, [router, searchParams]);
 
-  useEffect(() => {
-    refresh().catch((error) => setMessage(error instanceof Error ? error.message : "无法读取资源"));
-  }, []);
-
-  const visible = useMemo(() => items.filter((item) => {
-    if (status !== "all" && (item.status || "active") !== status) return false;
-    if (kind !== "all" && (item.kind || "tool") !== kind) return false;
-    if (category !== "all" && item.category !== category) return false;
-    if (query.trim()) {
-      const haystack = `${item.name} ${item.slug} ${item.verdict.zh} ${item.verdict.en}`.toLowerCase();
-      if (!haystack.includes(query.trim().toLowerCase())) return false;
-    }
-    return true;
-  }), [items, query, kind, category, status]);
-
-  function update<K extends keyof CatalogItem>(key: K, value: CatalogItem[K]) {
-    setSelected((current) => current ? { ...current, [key]: value } : current);
-  }
-
-  function updateLocalized(field: "verdict" | "summary", locale: "en" | "zh", value: string) {
-    setSelected((current) => current ? {
-      ...current,
-      [field]: { ...current[field], [locale]: value },
-    } : current);
-  }
-
-  async function save() {
-    if (!selected) return;
-    setBusy(true);
-    setMessage("");
+  const load = useCallback(async () => {
+    setLoading(true); setNotice(null);
     try {
-      const result = await curatorRequest<{ item: CatalogItem; message: string }>("/catalog", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item: selected }),
-      });
-      setMessage(result.message);
-      await refresh(result.item.slug);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存失败");
-    } finally {
-      setBusy(false);
-    }
-  }
+      const params = new URLSearchParams({ block, status, sort, page: String(page), pageSize: String(pageSize) });
+      if (query) params.set("query", query);
+      if (issues) params.set("issues", "true");
+      const payload = await curatorRequest<LibraryPage>(`/content?${params.toString()}`);
+      setResult(payload); setSelected([]);
+      if (payload.page !== page) updateParams({ page: payload.page });
+    } catch (caught) { setNotice({ text: caught instanceof Error ? caught.message : "资源库读取失败", tone: "error" }); }
+    finally { setLoading(false); }
+  }, [block, issues, page, pageSize, query, sort, status, updateParams]);
 
-  async function setItemStatus(next: "active" | "archived") {
-    if (!selected) return;
-    setBusy(true);
-    setMessage("");
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, [load]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setSearch(query); }, [query]);
+
+  const allSelected = result.items.length > 0 && result.items.every((item) => selected.includes(item.id));
+  const createBlock = block === "all" ? "tool" : block;
+  const range = useMemo(() => {
+    if (!result.total) return "0 条";
+    const start = (result.page - 1) * result.pageSize + 1;
+    return `${start}–${Math.min(result.page * result.pageSize, result.total)} / ${result.total} 条`;
+  }, [result]);
+
+  function submitSearch(event: FormEvent) { event.preventDefault(); updateParams({ query: search.trim(), page: 1 }); }
+  function toggleAll(checked: boolean) { setSelected(checked ? result.items.map((item) => item.id) : []); }
+  function toggleOne(id: string, checked: boolean) { setSelected((current) => checked ? [...current, id] : current.filter((item) => item !== id)); }
+  async function batch(nextStatus: "active" | "archived") {
+    if (!selected.length) return;
+    setBusy(true); setNotice(null);
     try {
-      await curatorRequest("/catalog/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: selected.slug, status: next }),
-      });
-      await refresh(selected.slug);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "状态更新失败");
-    } finally {
-      setBusy(false);
-    }
+      const response = await curatorRequest<{ message: string }>("/content/batch", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: selected, status: nextStatus }) });
+      setNotice({ text: response.message, tone: "success" }); await load();
+    } catch (caught) { setNotice({ text: caught instanceof Error ? caught.message : "批量操作失败", tone: "error" }); }
+    finally { setBusy(false); }
   }
 
-  return (
-    <section className="curator-shell curator-library">
-      <div className="curator-intro">
-        <p className="curator-kicker">CURATOR / 资源库</p>
-        <h1>维护已收录的条目</h1>
-        <p>改文案、场景和关联。归档等于从公开站下架。</p>
-      </div>
-      <div className="curator-library-layout">
-        <aside>
-          <div className="curator-library-filters">
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索名称或定位" />
-            <select value={status} onChange={(event) => setStatus(event.target.value)}>
-              <option value="active">在架</option>
-              <option value="archived">已归档</option>
-              <option value="all">全部</option>
-            </select>
-            <select value={kind} onChange={(event) => setKind(event.target.value)}>
-              <option value="all">全部类型</option>
-              {kinds.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
-              <option value="all">全部场景</option>
-              {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </div>
-          <ul className="curator-resource-list">
-            {visible.map((item) => (
-              <li key={item.id}>
-                <button type="button" className={selected?.id === item.id ? "is-active" : undefined} onClick={() => setSelected(item)}>
-                  <strong>{item.name}</strong>
-                  <span>{KIND_LABEL[item.kind || "tool"]} · {CATEGORY_LABEL[item.category]}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-        {selected ? (
-          <form className="curator-review" onSubmit={(event) => { event.preventDefault(); save(); }}>
-            <header className="curator-review-head">
-              <div>
-                <p>{selected.file === "resources" ? "resources.json" : "tools.json"} · {selected.slug}</p>
-                <h2>{selected.name}</h2>
-              </div>
-              <a href={selected.url} target="_blank" rel="noreferrer">打开原链接 ↗</a>
-            </header>
-            <div className="curator-form-grid">
-              <label>名称<input value={selected.name} onChange={(event) => update("name", event.target.value)} /></label>
-              <label>Slug<input value={selected.slug} onChange={(event) => update("slug", event.target.value)} /></label>
-              <label>
-                类型
-                <select value={selected.kind || "tool"} onChange={(event) => update("kind", event.target.value as CatalogItem["kind"])}>
-                  {kinds.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                场景
-                <select value={selected.category} onChange={(event) => update("category", event.target.value as CatalogItem["category"])}>
-                  {categories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                </select>
-              </label>
-              <label>
-                定价
-                <select value={selected.pricing} onChange={(event) => update("pricing", event.target.value as CatalogItem["pricing"])}>
-                  <option value="free">免费</option>
-                  <option value="freemium">免费增值</option>
-                  <option value="paid">付费</option>
-                  <option value="api">按 API 用量</option>
-                </select>
-              </label>
-              <label>链接<input value={selected.url} onChange={(event) => update("url", event.target.value)} /></label>
-              <fieldset>
-                <legend>平台</legend>
-                <div className="curator-checks">
-                  {platforms.map((platform) => (
-                    <label key={platform}>
-                      <input
-                        type="checkbox"
-                        checked={selected.platforms.includes(platform)}
-                        onChange={() => {
-                          const next = selected.platforms.includes(platform)
-                            ? selected.platforms.filter((item) => item !== platform)
-                            : [...selected.platforms, platform];
-                          update("platforms", next);
-                        }}
-                      />
-                      {platform.toUpperCase()}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <label className="is-wide">中文一句话定位<input value={selected.verdict.zh} onChange={(event) => updateLocalized("verdict", "zh", event.target.value)} /></label>
-              <label className="is-wide">English verdict<input value={selected.verdict.en} onChange={(event) => updateLocalized("verdict", "en", event.target.value)} /></label>
-              <label className="is-wide">中文简介<textarea rows={3} value={selected.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.target.value)} /></label>
-              <label className="is-wide">English summary<textarea rows={3} value={selected.summary.en} onChange={(event) => updateLocalized("summary", "en", event.target.value)} /></label>
-              <label className="is-wide">
-                关联 Slug
-                <input
-                  value={selected.relatedSlugs.join(", ")}
-                  onChange={(event) => update("relatedSlugs", event.target.value.split(",").map((item) => item.trim()).filter(Boolean))}
-                />
-              </label>
-            </div>
-            <footer className="curator-review-footer">
-              <p>{selected.status === "archived" ? "这条已归档，公开站不会生成页面。" : "保存后点顶栏「生成预览」才能在首页看到。"}</p>
-              <div className="curator-editor-actions">
-                {selected.status === "archived" ? (
-                  <button type="button" className="curator-secondary" onClick={() => setItemStatus("active")} disabled={busy}>恢复</button>
-                ) : (
-                  <button type="button" className="curator-secondary" onClick={() => setItemStatus("archived")} disabled={busy}>归档</button>
-                )}
-                <button type="submit" disabled={busy}>{busy ? "正在保存…" : "保存修改"}</button>
-              </div>
-            </footer>
-            {message ? <p className="curator-message">{message}</p> : null}
-          </form>
-        ) : (
-          <p className="curator-empty">没有匹配的资源。</p>
-        )}
-      </div>
-    </section>
-  );
+  return <Stack gap="xl">
+    <Flex justify="space-between" align="flex-end" gap="xl" wrap="wrap" className="curator-page-heading-mantine">
+      <Box><Text className="curator-eyebrow-mantine">内容管理</Text><Title order={1} mt={4}>资源库</Title><Text c="dimmed" mt="xs" maw={620}>按内容板块管理工具卡片与长内容。列表负责查找，编辑在独立页面完成。</Text></Box>
+      <Button component={Link} href={`/curator/ingest/?block=${createBlock}`} size="md">新建{BLOCK_LABELS[createBlock]}</Button>
+    </Flex>
+
+    <Tabs value={block} onChange={(value) => updateParams({ block: value || "all", page: 1 })} variant="pills" keepMounted={false}>
+      <Tabs.List className="curator-block-tabs">{BLOCKS.map((item) => <Tabs.Tab value={item.value} key={item.value}>{item.label}</Tabs.Tab>)}</Tabs.List>
+    </Tabs>
+
+    <Paper component="form" withBorder p="md" onSubmit={submitSearch}>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }} spacing="sm">
+        <TextInput value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="搜索名称、Slug、链接或摘要" aria-label="搜索资源" />
+        <Button type="submit" variant="default" h={42}>搜索</Button>
+        <Select aria-label="内容状态" value={status} onChange={(value) => updateParams({ status: value || "all", page: 1 })} data={[{ value: "all", label: "全部状态" }, { value: "draft", label: "草稿" }, { value: "active", label: "已发布" }, { value: "archived", label: "已归档" }]} />
+        <Select aria-label="排序" value={sort} onChange={(value) => updateParams({ sort: value || "updated-desc", page: 1 })} data={[{ value: "updated-desc", label: "最近更新" }, { value: "updated-asc", label: "最早更新" }, { value: "title-asc", label: "名称 A–Z" }]} />
+        <Checkbox checked={issues} onChange={(event) => updateParams({ issues: event.currentTarget.checked, page: 1 })} label="只看有问题的" my="auto" />
+      </SimpleGrid>
+    </Paper>
+
+    {notice ? <Alert color={notice.tone === "error" ? "red" : "teal"} title={notice.tone === "error" ? "操作失败" : "操作完成"} role={notice.tone === "error" ? "alert" : "status"}>{notice.text}</Alert> : null}
+
+    <Paper withBorder p={0} className="curator-library-table-shell">
+      <Group justify="space-between" p="md" mih={58}>
+        <Text size="sm" c="dimmed" className="curator-number">{selected.length ? `已选择 ${selected.length} 条` : range}</Text>
+        {selected.length ? <Group gap="xs"><Button variant="default" disabled={busy} onClick={() => void batch("active")}>批量发布</Button><Button color="red" variant="light" disabled={busy} onClick={() => void batch("archived")}>批量归档</Button></Group> : null}
+      </Group>
+      {loading ? <Stack p="md" gap="xs">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} h={54} radius="sm" />)}</Stack> : null}
+      {!loading && !result.items.length ? <Stack align="center" justify="center" mih={240} p="xl" gap={4}><Text fw={600}>没有匹配的内容</Text><Text size="sm" c="dimmed">调整搜索或筛选条件，或者新建一条内容。</Text></Stack> : null}
+      {!loading && result.items.length ? <>
+        <Table.ScrollContainer minWidth={760} visibleFrom="sm"><Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
+          <Table.Thead><Table.Tr><Table.Th w={44}><Checkbox checked={allSelected} onChange={(event) => toggleAll(event.currentTarget.checked)} aria-label="选择当前页全部内容" /></Table.Th><Table.Th>内容</Table.Th><Table.Th w={90}>板块</Table.Th><Table.Th w={100}>状态</Table.Th><Table.Th w={76}>问题</Table.Th><Table.Th w={120}>更新时间</Table.Th></Table.Tr></Table.Thead>
+          <Table.Tbody>{result.items.map((item) => <Table.Tr key={item.id}>
+            <Table.Td><Checkbox checked={selected.includes(item.id)} onChange={(event) => toggleOne(item.id, event.currentTarget.checked)} aria-label={`选择 ${item.title}`} /></Table.Td>
+            <Table.Td><ContentIdentity item={item} /></Table.Td><Table.Td><Text size="sm">{BLOCK_LABELS[item.blockType as Exclude<LibraryBlock, "all">]}</Text></Table.Td>
+            <Table.Td><Badge color={STATUS_COLOR[item.status]} variant="light">{STATUS_LABEL[item.status]}</Badge></Table.Td><Table.Td>{item.issueCount ? <Badge color="orange" circle>{item.issueCount}</Badge> : <Text c="dimmed">—</Text>}</Table.Td>
+            <Table.Td><Text size="sm" className="curator-number">{new Date(item.updatedAt).toLocaleDateString("zh-CN")}</Text></Table.Td>
+          </Table.Tr>)}</Table.Tbody>
+        </Table></Table.ScrollContainer>
+        <Stack hiddenFrom="sm" gap={0}>{result.items.map((item) => <Box key={item.id} p="md" className="curator-mobile-resource-row"><Group align="flex-start" wrap="nowrap">
+          <Checkbox mt={3} checked={selected.includes(item.id)} onChange={(event) => toggleOne(item.id, event.currentTarget.checked)} aria-label={`选择 ${item.title}`} />
+          <Stack gap="xs" flex={1}><ContentIdentity item={item} /><Group gap="xs"><Badge color="gray" variant="light">{BLOCK_LABELS[item.blockType as Exclude<LibraryBlock, "all">]}</Badge><Badge color={STATUS_COLOR[item.status]} variant="light">{STATUS_LABEL[item.status]}</Badge>{item.issueCount ? <Badge color="orange" variant="light">{item.issueCount} 个问题</Badge> : null}</Group><Text size="xs" c="dimmed" className="curator-number">更新于 {new Date(item.updatedAt).toLocaleDateString("zh-CN")}</Text></Stack>
+        </Group></Box>)}</Stack>
+      </> : null}
+      <Flex justify="space-between" align="center" gap="md" wrap="wrap" p="md" className="curator-pagination-mantine">
+        <Select w={130} size="sm" aria-label="每页条数" value={String(result.pageSize)} onChange={(value) => updateParams({ pageSize: value || "20", page: 1 })} data={[{ value: "20", label: "每页 20 条" }, { value: "50", label: "每页 50 条" }]} />
+        <Pagination value={result.page} onChange={(nextPage) => updateParams({ page: nextPage })} total={result.pages} size="sm" withEdges />
+      </Flex>
+    </Paper>
+  </Stack>;
 }

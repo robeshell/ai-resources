@@ -3,29 +3,29 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Alert, AppShell, Badge, Box, Burger, Container, Drawer, Group, Stack, Text } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { BrandMark } from "@/components/BrandMark";
 import { curatorRequest, type BuildJob } from "@/lib/curator-client";
+import { useBuildJob } from "@/components/curator/useBuildJob";
 
 const links = [
-  { href: "/curator/", label: "总览" },
-  { href: "/curator/resources/", label: "资源库" },
-  { href: "/curator/ingest/", label: "收录" },
-  { href: "/curator/inbox/", label: "模型清单" },
-  { href: "/curator/scenarios/", label: "场景方案" },
-  { href: "/curator/settings/", label: "设置" },
+  { href: "/curator/", label: "工作台", match: ["/curator/"] },
+  { href: "/curator/resources/", label: "资源库", match: ["/curator/resources/", "/curator/skills/", "/curator/projects/", "/curator/prompts/"] },
+  { href: "/curator/ingest/", label: "收录", match: ["/curator/ingest/"] },
+  { href: "/curator/settings/", label: "系统", match: ["/curator/settings/"] },
 ];
 
-function pathMatches(pathname: string, href: string) {
+function pathMatches(pathname: string, link: (typeof links)[number]) {
   const current = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  if (href === "/curator/") return current === "/curator/";
-  return current.startsWith(href);
+  return link.match.some((prefix) => (prefix === "/curator/" ? current === prefix : current.startsWith(prefix)));
 }
 
 export function CuratorChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "/curator/";
   const [service, setService] = useState<"checking" | "online" | "offline">("checking");
-  const [build, setBuild] = useState<BuildJob>({ status: "idle" });
-  const [busy, setBusy] = useState(false);
+  const { build, setBuild } = useBuildJob();
+  const [menuOpen, { open: openMenu, close: closeMenu }] = useDisclosure(false);
 
   useEffect(() => {
     curatorRequest<{ ok: boolean; build?: BuildJob }>("/health")
@@ -34,70 +34,62 @@ export function CuratorChrome({ children }: { children: React.ReactNode }) {
         if (payload.build) setBuild(payload.build);
       })
       .catch(() => setService("offline"));
-  }, []);
-
-  useEffect(() => {
-    if (build.status !== "running") return;
-    const timer = setInterval(() => {
-      curatorRequest<BuildJob>("/build").then(setBuild).catch(() => undefined);
-    }, 1500);
-    return () => clearInterval(timer);
-  }, [build.status]);
-
-  async function previewBuild() {
-    setBusy(true);
-    try {
-      setBuild(await curatorRequest<BuildJob>("/build", { method: "POST" }));
-    } catch {
-      setBuild({ status: "error", error: "构建没有开始" });
-    } finally {
-      setBusy(false);
-    }
-  }
+  }, [setBuild]);
 
   return (
-    <div className="curator-page">
-      <header className="curator-header">
-        <Link href="/zh/" className="brand" aria-label="返回 AI 导航">
-          <BrandMark size={24} />
-          <span>AI 导航</span>
-        </Link>
-        <nav className="curator-nav" aria-label="管理">
+    <AppShell className="curator-root" header={{ height: 58 }} padding={0}>
+      <AppShell.Header className="curator-header">
+        <Container size="xl" className="curator-header-inner">
+          <Group h="100%" justify="space-between" wrap="nowrap">
+          <Group gap="xl" wrap="nowrap">
+          <Link href="/zh/" className="curator-brand-link" aria-label="返回 AI 导航">
+            <Group gap="xs" wrap="nowrap"><BrandMark size={22} /><span>Curator</span></Group>
+          </Link>
+          <Group component="nav" aria-label="Curator" gap="xl" visibleFrom="sm">
+            {links.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="curator-nav-link"
+                data-active={pathMatches(pathname, link)}
+                aria-current={pathMatches(pathname, link) ? "page" : undefined}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </Group>
+          </Group>
+          <Group gap="sm" wrap="nowrap">
+            <Badge color={service === "online" ? "teal" : service === "offline" ? "red" : "gray"} variant="light" size="sm" visibleFrom="sm">
+              {service === "online" ? "服务正常" : service === "offline" ? "服务未启动" : "连接中"}
+            </Badge>
+            {build.status === "running" ? <Badge color="curator" variant="light" size="sm" visibleFrom="sm">构建校验中</Badge> : null}
+            <Burger opened={menuOpen} onClick={menuOpen ? closeMenu : openMenu} hiddenFrom="sm" size="sm" aria-label="菜单" />
+          </Group>
+          </Group>
+        </Container>
+      </AppShell.Header>
+
+      <Drawer opened={menuOpen} onClose={closeMenu} title="Curator" position="right" size="xs" hiddenFrom="sm">
+        <Stack component="nav" aria-label="Curator 移动导航" gap="xs">
           {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={pathMatches(pathname, link.href) ? "is-active" : undefined}
-            >
+            <Box component={Link} key={link.href} href={link.href} className="curator-nav-link" data-active={pathMatches(pathname, link)} p="sm" onClick={closeMenu}>
               {link.label}
-            </Link>
+            </Box>
           ))}
-        </nav>
-        <div className="curator-header-actions">
-          <div className="curator-service">
-            <span className={`curator-service-dot is-${service}`} />
-            {service === "online" ? "已连接" : service === "offline" ? "未启动" : "检查中"}
-          </div>
-          <button type="button" className="curator-preview-btn" onClick={previewBuild} disabled={busy || service !== "online" || build.status === "running"}>
-            {build.status === "running" || busy ? "正在构建…" : "生成预览"}
-          </button>
-        </div>
-      </header>
-      {service === "offline" ? (
-        <div className="curator-notice curator-notice-banner">
-          在项目目录运行 <code>npm run curator</code>，然后刷新这个页面。
-        </div>
-      ) : null}
-      {build.status === "ok" ? (
-        <p className="curator-build-strip">
-          预览已更新。
-          <a href={build.previewUrl || "http://localhost:3000/zh/"} target="_blank" rel="noreferrer">打开首页 ↗</a>
-        </p>
-      ) : null}
-      {build.status === "error" ? (
-        <p className="curator-build-strip is-error">{build.error || "构建失败"}</p>
-      ) : null}
-      {children}
-    </div>
+          <Text size="sm" c={service === "online" ? "teal.8" : service === "offline" ? "red.7" : "dimmed"} mt="md">
+            {service === "online" ? "服务正常" : service === "offline" ? "服务未启动" : "连接中"}
+          </Text>
+        </Stack>
+      </Drawer>
+
+      <AppShell.Main>
+        {(service === "offline" || build.status === "error") ? <Container size="xl" className="curator-shell-alerts">
+          {service === "offline" ? <Alert color="yellow" title="Curator 服务未启动" role="status">运行 <code>npm run curator</code> 后重试。</Alert> : null}
+          {build.status === "error" ? <Alert color="red" title="构建校验失败" role="alert" mt="sm">{build.error || "构建没有完成"}</Alert> : null}
+        </Container> : null}
+        <Container component="div" size="xl" className="curator-main curator-page-container">{children}</Container>
+      </AppShell.Main>
+    </AppShell>
   );
 }

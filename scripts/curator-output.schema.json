@@ -6,21 +6,25 @@
     "name",
     "slug",
     "kind",
-    "category",
+    "blockType",
     "pricing",
     "platforms",
     "verdict",
     "summary",
-    "relatedSlugs",
     "confidence",
-    "rationale"
+    "rationale",
+    "body",
+    "links",
+    "prompt",
+    "variables",
+    "examples"
   ],
   "properties": {
     "name": { "type": "string" },
     "slug": { "type": "string" },
-    "kind": { "enum": ["tool", "skill", "open-source", "model"] },
-    "category": { "enum": ["code", "chat", "image", "video", "research", "agents"] },
-    "pricing": { "enum": ["free", "freemium", "paid", "api"] },
+    "kind": { "enum": ["tool", "skill", "open-source", "prompt"] },
+    "blockType": { "type": ["string", "null"], "enum": ["tool", "skill", "project", "prompt", null] },
+    "pricing": { "type": ["string", "null"], "enum": ["free", "freemium", "paid", "api", null] },
     "platforms": {
       "type": "array",
       "items": { "enum": ["web", "app", "api", "cli"] }
@@ -43,11 +47,47 @@
         "zh": { "type": "string", "minLength": 8, "maxLength": 72 }
       }
     },
-    "relatedSlugs": {
-      "type": "array",
-      "items": { "type": "string" }
-    },
     "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-    "rationale": { "type": "string" }
+    "rationale": { "type": "string" },
+    "body": { "type": "string", "maxLength": 24000 },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "url", "kind"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "url": { "type": "string", "minLength": 8, "maxLength": 2000 },
+          "kind": { "enum": ["official", "docs", "repository", "reference", "other"] }
+        }
+      }
+    },
+    "prompt": { "type": ["string", "null"], "maxLength": 16000 },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "description", "example"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "example": { "type": ["string", "null"], "maxLength": 1000 }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["input", "output"],
+        "properties": {
+          "input": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "output": { "type": "string", "minLength": 1, "maxLength": 8000 }
+        }
+      }
+    }
   }
 }

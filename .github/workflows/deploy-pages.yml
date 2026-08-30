@@ -41,6 +41,7 @@ jobs:
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: |
           npm run lint
+          npm run curator:export
           npm run build
           rm -rf out/curator
           touch out/.nojekyll

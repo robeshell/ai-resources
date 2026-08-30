@@ -9,14 +9,12 @@ export function TiltCard({
   href,
   children,
   transitionTypes,
-  category,
   onClick,
   className,
 }: {
   href?: string;
   children: ReactNode;
   transitionTypes?: string[];
-  category?: string;
   onClick?: () => void;
   className?: string;
 }) {
@@ -85,7 +83,6 @@ export function TiltCard({
           ref={(node) => { cardRef.current = node; }}
           type="button"
           className={`t-tilt-card catalog-card tool-card${className ? ` ${className}` : ""}`}
-          data-category={category}
           onClick={onClick}
         >
           {children}
@@ -96,7 +93,6 @@ export function TiltCard({
           ref={(node) => { cardRef.current = node; }}
           href={href ?? "#"}
           className={`t-tilt-card catalog-card tool-card${className ? ` ${className}` : ""}`}
-          data-category={category}
           transitionTypes={transitionTypes}
         >
           {children}

@@ -21,6 +21,7 @@
 # misc
 .DS_Store
 *.pem
+/.curator/
 
 # debug
 npm-debug.log*
@@ -38,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 个人工具状态
+/.claude/
+/.zcode/

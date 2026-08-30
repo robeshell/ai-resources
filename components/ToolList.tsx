@@ -5,10 +5,10 @@ import { useCallback, useState } from "react";
 import { TiltCard } from "@/components/TiltCard";
 import { ToolDialog } from "@/components/ToolDialog";
 import { ToolLogo } from "@/components/ToolLogo";
-import { localePath, ui } from "@/lib/i18n";
+import { productPricingLabel, ui } from "@/lib/i18n";
 import { text, type Locale, type Tool } from "@/lib/types";
 
-export function ToolCard({
+function ToolCard({
   tool,
   locale,
   index = 0,
@@ -25,11 +25,10 @@ export function ToolCard({
 }) {
   const t = ui(locale);
   const kind = tool.kind ?? "tool";
+  const price = productPricingLabel(locale, tool);
   return (
     <TiltCard
-      href={onSelect ? undefined : localePath(locale, `/t/${tool.slug}`)}
-      transitionTypes={["nav-forward"]}
-      category={tool.category}
+      href={onSelect ? undefined : tool.url}
       onClick={onSelect ? () => onSelect(tool) : undefined}
       className={!showTags ? "tool-card--bare" : undefined}
     >
@@ -51,7 +50,7 @@ export function ToolCard({
       {showTags ? (
         <span className="tool-card-footer">
           <span className="tool-tags">
-            <span className={`price-tag price-${tool.pricing}`}>{t.pricing[tool.pricing]}</span>
+            {price ? <span className={`price-tag price-${tool.pricing}`}>{price}</span> : null}
             {tool.platforms[0] ? <span className="platform-tag">{t.platform[tool.platforms[0]]}</span> : null}
           </span>
         </span>

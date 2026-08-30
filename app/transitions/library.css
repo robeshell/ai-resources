@@ -1,4 +1,4 @@
-/* Snippets from transitions.dev (tabs, texts-reveal, card-tilt, skeleton-reveal, learn-more). */
+/* Snippets from transitions.dev (tabs, texts-reveal, card-tilt, skeleton-reveal, learn-more, modal, text-swap). */
 
 .t-tabs {
   position: relative;
@@ -70,6 +70,9 @@
 .t-stagger-line--2 {
   transition-delay: var(--stagger-stagger);
 }
+.t-stagger-line--3 {
+  transition-delay: calc(var(--stagger-stagger) * 2);
+}
 .t-stagger.is-shown .t-stagger-line {
   opacity: 1;
   transform: translateY(0);
@@ -115,24 +118,17 @@
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  mix-blend-mode: screen;
+  mix-blend-mode: var(--glare-blend, screen);
   background:
     radial-gradient(
-      circle 95px at var(--tilt-gx, 50%) var(--tilt-gy, 50%),
-      rgba(255, 255, 255, 0.48),
-      rgba(255, 255, 255, 0.06) 52%,
-      rgba(255, 255, 255, 0) 84%
+      circle var(--glare-r1, 95px) at var(--tilt-gx, 50%) var(--tilt-gy, 50%),
+      var(--glare-spot),
+      transparent 68%
     ),
     radial-gradient(
-      circle 200px at var(--tilt-gx, 50%) var(--tilt-gy, 50%),
-      rgba(255, 255, 255, 0.22),
-      rgba(255, 255, 255, 0.04) 58%,
-      rgba(255, 255, 255, 0) 78%
-    ),
-    radial-gradient(
-      circle 360px at var(--tilt-gx, 50%) var(--tilt-gy, 50%),
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0) 88%
+      circle var(--glare-r2, 200px) at var(--tilt-gx, 50%) var(--tilt-gy, 50%),
+      color-mix(in srgb, var(--glare-spot) 22%, transparent),
+      transparent 72%
     );
   transition: opacity var(--tilt-glare-fade) var(--tilt-glare-ease);
 }
@@ -143,64 +139,6 @@
   .t-tilt-card {
     transform: none !important;
     transition: none !important;
-  }
-}
-
-.t-skel {
-  position: relative;
-}
-.t-skel-skeleton,
-.t-skel-content {
-  position: absolute;
-  inset: 0;
-}
-.t-skel-skeleton {
-  z-index: 1;
-  opacity: 1;
-  filter: blur(0);
-  transition:
-    opacity var(--reveal-dur) var(--reveal-ease),
-    filter var(--reveal-dur) var(--reveal-ease);
-}
-.t-skel-content {
-  z-index: 2;
-  opacity: 0;
-  filter: blur(var(--reveal-blur));
-  transition:
-    opacity var(--reveal-dur) var(--reveal-ease),
-    filter var(--reveal-dur) var(--reveal-ease);
-}
-.t-skel.is-revealed .t-skel-skeleton {
-  opacity: 0;
-  filter: blur(var(--reveal-blur));
-}
-.t-skel.is-revealed .t-skel-content {
-  opacity: 1;
-  filter: blur(0);
-}
-.t-skel.is-resetting .t-skel-skeleton,
-.t-skel.is-resetting .t-skel-content {
-  transition: none !important;
-}
-.t-skel-skeleton.is-pulsing > * {
-  animation: t-skel-pulse var(--pulse-dur) ease-in-out var(--pulse-count);
-}
-@keyframes t-skel-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: var(--pulse-min);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .t-skel-skeleton,
-  .t-skel-content {
-    transition: none !important;
-  }
-  .t-skel-skeleton.is-pulsing > * {
-    animation: none !important;
   }
 }
 
@@ -238,6 +176,61 @@
   .t-learn-arm {
     transition: none !important;
   }
+}
+
+.t-modal {
+  transform-origin: center;
+  transform: scale(var(--modal-scale));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-open-dur) var(--modal-ease),
+    opacity var(--modal-open-dur) var(--modal-ease);
+  will-change: transform, opacity;
+}
+.t-modal.is-open {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+.t-modal.is-closing {
+  transform: scale(var(--modal-scale-close));
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform var(--modal-close-dur) var(--modal-ease),
+    opacity var(--modal-close-dur) var(--modal-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-modal { transition: none !important; }
+}
+
+.t-text-swap {
+  display: inline-block;
+  transform: translateY(0);
+  filter: blur(0);
+  opacity: 1;
+  transition:
+    transform var(--text-swap-dur) var(--text-swap-ease),
+    filter var(--text-swap-dur) var(--text-swap-ease),
+    opacity var(--text-swap-dur) var(--text-swap-ease);
+  will-change: transform, filter, opacity;
+}
+.t-text-swap.is-exit {
+  transform: translateY(calc(var(--text-swap-translate-y) * -1));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+}
+.t-text-swap.is-enter-start {
+  transform: translateY(var(--text-swap-translate-y));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-text-swap { transition: none !important; }
 }
 
 ::view-transition {

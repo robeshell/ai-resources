@@ -1,47 +1,62 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { TextSwap, useRovingKeys, useSlidingPill } from "@/components/Transitions";
 import { ToolList } from "@/components/ToolList";
-import { ui } from "@/lib/i18n";
-import { text, type Category, type Locale, type ResourceKind, type Tool } from "@/lib/types";
+import { resourcesLabel, ui } from "@/lib/i18n";
+import type { PublicContentSummary } from "@/lib/public-content";
+import { text, type Locale, type Tool } from "@/lib/types";
+
+type PublicBoard = "tool" | "skill" | "project" | "prompt";
 
 export function HomeTools({
   all,
-  categories,
+  content,
   locale,
-  rankingUrl,
 }: {
   all: Tool[];
-  categories: Category[];
+  content: PublicContentSummary[];
   locale: Locale;
-  rankingUrl: string;
 }) {
   const t = ui(locale);
-  const [activeCategory, setActiveCategory] = useState(categories[0]?.id ?? "chat");
-  const [activeKind, setActiveKind] = useState<ResourceKind | undefined>(undefined);
-
-  const groups: Array<{ id: string; kind: ResourceKind; label: string }> = [
-    { id: "tools", kind: "tool", label: t.kindTool },
-    { id: "skills", kind: "skill", label: t.kindSkill },
-    { id: "open-source", kind: "open-source", label: t.kindOpenSource },
+  const kinds: Array<{ kind: PublicBoard; label: string }> = [
+    { kind: "tool", label: t.kindTool },
+    { kind: "skill", label: t.kindSkill },
+    { kind: "project", label: t.kindOpenSource },
+    { kind: "prompt", label: t.kindPrompt },
   ];
-  const inScene = all.filter((resource) => resource.category === activeCategory);
-  const visible = inScene.filter((resource) => !activeKind || (resource.kind ?? "tool") === activeKind);
-  const modelUrl = `${rankingUrl.replace(/\/$/, "")}/models/`;
-  const selectedCategory = categories.find((category) => category.id === activeCategory) ?? categories[0];
+  const [activeKind, setActiveKind] = useState<PublicBoard>("tool");
+  const { barRef: kindBarRef, pillRef: kindPillRef } = useSlidingPill(activeKind);
+  useRovingKeys(kindBarRef);
+
+  const visibleTools = activeKind === "tool" ? all : [];
+  const visibleContent = content.filter((item) => item.blockType === activeKind);
+  const selectedKind = kinds.find((item) => item.kind === activeKind) ?? kinds[0];
+  const count = activeKind === "tool" ? all.length : visibleContent.length;
 
   return (
-    <section id="catalog" className="catalog-only" aria-label={locale === "zh" ? "内容分类" : "Content categories"}>
+    <section id="catalog" className="catalog-only" aria-label={t.catalogKinds}>
       <div className="library-shell">
         <aside className="scene-rail">
-          <p>{locale === "zh" ? "使用场景" : "Use cases"}</p>
-          <nav role="tablist" aria-label={locale === "zh" ? "使用场景" : "Use cases"}>
-            {categories.map((category) => {
-              const count = all.filter((resource) => resource.category === category.id).length;
+          <p>{t.catalogKinds}</p>
+          <nav ref={kindBarRef} role="tablist" aria-label={t.catalogKinds}>
+            <span ref={kindPillRef} className="t-tabs-pill" aria-hidden="true" />
+            {kinds.map((item) => {
+              const boardCount = item.kind === "tool" ? all.length : content.filter((entry) => entry.blockType === item.kind).length;
               return (
-                <button key={category.id} type="button" role="tab" aria-selected={activeCategory === category.id} onClick={() => { setActiveCategory(category.id); setActiveKind(undefined); }}>
-                  <span>{text(category.name, locale)}</span>
-                  <em>{count}</em>
+                <button
+                  key={item.kind}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeKind === item.kind}
+                  tabIndex={activeKind === item.kind ? 0 : -1}
+                  onClick={() => {
+                    setActiveKind(item.kind);
+                  }}
+                >
+                  <span>{item.label}</span>
+                  <em>{boardCount}</em>
                 </button>
               );
             })}
@@ -50,21 +65,28 @@ export function HomeTools({
         <div className="library-main">
           <header className="library-toolbar">
             <div className="library-title">
-              <h2>{selectedCategory ? text(selectedCategory.name, locale) : ""}</h2>
-              <span>{visible.length} {t.toolsLabel}</span>
+              <h2>
+                <TextSwap value={selectedKind.label} />
+              </h2>
+              <span>
+                <TextSwap value={resourcesLabel(locale, count)} />
+              </span>
             </div>
-            <nav className="type-tabs" role="tablist" aria-label={locale === "zh" ? "资源类型" : "Resource types"}>
-              <button type="button" role="tab" aria-selected={!activeKind} onClick={() => setActiveKind(undefined)}>{locale === "zh" ? "全部" : "All"}</button>
-              {groups.map((group) => {
-                const count = inScene.filter((resource) => (resource.kind ?? "tool") === group.kind).length;
-                if (count === 0) return null;
-                return <button key={group.id} type="button" role="tab" aria-selected={activeKind === group.kind} onClick={() => setActiveKind(group.kind)}>{group.label}</button>;
-              })}
-              <a href={modelUrl} target="_blank" rel="noreferrer">{locale === "zh" ? "模型 ↗" : "Models ↗"}</a>
-            </nav>
           </header>
           <div role="tabpanel" className="content-panel">
-            <ToolList tools={visible} locale={locale} showTags={false} />
+            {activeKind === "tool" ? <ToolList tools={visibleTools} locale={locale} showTags={false} /> : (
+              <div className="public-content-grid">
+                {visibleContent.map((item) => (
+                  <Link key={item.id} href={`/${locale}/${item.blockType}s/${item.slug}/`} className="public-content-card">
+                    <span>{selectedKind.label}</span>
+                    <h3>{item.title}</h3>
+                    <p>{text(item.summary, locale)}</p>
+                    <em>{t.readMore} →</em>
+                  </Link>
+                ))}
+                {!visibleContent.length ? <p className="public-content-empty">{t.empty}</p> : null}
+              </div>
+            )}
           </div>
         </div>
       </div>

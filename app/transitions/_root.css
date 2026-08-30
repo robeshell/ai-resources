@@ -75,4 +75,15 @@
   --learn-in: 350ms;
   --learn-out: 350ms;
   --learn-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --modal-open-dur: 250ms;
+  --modal-close-dur: 150ms;
+  --modal-scale: 0.96;
+  --modal-scale-close: 0.96;
+  --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
 }
