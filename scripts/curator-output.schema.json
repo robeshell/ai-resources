@@ -20,60 +20,177 @@
     "examples"
   ],
   "properties": {
-    "name": { "type": "string" },
-    "slug": { "type": "string" },
-    "kind": { "enum": ["tool", "skill", "open-source", "prompt"] },
-    "blockType": { "type": ["string", "null"], "enum": ["tool", "skill", "project", "prompt", null] },
-    "pricing": { "type": ["string", "null"], "enum": ["free", "freemium", "paid", "api", null] },
+    "name": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "tool",
+        "skill",
+        "open-source",
+        "prompt"
+      ]
+    },
+    "blockType": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "tool",
+        "skill",
+        "project",
+        "prompt",
+        null
+      ]
+    },
+    "pricing": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "free",
+        "freemium",
+        "paid",
+        "api",
+        null
+      ]
+    },
     "platforms": {
       "type": "array",
-      "items": { "enum": ["web", "app", "api", "cli"] }
+      "items": {
+        "enum": [
+          "web",
+          "app",
+          "api",
+          "cli"
+        ]
+      }
     },
     "verdict": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["en", "zh"],
+      "required": [
+        "en",
+        "zh"
+      ],
       "properties": {
-        "en": { "type": "string", "minLength": 4, "maxLength": 72 },
-        "zh": { "type": "string", "minLength": 4, "maxLength": 36 }
+        "en": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 72
+        },
+        "zh": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 36
+        }
       }
     },
     "summary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["en", "zh"],
+      "required": [
+        "en",
+        "zh"
+      ],
       "properties": {
-        "en": { "type": "string", "minLength": 8, "maxLength": 140 },
-        "zh": { "type": "string", "minLength": 8, "maxLength": 72 }
+        "en": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 140
+        },
+        "zh": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 72
+        }
       }
     },
-    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-    "rationale": { "type": "string" },
-    "body": { "type": "string", "maxLength": 24000 },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "rationale": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string",
+      "maxLength": 24000
+    },
     "links": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["label", "url", "kind"],
+        "required": [
+          "label",
+          "url",
+          "kind"
+        ],
         "properties": {
-          "label": { "type": "string", "minLength": 1, "maxLength": 80 },
-          "url": { "type": "string", "minLength": 8, "maxLength": 2000 },
-          "kind": { "enum": ["official", "docs", "repository", "reference", "other"] }
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "url": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 2000
+          },
+          "kind": {
+            "enum": [
+              "official",
+              "docs",
+              "repository",
+              "reference",
+              "other"
+            ]
+          }
         }
       }
     },
-    "prompt": { "type": ["string", "null"], "maxLength": 16000 },
+    "prompt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 16000
+    },
     "variables": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "description", "example"],
+        "required": [
+          "name",
+          "description",
+          "example"
+        ],
         "properties": {
-          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
-          "description": { "type": "string", "minLength": 1, "maxLength": 500 },
-          "example": { "type": ["string", "null"], "maxLength": 1000 }
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "example": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          }
         }
       }
     },
@@ -82,12 +199,30 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["input", "output"],
+        "required": [
+          "input",
+          "output"
+        ],
         "properties": {
-          "input": { "type": "string", "minLength": 1, "maxLength": 4000 },
-          "output": { "type": "string", "minLength": 1, "maxLength": 8000 }
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000
+          }
         }
       }
+    },
+    "logoUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "页面图标（favicon 或 og:image）的完整 URL；找不到用 null"
     }
   }
 }

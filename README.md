@@ -41,7 +41,6 @@ npm run curator
 
 「构建校验」只在系统页执行；工作台只显示构建状态和失败入口。编辑页不做重复预览，保存后直接打开公开站查看。运行手册见 `docs/curator.md`，系统架构见 `docs/architecture.md`。
 
-如果暂时不想调用 Agent，在 `.env.local` 设置 `CURATOR_DISABLE_AI=1`，工具会退回元信息与关键词规则。
 
 ## 怎么管理数据
 

@@ -101,8 +101,7 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
 
   const running = Boolean(run && ["queued", "running"].includes(run.status));
   const failed = run?.status === "failed";
-  const rulesFallback = run?.status === "awaiting_review" && run.agent?.mode === "rules";
-  const ready = run?.status === "awaiting_review" && run.agent?.mode !== "rules";
+  const ready = run?.status === "awaiting_review";
   const proposed = useMemo(() => (ready && run?.draft ? draftPayload(run.draft, item.payload) : null), [ready, run, item.payload]);
   const changes = useMemo(() => {
     if (!proposed) return [];
@@ -127,14 +126,6 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
       {failed ? <Stack gap="md">
         <Alert color="red" title="处理失败">{run?.error || describeAgentFailure("", toolLabel)}</Alert>
         <Button variant="default" onClick={() => void start()}>重试</Button>
-      </Stack> : null}
-
-      {rulesFallback ? <Stack gap="md">
-        <Alert color="yellow" title="Agent 没有产出结果">{run.agent?.message ?? "已生成备用草稿"}</Alert>
-        <Group>
-          <Button variant="default" onClick={() => void start()}>重试</Button>
-          <Button variant="subtle" color="gray" onClick={() => onOpenChange(false)}>放弃</Button>
-        </Group>
       </Stack> : null}
 
       {ready && proposed ? <Paper withBorder p="md">

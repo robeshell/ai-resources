@@ -395,7 +395,7 @@ export function CuratorStudio() {
           </Tabs>
           <aside className="curator-agent-panel">
             <header className="curator-panel-header">
-              <div><Text className="curator-eyebrow-mantine">{run.agent?.mode === "rules" ? "备用草稿" : run.agent?.model || currentAgent?.label || "Agent"}</Text><h2>分析过程</h2></div>
+              <div><Text className="curator-eyebrow-mantine">{run.agent?.model || currentAgent?.label || "Agent"}</Text><h2>分析过程</h2></div>
               {running ? <Button type="button" variant="default" onClick={cancel}>取消分析</Button> : null}
             </header>
             <ol className="curator-timeline">

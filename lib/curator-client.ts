@@ -87,24 +87,20 @@ export type CuratorDraft = {
   examples?: PromptExample[];
 };
 
-export type CuratorRunPhase =
-  | "fetch"
-  | "extract"
-  | "compare"
-  | "generate"
-  | "validate"
-  | "asset"
-  | "complete";
+export type CuratorRunPhase = "prepare" | "run" | "complete";
 
-/** Chinese phase names shared by the ingest timeline and the Agent drawer. */
-export const PHASE_LABEL: Record<CuratorRunPhase, string> = {
+/** Chinese phase names shared by the ingest timeline and the Agent drawer.
+ *  旧键（fetch/extract/…）用于回放历史运行的事件。 */
+export const PHASE_LABEL: Record<CuratorRunPhase | "fetch" | "extract" | "compare" | "generate" | "validate" | "asset", string> = {
+  prepare: "准备",
+  run: "Agent 整理中",
+  complete: "完成",
   fetch: "读取页面",
   extract: "提取信息",
   compare: "对照目录",
   generate: "生成草稿",
   validate: "检查内容",
   asset: "准备素材",
-  complete: "完成",
 };
 
 export type CuratorRunEvent = {

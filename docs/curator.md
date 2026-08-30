@@ -13,7 +13,7 @@ npm run curator:server    # 只启动服务
 
 ## Agent 配置
 
-收录和「AI 重新处理」调用本机 CLI，两者都不存在时自动退回备用草稿并在界面明确标注：
+收录和「AI 重新处理」调用本机 CLI，整理规则在 `skills/curator-ingest/SKILL.md`（Agent 自行访问目标页面并产出草稿）：
 
 | Agent | 调用方式 | 模型来源 |
 |-------|----------|----------|
@@ -21,15 +21,13 @@ npm run curator:server    # 只启动服务
 | Claude Code | `claude --print --output-format json --json-schema …`，禁用全部工具 | `~/.claude/settings.json`、`ANTHROPIC_MODEL*`、`/v1/models` |
 
 - 「运行设置」里可切换 Agent 与模型；中断恢复的 run 会记住原选择。
-- `CURATOR_DISABLE_AI=1`（`.env.local`）跳过 Agent，直接产出备用草稿——适合离线或纯手工整理。
 - 单次 Agent 调用超时 120 秒；CLI 以只读沙箱运行（Claude 侧禁用全部工具），页面正文按不可信材料处理。
 
 ## 收录流程（`/curator/ingest/`）
 
-1. 粘贴链接，可选指定目标板块（默认自动判断）。
-2. 同域/同名查重：目录里已有相似资源时会列出并要求二次确认「仍然分析」。
-3. 分析过程实时显示：读取页面 → 提取信息 → 对照目录 → 生成草稿 → 检查内容 → 准备 Logo → 完成（SSE 逐条推送）。
-4. 草稿就绪后人工核对：板块、双语文案（实时字数：verdict ≤16 字/8 词，summary ≤32 字/22 词）、定价、平台。
+1. 粘贴链接，可选指定目标板块（默认让 Agent 判断）。
+2. Agent 按 `skills/curator-ingest/SKILL.md` 自行访问页面、对照目录、撰写草稿，进度实时显示。
+3. 草稿就绪后人工核对：板块、双语文案（实时字数：verdict ≤16 字/8 词，summary ≤32 字/22 词）、定价、平台。
 5. 保存：工具直接发布上线；技能/项目/提示词存为草稿，补正文后发布。
 6. 「重新生成草稿」复用已抓取的页面只重跑 Agent，「重新分析」完全重来；分析面板里可随时切换 Agent 与模型再重试——额度用尽时直接换另一家。
 
