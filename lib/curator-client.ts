@@ -64,7 +64,8 @@ export type AgentInfo = {
   label: string;
   available: boolean;
   defaultModel: string;
-  models: Array<{ id: string; label: string }>;
+  /** `group` sorts the picker into 本地别名 / 网关模型 / 服务商目录. */
+  models: Array<{ id: string; label: string; group?: string }>;
 };
 
 export type CuratorDraft = {
@@ -131,7 +132,7 @@ export type CuratorRun = {
   phase: CuratorRunPhase;
   createdAt: string;
   updatedAt: string;
-  input?: { url: string; note: string; block?: "auto" | CuratorIngestBlock; mode?: "ingest" | "reprocess"; contentId?: string; tool?: AgentTool; model?: string };
+  input?: { url: string; note: string; block?: "auto" | CuratorIngestBlock; mode?: "ingest" | "reprocess"; contentId?: string; conversationId?: string; tool?: AgentTool; model?: string };
   draft?: CuratorDraft;
   source?: { title: string; description: string; finalUrl: string; logoUrl?: string };
   agent?: { mode: "codex" | "claude" | "rules"; tool?: AgentTool; model?: string; message?: string };
@@ -154,6 +155,47 @@ export type ActivityEntry = {
   slug?: string;
   name?: string;
 };
+
+export type ConversationMessageData = {
+  runId?: string;
+  status?: string;
+  error?: string | null;
+  tool?: string;
+  draft?: CuratorDraft | null;
+};
+
+export type ConversationMessage = {
+  id: number;
+  role: "user" | "assistant";
+  kind: string;
+  text: string;
+  data: ConversationMessageData | null;
+  runId?: string;
+  createdAt: string;
+};
+
+export type Conversation = {
+  id: string;
+  title: string;
+  contentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  messages: ConversationMessage[];
+};
+
+// 与服务端 contentPayloadFromDraft 同规则：把运行草稿折算成条目 payload，
+// 供会话结果「采用到编辑器」时做差量预览。
+export function draftPayload(draft: CuratorDraft, current: Record<string, unknown>): Record<string, unknown> {
+  const base = { ...current };
+  const block = draft.blockType || "tool";
+  if (block === "tool") {
+    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, url: draft.url, pricing: draft.pricing, platforms: draft.platforms };
+  }
+  if (block === "prompt") {
+    return { ...base, summary: draft.summary, prompt: (draft.prompt || "").trim(), variables: draft.variables || [], examples: draft.examples || [], links: draft.links?.length ? draft.links : base.links || [] };
+  }
+  return { ...base, summary: draft.summary, body: (draft.body || "").trim(), links: draft.links?.length ? draft.links : base.links || [] };
+}
 
 export type RunRecordStats = {
   count: number;
@@ -178,11 +220,15 @@ export function describeAgentFailure(message: string, toolLabel: string): string
   if (/usage limit|hit your usage/i.test(text)) return `${toolLabel} 额度已用尽${reset ? `，${reset[1]} 后重置` : ""}`;
   if (/not logged in|unauthorized|invalid api key/i.test(text)) return `${toolLabel} 未登录或凭证失效`;
   if (/ENOENT|command not found/i.test(text)) return `${toolLabel} 命令不存在或不在 PATH`;
-  const firstError = text.split("\n")
+  // Mirror of the server rule: show what the tool said, never a canned phrase.
+  const lines = text.split("\n")
     .map((line) => line.trim())
-    .filter((line) => line && !/^\d{4}-\d{2}-\d{2}T/.test(line) && !/codex_models_manager/.test(line))
-    .find((line) => /^error/i.test(line));
-  return firstError ? firstError.slice(0, 140) : `${toolLabel} 没有返回结构化结果`;
+    .filter((line) => line
+      && !/^\d{4}-\d{2}-\d{2}T/.test(line)
+      && !/codex_models_manager/.test(line)
+      && !line.startsWith("[claude-code:"));
+  const detail = lines.find((line) => /^error/i.test(line)) || lines[0] || "";
+  return detail ? detail.slice(0, 160) : `${toolLabel} 没有输出任何内容`;
 }
 
 export function agentEventMessage(event: { type: string; message: string; data?: Record<string, unknown> }): string {

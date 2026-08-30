@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -10,7 +11,7 @@ const LEGACY_FILES = [
   { blockType: "tool", file: path.join(ROOT, "data/tools.json") },
 ];
 
-export const CONTENT_SCHEMA_VERSION = 3;
+export const CONTENT_SCHEMA_VERSION = 5;
 
 const MIGRATIONS = [
   {
@@ -109,6 +110,41 @@ const MIGRATIONS = [
       ALTER TABLE content_items DROP COLUMN category;
     `,
   },
+  {
+    version: 4,
+    sql: `
+      CREATE TABLE IF NOT EXISTS conversations (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        content_id TEXT REFERENCES content_items(id) ON DELETE SET NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS conversation_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+        kind TEXT NOT NULL DEFAULT 'text',
+        text TEXT NOT NULL DEFAULT '',
+        data_json TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_conversation_messages_conv
+        ON conversation_messages(conversation_id, id);
+      CREATE INDEX IF NOT EXISTS idx_conversations_content
+        ON conversations(content_id);
+    `,
+  },
+  {
+    version: 5,
+    sql: `
+      ALTER TABLE conversation_messages ADD COLUMN run_id TEXT;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_content_unique
+        ON conversations(content_id) WHERE content_id IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_conversation_messages_run_unique
+        ON conversation_messages(run_id) WHERE run_id IS NOT NULL;
+    `,
+  },
 ];
 
 function now() {
@@ -189,6 +225,89 @@ function readItemRow(db, idOrSlug) {
   return hydrateItem(row, revision);
 }
 
+function readConversation(db, id) {
+  const conv = db.prepare("SELECT * FROM conversations WHERE id = ?").get(id);
+  if (!conv) return null;
+  const messages = db.prepare("SELECT * FROM conversation_messages WHERE conversation_id = ? ORDER BY id ASC").all(id)
+    .map((message) => ({
+      id: Number(message.id),
+      role: message.role,
+      kind: message.kind,
+      text: message.text,
+      data: message.data_json ? JSON.parse(message.data_json) : null,
+      ...(message.run_id ? { runId: message.run_id } : {}),
+      createdAt: message.created_at,
+    }));
+  return { id: conv.id, title: conv.title, contentId: conv.content_id || null, createdAt: conv.created_at, updatedAt: conv.updated_at, messages };
+}
+
+/** Write one item without opening a transaction, so single saves and batch
+ *  saves can share the same code while batches stay atomic. */
+function saveItemWithin(db, item, { revisionKind = "manual", note = "", expectedRevisionId } = {}) {
+  const existing = db.prepare("SELECT * FROM content_items WHERE id = ? OR slug = ? LIMIT 1").get(item.id, item.slug);
+  if (existing && expectedRevisionId !== undefined && Number(existing.current_revision_id || 0) !== Number(expectedRevisionId)) {
+    throw Object.assign(new Error("内容已在其他窗口更新，请重新加载后再保存"), { code: "stale-revision" });
+  }
+  const itemId = existing?.id || item.id;
+  const at = now();
+  if (existing) {
+    db.prepare(`
+      UPDATE content_items
+      SET block_type = ?, slug = ?, title = ?, status = ?, tags_json = ?, source_url = ?, updated_at = ?
+      WHERE id = ?
+    `).run(
+      item.blockType,
+      item.slug,
+      item.title,
+      item.status,
+      JSON.stringify(item.tags || []),
+      item.sourceUrl || null,
+      at,
+      existing.id,
+    );
+    if (existing.current_revision_id) {
+      db.prepare("UPDATE content_revisions SET revision_status = 'superseded' WHERE id = ?").run(existing.current_revision_id);
+    }
+  } else {
+    const nextSortOrder = item.sortOrder === undefined
+      ? Number(db.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM content_items").get().next)
+      : Number(item.sortOrder);
+    db.prepare(`
+      INSERT INTO content_items
+        (id, block_type, slug, title, status, tags_json, source_url, created_at, updated_at, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      item.id,
+      item.blockType,
+      item.slug,
+      item.title,
+      item.status,
+      JSON.stringify(item.tags || []),
+      item.sourceUrl || null,
+      at,
+      at,
+      nextSortOrder,
+    );
+  }
+  const revision = db.prepare(`
+    INSERT INTO content_revisions
+      (item_id, revision_kind, revision_status, payload_json, note, created_at, created_by)
+    VALUES (?, ?, 'current', ?, ?, ?, 'curator')
+    `).run(itemId, revisionKind, JSON.stringify(item.payload), note, at);
+  db.prepare("UPDATE content_items SET current_revision_id = ?, updated_at = ? WHERE id = ?")
+    .run(Number(revision.lastInsertRowid), at, itemId);
+  db.prepare("DELETE FROM content_links WHERE item_id = ?").run(itemId);
+  for (const [ordinal, link] of (item.payload.links || []).entries()) {
+    db.prepare("INSERT INTO content_links(item_id, label, url, kind, ordinal) VALUES (?, ?, ?, ?, ?)")
+      .run(itemId, link.label, link.url, link.kind || "other", ordinal);
+  }
+  db.prepare("DELETE FROM content_tags WHERE item_id = ?").run(itemId);
+  for (const tag of item.tags || []) {
+    db.prepare("INSERT INTO content_tags(item_id, tag) VALUES (?, ?)").run(itemId, tag);
+  }
+  return readItemRow(db, itemId);
+}
+
 export function contentRevisionToken(db) {
   const row = db.prepare("SELECT COALESCE(MAX(current_revision_id), 0) AS revision, COALESCE(MAX(updated_at), '') AS updated FROM content_items").get();
   return `sqlite:${Number(row.revision || 0)}:${row.updated || ""}`;
@@ -226,71 +345,13 @@ export function createContentRepository(db) {
         return hydrateItem(row, revision);
       });
     },
-    save(item, { revisionKind = "manual", note = "", expectedRevisionId } = {}) {
-      return withTransaction(db, () => {
-        const existing = db.prepare("SELECT * FROM content_items WHERE id = ? OR slug = ? LIMIT 1").get(item.id, item.slug);
-      if (existing && expectedRevisionId !== undefined && Number(existing.current_revision_id || 0) !== Number(expectedRevisionId)) {
-          throw Object.assign(new Error("内容已在其他窗口更新，请重新加载后再保存"), { code: "stale-revision" });
-        }
-        const itemId = existing?.id || item.id;
-        const at = now();
-        if (existing) {
-          db.prepare(`
-            UPDATE content_items
-            SET block_type = ?, slug = ?, title = ?, status = ?, tags_json = ?, source_url = ?, updated_at = ?
-            WHERE id = ?
-          `).run(
-            item.blockType,
-            item.slug,
-            item.title,
-            item.status,
-            JSON.stringify(item.tags || []),
-            item.sourceUrl || null,
-            at,
-            existing.id,
-          );
-          if (existing.current_revision_id) {
-            db.prepare("UPDATE content_revisions SET revision_status = 'superseded' WHERE id = ?").run(existing.current_revision_id);
-          }
-        } else {
-          const nextSortOrder = item.sortOrder === undefined
-            ? Number(db.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM content_items").get().next)
-            : Number(item.sortOrder);
-          db.prepare(`
-            INSERT INTO content_items
-              (id, block_type, slug, title, status, tags_json, source_url, created_at, updated_at, sort_order)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(
-            item.id,
-            item.blockType,
-            item.slug,
-            item.title,
-            item.status,
-            JSON.stringify(item.tags || []),
-            item.sourceUrl || null,
-            at,
-            at,
-            nextSortOrder,
-          );
-        }
-        const revision = db.prepare(`
-          INSERT INTO content_revisions
-            (item_id, revision_kind, revision_status, payload_json, note, created_at, created_by)
-          VALUES (?, ?, 'current', ?, ?, ?, 'curator')
-          `).run(itemId, revisionKind, JSON.stringify(item.payload), note, at);
-        db.prepare("UPDATE content_items SET current_revision_id = ?, updated_at = ? WHERE id = ?")
-          .run(Number(revision.lastInsertRowid), at, itemId);
-        db.prepare("DELETE FROM content_links WHERE item_id = ?").run(itemId);
-        for (const [ordinal, link] of (item.payload.links || []).entries()) {
-          db.prepare("INSERT INTO content_links(item_id, label, url, kind, ordinal) VALUES (?, ?, ?, ?, ?)")
-            .run(itemId, link.label, link.url, link.kind || "other", ordinal);
-        }
-        db.prepare("DELETE FROM content_tags WHERE item_id = ?").run(itemId);
-        for (const tag of item.tags || []) {
-          db.prepare("INSERT INTO content_tags(item_id, tag) VALUES (?, ?)").run(itemId, tag);
-        }
-        return readItemRow(db, itemId);
-      });
+    save(item, options = {}) {
+      return withTransaction(db, () => saveItemWithin(db, item, options));
+    },
+    /** Batch writes share one transaction so a failure halfway through cannot
+     *  leave the database partially updated against the exported files. */
+    saveMany(entries, options = {}) {
+      return withTransaction(db, () => entries.map((entry) => saveItemWithin(db, entry.item, { ...options, ...entry })));
     },
     createCandidate(itemId, payload, { note = "", createdBy = "agent" } = {}) {
       return withTransaction(db, () => {
@@ -379,6 +440,59 @@ export function createContentRepository(db) {
         const item = db.prepare("SELECT id FROM content_items WHERE id = ? OR slug = ? LIMIT 1").get(idOrSlug, idOrSlug);
         if (!item) return false;
         db.prepare("DELETE FROM content_items WHERE id = ?").run(item.id);
+        return true;
+      });
+    },
+    createConversation({ title = "", contentId = null } = {}) {
+      return withTransaction(db, () => {
+        if (contentId) {
+          const item = db.prepare("SELECT id FROM content_items WHERE id = ?").get(contentId);
+          if (!item) throw new Error("找不到要绑定的内容");
+          const existing = db.prepare("SELECT id FROM conversations WHERE content_id = ?").get(contentId);
+          if (existing) return readConversation(db, existing.id);
+        }
+        const id = randomUUID();
+        const at = now();
+        db.prepare("INSERT INTO conversations (id, title, content_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+          .run(id, title, contentId, at, at);
+        return { id, title, contentId, createdAt: at, updatedAt: at, messages: [] };
+      });
+    },
+    getConversation(id) {
+      return readConversation(db, id);
+    },
+    listConversations({ contentId } = {}) {
+      const rows = contentId
+        ? db.prepare("SELECT * FROM conversations WHERE content_id = ? ORDER BY updated_at DESC").all(contentId)
+        : db.prepare("SELECT * FROM conversations ORDER BY updated_at DESC").all();
+      return rows.map((c) => ({ id: c.id, title: c.title, contentId: c.content_id || null, createdAt: c.created_at, updatedAt: c.updated_at }));
+    },
+    addMessage(conversationId, { role, kind = "text", text = "", data, runId = null } = {}) {
+      return withTransaction(db, () => {
+        const conv = db.prepare("SELECT id FROM conversations WHERE id = ?").get(conversationId);
+        if (!conv) throw new Error("会话不存在");
+        if (runId) {
+          const existing = db.prepare("SELECT * FROM conversation_messages WHERE run_id = ?").get(runId);
+          if (existing) {
+            return { id: Number(existing.id), conversationId: existing.conversation_id, role: existing.role, kind: existing.kind, text: existing.text, data: existing.data_json ? JSON.parse(existing.data_json) : null, runId: existing.run_id, createdAt: existing.created_at };
+          }
+        }
+        const at = now();
+        const res = db.prepare("INSERT INTO conversation_messages (conversation_id, role, kind, text, data_json, run_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+          .run(conversationId, role, kind, text, data ? JSON.stringify(data) : null, runId, at);
+        db.prepare("UPDATE conversations SET updated_at = ? WHERE id = ?").run(at, conversationId);
+        return { id: Number(res.lastInsertRowid), conversationId, role, kind, text, data: data ?? null, ...(runId ? { runId } : {}), createdAt: at };
+      });
+    },
+    bindConversation(id, contentId) {
+      return withTransaction(db, () => {
+        const conv = db.prepare("SELECT id, content_id FROM conversations WHERE id = ?").get(id);
+        if (!conv) throw new Error("会话不存在");
+        const item = db.prepare("SELECT id FROM content_items WHERE id = ?").get(contentId);
+        if (!item) throw new Error("找不到要绑定的内容");
+        const existing = db.prepare("SELECT id FROM conversations WHERE content_id = ? AND id <> ?").get(contentId, id);
+        if (existing) throw new Error("这条内容已经绑定了其他会话");
+        db.prepare("UPDATE conversations SET content_id = ?, updated_at = ? WHERE id = ?").run(contentId, now(), id);
         return true;
       });
     },

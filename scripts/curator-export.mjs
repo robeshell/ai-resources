@@ -22,7 +22,7 @@ function legacyTool(item) {
     ...(payload.logo ? { logo: payload.logo } : {}),
     pricing: payload.pricing,
     platforms: payload.platforms || [],
-    status: item.status === "archived" ? "archived" : "active",
+    status: item.status,
     verdict: payload.tagline,
     summary: payload.summary,
   };
@@ -43,20 +43,24 @@ function markdownDocument(item) {
   return `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n\n${String(payload.body || "").trim()}\n`;
 }
 
-async function ensureDb() {
+async function ensureDb(file) {
   try {
-    await fs.access(DB_FILE);
+    await fs.access(file);
   } catch {
-    await importLegacyCatalog({ file: DB_FILE, dryRun: false });
+    await importLegacyCatalog({ file, dryRun: false });
   }
-  return openContentDb({ file: DB_FILE });
+  return openContentDb({ file });
 }
 
-export async function exportContent({ outputRoot = ROOT, includeDrafts = false, write = false } = {}) {
-  const db = await ensureDb();
+export async function exportContent({ outputRoot = ROOT, dbFile = DB_FILE, includeDrafts = false, write = false } = {}) {
+  const db = await ensureDb(dbFile);
   const repository = createContentRepository(db);
   const items = repository.list();
-  const tools = items.filter((item) => item.blockType === "tool");
+  // Drafts stay in SQLite. tools.json is a public artefact (and the cold-start
+  // import source), so a rule-fallback draft must never land in it — the site
+  // publishes every non-archived entry it finds there.
+  const published = (item) => includeDrafts || item.status !== "draft";
+  const tools = items.filter((item) => item.blockType === "tool" && published(item));
   const longForm = items.filter((item) => item.blockType !== "tool" && (includeDrafts || item.status === "active"));
   const files = [
     { path: path.join(outputRoot, "data/tools.json"), content: `${JSON.stringify({ items: tools.map(legacyTool) }, null, 2)}\n` },
@@ -80,7 +84,7 @@ export async function exportContent({ outputRoot = ROOT, includeDrafts = false, 
   return {
     write,
     outputRoot,
-    source: DB_FILE,
+    source: dbFile,
     items: items.length,
     tools: tools.length,
     longForm: longForm.length,

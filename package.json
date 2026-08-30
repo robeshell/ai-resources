@@ -5,21 +5,26 @@
   "scripts": {
     "dev": "next dev",
     "curator": "node --env-file-if-exists=.env.local scripts/curator-dev.mjs",
-    "curator:server": "node --env-file-if-exists=.env.local scripts/curator-server.mjs",
+    "curator:server": "NODE_USE_ENV_PROXY=1 node --env-file-if-exists=.env.local scripts/curator-server.mjs",
     "curator:migrate:check": "node scripts/curator-migrate.mjs",
     "curator:migrate": "node scripts/curator-migrate.mjs --write",
     "curator:db:check": "node scripts/curator-db.mjs",
     "curator:db:import": "node scripts/curator-db.mjs --write",
     "curator:export:check": "node scripts/curator-export.mjs",
     "curator:export": "node scripts/curator-export.mjs --write",
+    "test": "node --test scripts/*.test.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.15.17",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language-data": "^6.5.2",
     "@mantine/core": "^9.5.2",
     "@mantine/hooks": "^9.5.2",
     "@mantine/notifications": "^9.5.2",
+    "@uiw/react-codemirror": "^4.25.11",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"

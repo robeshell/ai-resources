@@ -115,20 +115,88 @@
   border-top: 1px solid #dedbd4;
 }
 
-.curator-markdown-input textarea {
-  min-height: 32rem;
-  font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.875rem;
+.curator-markdown-editor,
+.curator-markdown-preview {
+  overflow: auto;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid #cbc7bf;
+  border-radius: var(--mantine-radius-md);
+  background: #fff;
+}
+
+.curator-markdown-editor:focus-within {
+  border-color: var(--mantine-color-curator-6);
+  outline: 2px solid var(--mantine-color-curator-3);
+  outline-offset: 1px;
+}
+
+.curator-markdown-preview {
+  padding: 1rem 1.25rem;
+  font-size: 0.9375rem;
   line-height: 1.7;
+}
+
+.curator-markdown-preview .markdown-body > * { margin-block: 0 0.9rem; }
+.curator-markdown-preview .markdown-body > :last-child { margin-bottom: 0; }
+.curator-markdown-preview .markdown-body h2 { margin-top: 1.5rem; font-size: 1.15rem; }
+.curator-markdown-preview .markdown-body h3 { margin-top: 1.25rem; font-size: 1rem; }
+.curator-markdown-preview .markdown-body h4,
+.curator-markdown-preview .markdown-body h5,
+.curator-markdown-preview .markdown-body h6 { margin-top: 1.1rem; font-size: 0.9375rem; }
+.curator-markdown-preview .markdown-body ul,
+.curator-markdown-preview .markdown-body ol { padding-left: 1.4rem; }
+.curator-markdown-preview .markdown-body li { margin-block: 0.25rem; }
+.curator-markdown-preview .markdown-body a { color: var(--mantine-color-curator-8); }
+.curator-markdown-preview .markdown-body code {
+  padding: 0.1em 0.35em;
+  border-radius: 0.3rem;
+  background: #f0eee9;
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.875em;
+}
+.curator-markdown-preview .markdown-body pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: var(--mantine-radius-md);
+  background: #f5f3ef;
+}
+.curator-markdown-preview .markdown-body pre code { padding: 0; background: none; }
+.curator-markdown-preview .markdown-body blockquote {
+  margin-inline: 0;
+  padding-left: 1rem;
+  border-left: 3px solid #dedbd4;
+  color: #68655f;
+}
+.curator-markdown-preview .markdown-body hr { margin-block: 1.5rem; border: 0; border-top: 1px solid #dedbd4; }
+
+/* Side by side while there is room; the toggle still offers each view alone. */
+.curator-markdown-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+@media (max-width: 60rem) {
+  .curator-markdown-split { grid-template-columns: 1fr; }
 }
 
 .curator-savebar-mantine {
   position: sticky;
   z-index: 20;
-  bottom: 1rem;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 1rem 2.8rem rgba(68, 54, 40, 0.12);
-  backdrop-filter: blur(16px);
+  bottom: 0;
+  /* Sits clear of the last section instead of touching it, and stays opaque so
+     content scrolling underneath does not ghost through. Its own border is
+     enough separation — a large soft shadow just smeared a grey gradient across
+     the gap. */
+  margin-top: 0.5rem;
+  background: #fffefc;
+}
+
+.curator-save-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .curator-code-block {
@@ -144,11 +212,6 @@
   font-size: 0.75rem;
   line-height: 1.55;
   white-space: pre-wrap;
-}
-
-.curator-code-block.is-new {
-  border-color: var(--mantine-color-curator-2);
-  background: var(--mantine-color-curator-0);
 }
 
 .curator-state-dot {
@@ -184,11 +247,11 @@
 
 .curator-root .mantine-Paper-root {
   border-color: #dedbd4;
-  background: rgba(255, 255, 255, 0.72);
+  /* Opaque: translucent panels let the page tint and the panel behind them show
+     through, which read as "something is back there" rather than as depth. */
+  background: #fffefc;
 }
 
-/* Ingest workspace keeps business-specific two-pane structure; all controls
-   inside it are Mantine components and inherit the same theme and type scale. */
 .curator-page {
   display: grid;
   gap: 1.5rem;
@@ -209,140 +272,7 @@
   letter-spacing: -0.035em;
 }
 
-.curator-ingest-start {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 20rem;
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.curator-ingest-form,
-.curator-agent-panel,
-.curator-draft-panel,
-.curator-panel {
-  padding: 1.25rem;
-  border: 1px solid #dedbd4;
-  border-radius: var(--mantine-radius-lg);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.curator-ingest-form {
-  display: grid;
-  gap: 1rem;
-}
-
-.curator-url-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.65rem;
-  align-items: end;
-}
-
-.curator-run-settings summary,
-.curator-evidence summary {
-  color: #68655f;
-  font-size: 0.8125rem;
-  cursor: pointer;
-}
-
-.curator-run-settings > div {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.curator-panel-header,
-.curator-draft-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.curator-panel-header h2,
-.curator-draft-header h2 {
-  margin: 0.2rem 0 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.curator-row-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.curator-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding-block: 0.7rem;
-  border-top: 1px solid #ebe8e2;
-}
-
-.curator-row:first-child { border-top: 0; }
-.curator-row a { display: contents; }
-.curator-row-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--mantine-color-gray-5); }
-.curator-row-dot.is-ok { background: var(--mantine-color-teal-6); }
-.curator-row-dot.is-warn { background: var(--mantine-color-yellow-7); }
-.curator-row-dot.is-block { background: var(--mantine-color-red-6); }
-.curator-row-main { display: grid; min-width: 0; gap: 0.15rem; }
-.curator-row-main strong { overflow: hidden; font-size: 0.875rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.curator-row-main span { overflow: hidden; color: #77736c; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
 .curator-empty-state { padding: 0.75rem 0; color: #77736c; font-size: 0.8125rem; }
-
-.curator-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.curator-warnings-block {
-  padding: 0.85rem 1rem;
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-yellow-0);
-}
-
-.curator-warnings-block li {
-  color: #514f49;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.curator-workspace {
-  display: grid;
-  grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr);
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.curator-work-switch { display: none; }
-.curator-timeline { display: grid; gap: 0; margin: 0.9rem 0 0; padding: 0; list-style: none; }
-.curator-timeline li { display: grid; grid-template-columns: 1rem 1fr; gap: 0.75rem; padding-block: 0.6rem; border-top: 1px solid #ebe8e2; }
-.curator-timeline li:first-child { border-top: 0; }
-.curator-timeline li > span { align-self: start; width: 0.55rem; height: 0.55rem; margin-top: 0.3rem; border-radius: 50%; background: var(--mantine-color-gray-5); }
-.curator-timeline li.is-active > span { background: var(--mantine-color-curator-6); box-shadow: 0 0 0 3px var(--mantine-color-curator-1); }
-.curator-timeline li.is-complete > span { background: var(--mantine-color-teal-6); }
-.curator-timeline li.is-error > span { background: var(--mantine-color-red-6); }
-.curator-timeline strong { display: block; font-size: 0.8125rem; font-weight: 600; }
-.curator-timeline p { margin: 0.15rem 0 0; color: #77736c; font-size: 0.75rem; line-height: 1.5; }
-.curator-evidence { margin-top: 1rem; }
-.curator-evidence pre { max-height: 14rem; overflow: auto; margin: 0.5rem 0 0; padding: 0.75rem; border-radius: var(--mantine-radius-md); background: #f5f3ef; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.75rem; white-space: pre-wrap; }
-.curator-retry-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-.curator-draft-identity { display: flex; align-items: center; gap: 0.75rem; }
-.curator-draft-identity p { margin: 0 0 0.15rem; color: #77736c; font-size: 0.75rem; }
-.curator-panel-note { color: #68655f; font-size: 0.8125rem; line-height: 1.6; }
 .curator-agent-stream {
   max-height: 22rem;
   overflow: auto;
@@ -358,18 +288,212 @@
   word-break: break-word;
 }
 
+.curator-ingest-conversation {
+  display: grid;
+  width: min(100%, 52rem);
+  gap: 0.75rem;
+  margin-inline: auto;
+}
+
+.curator-editor-split {
+  display: grid;
+  grid-template-columns: minmax(24rem, 0.95fr) minmax(34rem, 1.55fr);
+  height: calc(100dvh - 8rem);
+  /* Below this the two-column workspace stops fitting the viewport; the short-
+     viewport branch below stacks it rather than pushing the composer offscreen. */
+  min-height: 32rem;
+  gap: 1rem;
+  align-items: start;
+  overflow: hidden;
+}
+
+.curator-editor-chat {
+  height: 100%;
+  min-width: 0;
+}
+
+.curator-editor-main {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding-inline-end: 0.25rem;
+  scrollbar-gutter: stable;
+}
+
+/* The last section must clear the sticky save bar, otherwise it is only found
+   by scrolling past what looks like the end of the form. */
+.curator-editor-main > .mantine-Stack-root:first-of-type {
+  padding-bottom: 0.5rem;
+}
+
+.curator-editor-section-heading h2 {
+  font-size: 1rem;
+  letter-spacing: -0.015em;
+}
+
+.curator-conversation {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  border: 1px solid #dedbd4;
+  border-radius: var(--mantine-radius-lg);
+  background: #fffefc;
+  /* Tight enough to read as an edge, not as a grey haze around the column. */
+  box-shadow: 0 1px 2px rgba(68, 54, 40, 0.04);
+}
+
+.curator-conversation-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3rem;
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid #dedbd4;
+  background: #faf9f6;
+}
+
+.curator-conversation-header h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #1f1e1b;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.curator-conversation-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+  padding: 1rem;
+  scroll-padding-block: 1rem;
+}
+
+.curator-conversation-empty {
+  display: block;
+  max-width: 34rem;
+  margin: 4rem auto;
+  text-align: center;
+}
+
+.curator-msg {
+  width: fit-content;
+  max-width: min(92%, 42rem);
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--mantine-radius-md);
+}
+
+.curator-msg-user {
+  margin-left: auto;
+  border-bottom-right-radius: 0.25rem;
+  background: var(--mantine-color-curator-1);
+  color: #3f2d22;
+}
+
+.curator-msg-assistant {
+  margin-right: auto;
+  border: 1px solid #e3e0da;
+  border-bottom-left-radius: 0.25rem;
+  background: #fff;
+}
+
+.curator-msg-run { min-width: min(30rem, 100%); }
+
+.curator-conversation-controls {
+  /* Never shrink: the Agent picker and 发送 live here, and a squeezed panel
+     used to clip them out of the conversation's hidden overflow. */
+  flex: 0 0 auto;
+  padding: 0.75rem;
+  border-top: 1px solid #dedbd4;
+  background: #faf9f6;
+}
+
+.curator-composer-input {
+  width: 100%;
+  min-height: 4.75rem;
+  max-height: 11rem;
+  resize: none;
+  padding: 0.75rem;
+  border: 1px solid #cbc7bf;
+  border-radius: var(--mantine-radius-md);
+  outline: 0;
+  background: #fff;
+  color: #201f1c;
+  font: inherit;
+  line-height: 1.55;
+}
+
+.curator-composer-input:focus-visible {
+  border-color: var(--mantine-color-curator-6);
+  outline: 2px solid var(--mantine-color-curator-3);
+  outline-offset: 1px;
+}
+
+.curator-conversation-diff {
+  padding: 0.65rem;
+  border: 1px solid #ebe8e2;
+  border-radius: var(--mantine-radius-sm);
+  background: #faf9f6;
+}
+
+/* The progress trail: older steps fade back so the newest line reads first. */
+.curator-agent-trail {
+  padding-left: 1.35rem;
+  border-left: 2px solid #ebe8e2;
+}
+
+.curator-agent-trail > :last-child { color: #3f3d39; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .curator-agent-trail > :last-child { animation: curator-trail-in 260ms ease-out; }
+}
+
+@keyframes curator-trail-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+
+.curator-agent-details summary {
+  min-height: 2rem;
+  cursor: pointer;
+  color: #68655f;
+  font-size: 0.75rem;
+  line-height: 2rem;
+}
+
+.curator-agent-details[open] summary { margin-bottom: 0.4rem; }
+
 .curator-pulse-dot { width: 0.5rem; height: 0.5rem; flex: 0 0 auto; border-radius: 50%; background: var(--mantine-color-curator-6); animation: curator-pulse 1.2s ease-in-out infinite; }
-
-.curator-diff-row + .curator-diff-row { border-top: 1px solid #ebe8e2; padding-top: 0.6rem; }
-
-.curator-draft-loading { display: flex; gap: 0.4rem; padding: 2rem 0; }
-.curator-draft-loading span { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--mantine-color-gray-5); animation: curator-pulse 1.2s ease-in-out infinite; }
-.curator-draft-loading span:nth-child(2) { animation-delay: 0.15s; }
-.curator-draft-loading span:nth-child(3) { animation-delay: 0.3s; }
 
 @keyframes curator-pulse {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
+}
+
+/* Stack when the workspace cannot fit side by side — narrow, or too short for
+   an equal-height split (a zoomed-in window hits the height case first). */
+@media (max-width: 64rem), (max-height: 44rem) {
+  .curator-editor-split {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .curator-editor-chat,
+  .curator-editor-main {
+    height: auto;
+    overflow: visible;
+    padding-inline-end: 0;
+  }
+
+  .curator-conversation {
+    height: min(38rem, calc(100dvh - 7rem));
+    min-height: 30rem;
+  }
 }
 
 @media (max-width: 48rem) {
@@ -386,19 +510,10 @@
   }
 
   .curator-page-heading { align-items: flex-start; flex-direction: column; gap: 1rem; }
-  .curator-ingest-start,
-  .curator-workspace { grid-template-columns: 1fr; }
-  .curator-workspace[data-pane="process"] .curator-draft-panel,
-  .curator-workspace[data-pane="draft"] .curator-agent-panel { display: none; }
-  .curator-work-switch { display: block; width: 100%; margin-bottom: 1rem; }
-  .curator-work-switch .mantine-Tabs-list { display: flex; }
-  .curator-work-switch .mantine-Tabs-tab { flex: 1; }
-  .curator-run-settings > div,
-  .curator-url-row { grid-template-columns: 1fr; }
+  .curator-msg { max-width: 96%; }
+  .curator-msg-run { min-width: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .curator-draft-loading span,
-  .curator-pulse-dot,
-  .curator-agent-stream { animation: none; }
+  .curator-pulse-dot { animation: none; }
 }

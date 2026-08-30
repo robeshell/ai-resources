@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Badge, Box, Button, Flex, Group, Paper, SimpleGrid, Skeleton, Stack, Text, Title } from "@mantine/core";
+import { Accordion, Alert, Badge, Box, Button, Flex, Group, Paper, SimpleGrid, Skeleton, Stack, Text, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { curatorRequest, type ActivityEntry, type BuildJob, type CuratorIngestBlock, type CuratorRun } from "@/lib/curator-client";
 import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS } from "@/lib/content-blocks";
@@ -24,14 +24,35 @@ type DashboardData = {
 
 type QueueTone = "error" | "warn" | "info";
 type QueueRow = { key: string; tone: QueueTone; title: string; detail: string; action: string; href: string };
+/** A folded group: the label and count are always readable, the rows are not. */
+type Bucket = { id: string; label: string; total: number; rows: QueueRow[]; moreHref?: string };
 
 const TONE_COLOR: Record<QueueTone, string> = { error: "red", warn: "yellow", info: "gray" };
+/** How many rows an expanded group shows before deferring to the library. */
+const BUCKET_PREVIEW = 5;
 
 function relativeTime(value: string) {
   const at = Date.parse(value); if (Number.isNaN(at)) return "—";
   const minutes = Math.round((Date.now() - at) / 60000);
   if (minutes < 1) return "刚刚"; if (minutes < 60) return `${minutes} 分钟前`; if (minutes < 1440) return `${Math.round(minutes / 60)} 小时前`;
   return new Date(at).toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" });
+}
+
+function runTitle(run: CuratorRun) {
+  return run.draft?.name || run.source?.title || run.input?.url || "资源分析";
+}
+
+/**
+ * Where a run can actually be picked up again. A reprocess lives in the
+ * editor of the content it belongs to; a fresh ingest lives in its own
+ * conversation on the ingest page. Without a conversation there is nothing to
+ * resume, so the ingest page opens a new one.
+ */
+function runHref(run: CuratorRun) {
+  const contentId = run.input?.contentId;
+  if (contentId) return `/curator/resources/${run.input?.block ?? "tool"}/${encodeURIComponent(contentId)}`;
+  const conversationId = run.input?.conversationId;
+  return conversationId ? `/curator/ingest/?conversation=${encodeURIComponent(conversationId)}` : "/curator/ingest/";
 }
 
 function QueueItemRow({ tone, title, detail, action, href }: QueueRow) {
@@ -81,24 +102,49 @@ export function CuratorDashboard() {
     } finally { setBuildBusy(false); }
   }, [setBuild]);
 
-  // One prioritized queue instead of scattered panels: build, failed and
-  // pending analyses, unpublished drafts, then content issues.
-  const queue: QueueRow[] = [];
-  if (build.status === "error") queue.push({ key: "build", tone: "error", title: "上次构建校验失败", detail: build.error || "构建没有完成", action: "查看日志", href: "/curator/settings/" });
-  for (const run of data?.runs.filter((item) => item.status === "failed") ?? []) {
-    queue.push({ key: run.id, tone: "error", title: run.draft?.name || run.source?.title || run.input?.url || "资源分析", detail: `${run.error || "分析失败"} · ${relativeTime(run.updatedAt)}`, action: "重新分析", href: `/curator/ingest/?run=${run.id}` });
+  // Failures stay in the open — everything else is folded away behind a labelled
+  // count, so the page reads the same whether the library holds six items or six
+  // hundred.
+  const failedRuns = data?.runs.filter((item) => item.status === "failed") ?? [];
+  const pendingRuns = data?.runs.filter((item) => item.status === "awaiting_review") ?? [];
+  // Drafts and content issues are two separate queries over the same library, so
+  // an unpublished draft with empty fields matches both. Publishing it would be
+  // refused, so it belongs in one bucket only — 待补齐, the step that unblocks it.
+  const issueIds = new Set((data?.issueItems ?? []).map((item) => item.id));
+  const pureDrafts = (data?.draftItems ?? []).filter((item) => !issueIds.has(item.id));
+
+  const buckets: Bucket[] = [];
+  if (data?.issueItems.length) {
+    buckets.push({
+      id: "issues", label: "内容待补齐", total: data.issuesTotal, moreHref: "/curator/resources/?issues=true",
+      rows: data.issueItems.slice(0, BUCKET_PREVIEW).map((issue) => ({
+        key: `issue:${issue.id}`, tone: "warn", title: issue.title,
+        detail: `${issue.issueCount} 个字段需要补齐 · ${relativeTime(issue.updatedAt)}`,
+        action: "去补齐", href: `/curator/resources/${issue.blockType}/${encodeURIComponent(issue.slug)}`,
+      })),
+    });
   }
-  for (const run of data?.runs.filter((item) => item.status === "awaiting_review") ?? []) {
-    queue.push({ key: run.id, tone: "warn", title: run.draft?.name || run.source?.title || "资源草稿", detail: `分析完成 · ${relativeTime(run.updatedAt)}`, action: "继续处理", href: `/curator/ingest/?run=${run.id}` });
+  if (pureDrafts.length) {
+    buckets.push({
+      id: "drafts", label: "草稿未发布", total: pureDrafts.length, moreHref: "/curator/resources/?status=draft",
+      rows: pureDrafts.slice(0, BUCKET_PREVIEW).map((draft) => ({
+        key: `draft:${draft.id}`, tone: "info", title: draft.title,
+        detail: `${contentBlocks[draft.blockType]?.label.zh ?? draft.blockType}草稿，发布后公开可见 · ${relativeTime(draft.updatedAt)}`,
+        action: "去发布", href: `/curator/resources/${draft.blockType}/${encodeURIComponent(draft.slug)}`,
+      })),
+    });
   }
-  for (const draft of (data?.draftItems ?? []).slice(0, 3)) {
-    queue.push({ key: draft.id, tone: "info", title: draft.title, detail: `${contentBlocks[draft.blockType]?.label.zh ?? draft.blockType}草稿，发布后公开可见 · ${relativeTime(draft.updatedAt)}`, action: "去发布", href: `/curator/resources/${draft.blockType}/${encodeURIComponent(draft.slug)}` });
+  if (pendingRuns.length) {
+    buckets.push({
+      id: "runs", label: "分析待确认", total: pendingRuns.length,
+      rows: pendingRuns.slice(0, BUCKET_PREVIEW).map((run) => ({
+        key: `run:${run.id}`, tone: "warn", title: runTitle(run),
+        detail: `分析完成 · ${relativeTime(run.updatedAt)}`,
+        action: "继续处理", href: runHref(run),
+      })),
+    });
   }
-  for (const issue of (data?.issueItems ?? []).slice(0, 3)) {
-    queue.push({ key: issue.id, tone: "warn", title: issue.title, detail: `${issue.issueCount} 个字段需要补齐 · ${relativeTime(issue.updatedAt)}`, action: "去补齐", href: `/curator/resources/${issue.blockType}/${encodeURIComponent(issue.slug)}` });
-  }
-  const hiddenDrafts = Math.max(0, (data?.draftsTotal ?? 0) - Math.min(3, data?.draftItems.length ?? 0));
-  const hiddenIssues = Math.max(0, (data?.issuesTotal ?? 0) - Math.min(3, data?.issueItems.length ?? 0));
+  const pendingTotal = buckets.reduce((total, bucket) => total + bucket.total, 0);
   const counts = data?.counts;
 
   return <Stack gap="xl">
@@ -118,32 +164,29 @@ export function CuratorDashboard() {
 
     {error ? <Alert color="red" title="工作台读取失败" role="alert">{error}</Alert> : null}
 
-    <Paper withBorder p="xl">
-      <Group justify="space-between" mb="md">
-        <Box>
-          <Text className="curator-eyebrow-mantine">需要处理</Text>
-          <Title order={2} mt={4}>按优先级排好了</Title>
-        </Box>
-        {data ? <Badge color={queue.length ? "orange" : "teal"} variant="light">{queue.length ? `${queue.length} 项` : "清空"}</Badge> : null}
+    {build.status === "error" ? <Alert color="red" title="上次构建校验失败" role="alert">
+      <Group justify="space-between" wrap="nowrap" gap="md">
+        <Text size="sm" lineClamp={2}>{build.error || "构建没有完成"}</Text>
+        <Button component={Link} href="/curator/settings/" size="xs" variant="white" color="red" style={{ flex: "0 0 auto" }}>查看日志</Button>
       </Group>
-      {!data ? <Stack gap="xs"><Skeleton h={52} /><Skeleton h={52} /></Stack> : queue.length ? (
-        <Stack gap={0}>
-          {queue.map(({ key, ...row }) => <QueueItemRow key={key} {...row} />)}
-          {(hiddenDrafts > 0 || hiddenIssues > 0) && <Group gap="lg" py="sm" className="curator-dashboard-row">
-            {hiddenDrafts > 0 ? <Button component={Link} href="/curator/resources/?status=draft" variant="subtle" size="xs" px={0}>全部 {data?.draftsTotal} 条草稿</Button> : null}
-            {hiddenIssues > 0 ? <Button component={Link} href="/curator/resources/?issues=true" variant="subtle" size="xs" px={0}>全部 {data?.issuesTotal} 条待补齐</Button> : null}
-          </Group>}
-        </Stack>
-      ) : (
-        <Stack align="center" py="xl" gap={4}>
-          <Text fw={600}>都处理完了</Text>
-          <Group mt="sm">
-            <Button component={Link} href="/curator/ingest/" size="xs">收录新资源</Button>
-            <Button variant="default" size="xs" disabled={buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>构建校验</Button>
+    </Alert> : null}
+
+    {failedRuns.length ? <Alert color="red" title={`${failedRuns.length} 次分析失败`} role="alert">
+      <Stack gap="xs">
+        {failedRuns.slice(0, BUCKET_PREVIEW).map((run) => (
+          <Group key={run.id} justify="space-between" wrap="nowrap" gap="md">
+            <Box miw={0}>
+              <Text size="sm" fw={600} truncate="end">{runTitle(run)}</Text>
+              <Text size="xs" lineClamp={1}>{run.error || "分析没有完成"} · {relativeTime(run.updatedAt)}</Text>
+            </Box>
+            <Button component={Link} href={runHref(run)} size="xs" variant="white" color="red" style={{ flex: "0 0 auto" }}>
+              {run.input?.contentId ? "去编辑器重试" : "继续这次收录"}
+            </Button>
           </Group>
-        </Stack>
-      )}
-    </Paper>
+        ))}
+        {failedRuns.length > BUCKET_PREVIEW ? <Text size="xs">另有 {failedRuns.length - BUCKET_PREVIEW} 次，在系统页可以清理运行记录</Text> : null}
+      </Stack>
+    </Alert> : null}
 
     <div>
       <Group justify="space-between" mb="md" wrap="wrap">
@@ -169,20 +212,54 @@ export function CuratorDashboard() {
       </SimpleGrid>
     </div>
 
-    <Paper withBorder p="xl">
-      <Group justify="space-between" mb="md">
+    <div>
+      <Group justify="space-between" mb="md" wrap="wrap">
         <Box>
-          <Text className="curator-eyebrow-mantine">最近修改</Text>
-          <Title order={2} mt={4}>Curator 写入记录</Title>
+          <Text className="curator-eyebrow-mantine">待办与记录</Text>
+          <Title order={2} mt={4}>{!data ? "读取中" : pendingTotal ? `${pendingTotal} 项等你处理` : "没有待处理的内容"}</Title>
         </Box>
         <Text size="xs" c="dimmed" className="curator-number">数据更新于 {data?.updatedAt?.replaceAll("-", ".") || "—"}</Text>
       </Group>
-      {data?.activity.length ? <Stack gap={0}>
-        {data.activity.slice(0, 6).map((entry, index) => <Group justify="space-between" align="center" wrap="nowrap" py="sm" className="curator-dashboard-row" key={`${entry.at}-${index}`}>
-          <Group wrap="nowrap" gap="sm"><Box className="curator-state-dot" data-color="teal" /><Box maw="100%" miw={0}><Text fw={600} size="sm" truncate="end">{entry.message}</Text><Text size="xs" c="dimmed" mt={2} truncate="end">{entry.slug || entry.type}</Text></Box></Group>
-          <Text size="xs" c="dimmed" style={{ flex: "0 0 auto" }}>{relativeTime(entry.at)}</Text>
-        </Group>)}
-      </Stack> : <Text size="sm" c="dimmed" py="lg">还没有写入记录</Text>}
-    </Paper>
+      {!data ? <Stack gap="xs"><Skeleton h={52} /><Skeleton h={52} /></Stack> : (
+        <Accordion variant="separated" multiple chevronPosition="right">
+          {buckets.map((bucket) => (
+            <Accordion.Item value={bucket.id} key={bucket.id}>
+              <Accordion.Control>
+                <Group justify="space-between" wrap="nowrap" pr="sm">
+                  <Text fw={600} size="sm">{bucket.label}</Text>
+                  <Badge variant="light" color="orange">{bucket.total}</Badge>
+                </Group>
+              </Accordion.Control>
+              <Accordion.Panel>
+                <Stack gap={0}>
+                  {bucket.rows.map(({ key, ...row }) => <QueueItemRow key={key} {...row} />)}
+                  {bucket.moreHref && bucket.total > bucket.rows.length ? (
+                    <Group py="sm" className="curator-dashboard-row">
+                      <Button component={Link} href={bucket.moreHref} variant="subtle" size="xs" px={0}>在资源库看全部 {bucket.total} 条</Button>
+                    </Group>
+                  ) : null}
+                </Stack>
+              </Accordion.Panel>
+            </Accordion.Item>
+          ))}
+          <Accordion.Item value="activity">
+            <Accordion.Control>
+              <Group justify="space-between" wrap="nowrap" pr="sm">
+                <Text fw={600} size="sm">最近修改</Text>
+                <Badge variant="light" color="gray">{data.activity.length}</Badge>
+              </Group>
+            </Accordion.Control>
+            <Accordion.Panel>
+              {data.activity.length ? <Stack gap={0}>
+                {data.activity.slice(0, 6).map((entry, index) => <Group justify="space-between" align="center" wrap="nowrap" py="sm" className="curator-dashboard-row" key={`${entry.at}-${index}`}>
+                  <Group wrap="nowrap" gap="sm"><Box className="curator-state-dot" data-color="teal" /><Box maw="100%" miw={0}><Text fw={600} size="sm" truncate="end">{entry.message}</Text><Text size="xs" c="dimmed" mt={2} truncate="end">{entry.slug || entry.type}</Text></Box></Group>
+                  <Text size="xs" c="dimmed" style={{ flex: "0 0 auto" }}>{relativeTime(entry.at)}</Text>
+                </Group>)}
+              </Stack> : <Text size="sm" c="dimmed" py="sm">还没有写入记录</Text>}
+            </Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
+      )}
+    </div>
   </Stack>;
 }

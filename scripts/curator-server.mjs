@@ -2,7 +2,6 @@ import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promises as fs, readFileSync } from "node:fs";
 import http from "node:http";
-import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -12,14 +11,25 @@ import {
   createContentRepository,
   importLegacyCatalog,
 } from "./curator-db.mjs";
+import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft } from "./curator-agent-output.mjs";
+import {
+  assertContentItemShape,
+  assertUrlShape,
+  contentIssueCount,
+  PLATFORMS,
+  PRICING,
+  validateContentPayload,
+} from "./curator-content-rules.mjs";
 import { exportContent } from "./curator-export.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.CURATOR_PORT || 4317);
+const HOST = process.env.CURATOR_HOST || "127.0.0.1";
 const SITE_PORT = process.env.CURATOR_SITE_PORT || "3000";
 const SCHEMA_PATH = path.join(ROOT, "scripts/curator-output.schema.json");
 const SKILL_PATH = path.join(ROOT, "skills/curator-ingest/SKILL.md");
 const MAX_REQUEST_BYTES = 128 * 1024;
+const AGENT_TIMEOUT_MS = Number(process.env.CURATOR_AGENT_TIMEOUT_MS) || 240_000;
 const MAX_LOGO_BYTES = 512 * 1024;
 const LOGO_TYPES = {
   "image/png": "png",
@@ -33,8 +43,6 @@ const LOGO_TYPES = {
 };
 const KINDS = ["tool", "skill", "open-source", "prompt"];
 const INGEST_BLOCKS = ["tool", "skill", "project", "prompt"];
-const PRICING = ["free", "freemium", "paid", "api"];
-const PLATFORMS = ["web", "app", "api", "cli"];
 const allowedOrigins = new Set([
   `http://localhost:${SITE_PORT}`,
   `http://127.0.0.1:${SITE_PORT}`,
@@ -106,41 +114,6 @@ async function readJson(request) {
   }
 }
 
-function isPrivateIp(address) {
-  const normalized = address.toLowerCase();
-  if (normalized.startsWith("::ffff:")) return isPrivateIp(normalized.slice(7));
-  if (net.isIPv4(normalized)) {
-    const [a, b] = normalized.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224;
-  }
-  if (net.isIPv6(normalized)) {
-    return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") ||
-      normalized.startsWith("fd") || /^fe[89ab]/.test(normalized);
-  }
-  return true;
-}
-
-// Shape-only check: no DNS, so saving works offline. Used before writing JSON.
-function assertUrlShape(value) {
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new Error("请输入完整的 http 或 https 链接");
-  }
-  if (!["http:", "https:"].includes(url.protocol)) throw new Error("只支持 http 和 https 链接");
-  if (url.username || url.password) throw new Error("链接不能包含账号或密码");
-  const host = url.hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) {
-    throw new Error("不能使用本机地址");
-  }
-  if ((net.isIP(host.replace(/^\[|\]$/g, "")) && isPrivateIp(host.replace(/^\[|\]$/g, "")))) {
-    throw new Error("不能使用内网或保留地址");
-  }
-  return url;
-}
-
 function slugify(value) {
   // Keep CJK: a Chinese title should become a Chinese slug, not fall back to
   // a "new-resource" collision for every item.
@@ -157,20 +130,21 @@ function commandExists(bin) {
   return result.status === 0 && Boolean(result.stdout.trim());
 }
 
-function addModel(models, id, label) {
+function addModel(models, id, label, group) {
   const value = String(id || "").trim();
   if (!value) return;
   if (models.some((item) => item.id === value)) return;
-  models.push({ id: value, label: String(label || value).trim() || value });
+  models.push({ id: value, label: String(label || value).trim() || value, ...(group ? { group } : {}) });
 }
 
-function addCatalogModels(models, items) {
+function addCatalogModels(models, items, group) {
   for (const item of items || []) {
     if (item.visibility && item.visibility !== "list") continue;
     addModel(
       models,
       item.slug || item.model || item.id,
       item.display_name || item.displayName || item.slug || item.model,
+      group,
     );
   }
 }
@@ -208,20 +182,25 @@ async function listCodexModels() {
   let configText = "";
   try {
     configText = await fs.readFile(path.join(HOME, ".codex/config.toml"), "utf8");
-    addModel(models, configText.match(/^model\s*=\s*"([^"]+)"/m)?.[1]);
   } catch {
     /* no local Codex config */
   }
   const providerCatalog = readCcSwitchCurrentCodexCatalog();
   if (providerCatalog.length) {
-    addCatalogModels(models, providerCatalog);
-    return models;
+    addCatalogModels(models, providerCatalog, "服务商目录");
+  } else {
+    const catalogName = configText.match(/^\s*model_catalog_json\s*=\s*"([^"]+)"/m)?.[1];
+    const catalogFile = catalogName
+      ? path.join(HOME, ".codex", path.basename(catalogName))
+      : path.join(HOME, ".codex/models_cache.json");
+    addCatalogModels(models, (await readJsonFile(catalogFile))?.models, "服务商目录");
   }
-  const catalogName = configText.match(/^\s*model_catalog_json\s*=\s*"([^"]+)"/m)?.[1];
-  const catalogFile = catalogName
-    ? path.join(HOME, ".codex", path.basename(catalogName))
-    : path.join(HOME, ".codex/models_cache.json");
-  addCatalogModels(models, (await readJsonFile(catalogFile))?.models);
+  // The configured model leads the list — listAgents takes the first entry as
+  // the default — but the catalog is read first so it keeps its display name.
+  const configured = configText.match(/^model\s*=\s*"([^"]+)"/m)?.[1];
+  addModel(models, configured, configured, "服务商目录");
+  const index = models.findIndex((item) => item.id === configured);
+  if (index > 0) models.unshift(...models.splice(index, 1));
   return models;
 }
 
@@ -229,17 +208,23 @@ async function listClaudeModels() {
   const settings = await readJsonFile(path.join(HOME, ".claude/settings.json")) || {};
   const env = { ...process.env, ...(settings.env || {}) };
   const models = [];
-  addModel(models, settings.model, settings.model);
-  addModel(models, env.ANTHROPIC_MODEL, env.ANTHROPIC_MODEL);
   const aliases = [
-    ["opus", env.ANTHROPIC_DEFAULT_OPUS_MODEL, env.ANTHROPIC_DEFAULT_OPUS_MODEL_NAME],
-    ["sonnet", env.ANTHROPIC_DEFAULT_SONNET_MODEL, env.ANTHROPIC_DEFAULT_SONNET_MODEL_NAME],
-    ["haiku", env.ANTHROPIC_DEFAULT_HAIKU_MODEL, env.ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME],
-    ["fable", env.ANTHROPIC_DEFAULT_FABLE_MODEL, env.ANTHROPIC_DEFAULT_FABLE_MODEL_NAME],
+    ["opus", env.ANTHROPIC_DEFAULT_OPUS_MODEL],
+    ["sonnet", env.ANTHROPIC_DEFAULT_SONNET_MODEL],
+    ["haiku", env.ANTHROPIC_DEFAULT_HAIKU_MODEL],
+    ["fable", env.ANTHROPIC_DEFAULT_FABLE_MODEL],
   ];
-  for (const [alias, resolved, name] of aliases) {
-    addModel(models, alias, name ? `${alias} · ${name}` : alias);
-    addModel(models, resolved, name || resolved);
+  // An alias and the model it points at are one choice, not two. Keep the
+  // alias as the id so it keeps following the provider selected in cc-switch,
+  // and name the target in the label so the row is unambiguous.
+  const resolvedByAlias = new Set();
+  for (const [alias, resolved] of aliases) {
+    const target = String(resolved || "").trim();
+    addModel(models, alias, target ? `${alias} · ${target}` : alias, "本地别名");
+    if (target) resolvedByAlias.add(target);
+  }
+  for (const extra of [settings.model, env.ANTHROPIC_MODEL]) {
+    if (!resolvedByAlias.has(String(extra || "").trim())) addModel(models, extra, extra, "本地别名");
   }
   const base = String(env.ANTHROPIC_BASE_URL || "").replace(/\/+$/, "");
   const key = env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY || "";
@@ -257,8 +242,11 @@ async function listClaudeModels() {
         const payload = await response.json();
         const list = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.models) ? payload.models : [];
         for (const item of list) {
-          const id = item.id || item.name || item.slug;
-          addModel(models, id, item.display_name || item.name || id);
+          const id = String(item.id || item.name || item.slug || "").trim();
+          // Skip what an alias already covers so the same model is not offered
+          // twice under two names.
+          if (!id || resolvedByAlias.has(id)) continue;
+          addModel(models, id, item.display_name || item.name || id, "网关模型");
         }
       }
     } catch {
@@ -312,9 +300,9 @@ function sanitizeToolOutput(value, maxChars = 1200, maxLines = 30) {
   return text.length > maxChars ? `…${text.slice(-maxChars)}` : text;
 }
 
-function runProcess({ command, args, prompt, parseOutput, onChild, onToolOutput, onAgentLog }) {
+function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, onToolOutput, onAgentLog, onStdoutLine }) {
   return new Promise(async (resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"], cwd: ROOT });
+    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"], cwd });
     onChild?.(child);
     let stdout = "";
     let stderr = "";
@@ -331,7 +319,13 @@ function runProcess({ command, args, prompt, parseOutput, onChild, onToolOutput,
       stdout = `${stdout}${text}`.slice(-20000);
       pendingOut += text;
       const newline = pendingOut.lastIndexOf("\n");
-      if (newline >= 0) { forward("stdout", pendingOut.slice(0, newline + 1)); pendingOut = pendingOut.slice(newline + 1); }
+      if (newline < 0) return;
+      const complete = pendingOut.slice(0, newline + 1);
+      pendingOut = pendingOut.slice(newline + 1);
+      // A structured stream is read line by line instead of being dumped into
+      // the technical log, which would be thousands of unreadable JSON lines.
+      if (onStdoutLine) for (const line of complete.split("\n")) { if (line.trim()) onStdoutLine(line); }
+      else forward("stdout", complete);
     });
     child.stderr.on("data", (chunk) => {
       const text = chunk.toString();
@@ -342,7 +336,13 @@ function runProcess({ command, args, prompt, parseOutput, onChild, onToolOutput,
     });
     if (prompt !== undefined) child.stdin.end(prompt);
     else child.stdin.end();
-    const timer = setTimeout(() => child.kill("SIGTERM"), 120_000);
+    // Fetching a page and writing a full draft regularly runs past two minutes
+    // on a slower model, and a kill at that point looked like a silent failure.
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGTERM");
+    }, AGENT_TIMEOUT_MS);
     child.on("error", (error) => {
       clearTimeout(timer);
       reject(error);
@@ -356,6 +356,7 @@ function runProcess({ command, args, prompt, parseOutput, onChild, onToolOutput,
         stderr: sanitizeToolOutput(stderr),
       });
       try {
+        if (timedOut) throw new Error(`${command} 超过 ${Math.round(AGENT_TIMEOUT_MS / 1000)} 秒没有完成，已停止`);
         if (code !== 0) throw new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`);
         resolve(await parseOutput(stdout));
       } catch (error) {
@@ -379,69 +380,138 @@ async function runCodex(prompt, model, options = {}) {
     return await runProcess({
       command: process.env.CURATOR_CODEX_BIN || "codex",
       args,
+      cwd: tempDir,
       prompt,
       parseOutput: async () => JSON.parse(await fs.readFile(outputPath, "utf8")),
       onChild: options.onChild,
       onToolOutput: options.onToolOutput,
-      onAgentLog: options.onAgentLog,
+      // Codex already narrates its work on stdout, so its latest readable line
+      // doubles as the progress line the ingest view shows.
+      onAgentLog: (text, stream) => {
+        options.onAgentLog?.(text, stream);
+        if (stream !== "stdout") return;
+        const latest = codexProgressLine(text);
+        if (latest) options.onProgress?.(latest, { kind: "status" });
+      },
     });
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
 }
 
-function parseClaudeDraft(stdout) {
-  const text = String(stdout || "").trim();
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("Claude 没有返回 JSON");
-  const payload = JSON.parse(text.slice(start, end + 1));
-  const result = payload.result ?? payload.structured_output ?? payload;
-  if (typeof result === "string") {
-    const match = result.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Claude 没有返回 JSON");
-    return JSON.parse(match[0]);
-  }
-  if (result && typeof result === "object" && (result.name || result.slug || result.verdict)) return result;
-  throw new Error("Claude 没有返回结构化结果");
+/**
+ * The ingest Agent's whole policy, in one place. It used to be spread across a
+ * denylist, an inherited working directory, a default MCP config and an
+ * unstated permission mode, which made it impossible to answer "what can this
+ * thing actually do?" — and a denylist leaked exactly once it mattered (a
+ * blocked WebSearch simply became an MCP search tool).
+ *
+ * The task is: read one page, maybe check a fact, write a JSON draft. So:
+ *
+ * - Tools are an ALLOWLIST of the two network tools the task needs. Anything
+ *   not named here — Bash, Read, Glob, Grep, Edit, Write, sub-agents — does not
+ *   exist for this run, and a new built-in tool cannot silently appear.
+ * - No MCP servers, no CLAUDE.md, no skills, plugins or hooks. The run must not
+ *   change behaviour because the operator installed something yesterday.
+ * - It runs in an empty temporary directory, not in this repository. Even if a
+ *   file tool were somehow reachable, there is nothing here to read: not the
+ *   content database, not data/, not .env.local.
+ * - Permission prompts are bypassed because nothing is interactive. That is
+ *   only acceptable because of the two rules above: the blast radius is two
+ *   read-only network calls.
+ */
+const AGENT_POLICY = {
+  tools: ["WebFetch", "WebSearch"],
+  timeoutMs: AGENT_TIMEOUT_MS,
+  mcp: false,
+  customisations: false,
+  workspace: "临时目录",
+};
+
+function agentPolicyNote() {
+  return `工具策略：仅允许 ${AGENT_POLICY.tools.join("、")}；不加载 MCP、技能、插件与 CLAUDE.md；在临时目录中运行，读不到本仓库；超时 ${Math.round(AGENT_POLICY.timeoutMs / 1000)} 秒。`;
 }
 
 async function runClaude(prompt, model, options = {}) {
+  // See AGENT_POLICY. `--tools` is an allowlist of built-in tools, so nothing
+  // outside it exists for this run; --safe-mode drops CLAUDE.md, skills,
+  // plugins, hooks and custom agents; --strict-mcp-config drops MCP servers.
+  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "ai-nav-ingest-"));
   const args = [
-    "--print", "--output-format", "json", "--json-schema", readFileSync(SCHEMA_PATH, "utf8"),
+    // `stream-json` reports what the Agent is doing while it works; the plain
+    // `json` format stays silent until the very end, which left the operator
+    // watching a spinner with nothing to read.
+    "--print", "--output-format", "stream-json", "--verbose",
+    "--json-schema", claudeJsonSchema(readFileSync(SCHEMA_PATH, "utf8")),
+    "--safe-mode",
+    "--strict-mcp-config",
+    "--tools", AGENT_POLICY.tools.join(","),
     "--dangerously-skip-permissions",
-    "--disallowedTools", "Bash,Edit,Write,WebSearch,Agent,NotebookEdit",
   ];
   if (model) args.push("--model", model);
-  args.push(prompt);
-  return runProcess({
-    command: process.env.CURATOR_CLAUDE_BIN || "claude",
-    args,
-    parseOutput: (stdout) => parseClaudeDraft(stdout),
-    onChild: options.onChild,
-    onToolOutput: options.onToolOutput,
-    onAgentLog: options.onAgentLog,
-  });
+
+  // The stream ends with the same result envelope the `json` format returns.
+  // Keep it aside: the raw stdout buffer is capped and the envelope can be
+  // pushed out of it by a long run.
+  let resultLine = "";
+  let lastTokenReport = 0;
+  let lastTokens = 0;
+  let lastMessage = "";
+  const report = (message, data) => {
+    // The stream repeats itself (a task summary and its tool call describe the
+    // same step); one line per actual step is what makes it readable.
+    if (!message || message === lastMessage) return;
+    lastMessage = message;
+    options.onProgress?.(message, data);
+  };
+
+  try {
+    return await runProcess({
+      command: process.env.CURATOR_CLAUDE_BIN || "claude",
+      args,
+      cwd: workspace,
+      // Through stdin, like codex: `--tools <tools...>` is variadic, so a
+      // trailing positional prompt gets swallowed as another tool name and the
+      // CLI exits with "Input must be provided".
+      prompt,
+      onStdoutLine: (line) => {
+        let event;
+        try {
+          event = JSON.parse(line);
+        } catch {
+          return;
+        }
+        if (event.type === "result") { resultLine = line; return; }
+        const status = claudeStreamStatus(event);
+        if (!status) return;
+        if (status.kind === "tokens") {
+          // ~1000 of these per run: report progress at most once a second.
+          lastTokens = status.tokens;
+          // A counter that restarts at "1 tokens" each turn reads like a glitch.
+          if (lastTokens < 50) return;
+          const at = Date.now();
+          if (at - lastTokenReport < 1000) return;
+          lastTokenReport = at;
+          // Tagged so the view can feed the header counter without adding a
+          // trail step for every tick.
+          report(`思考中 · ${lastTokens} tokens`, { kind: "tokens", tokens: lastTokens });
+          return;
+        }
+        report(status.text, { kind: status.kind, ...(lastTokens ? { tokens: lastTokens } : {}) });
+      },
+      parseOutput: (stdout) => parseClaudeDraft(resultLine || stdout),
+      onChild: options.onChild,
+      onToolOutput: options.onToolOutput,
+      onAgentLog: options.onAgentLog,
+      });
+  } finally {
+    await fs.rm(workspace, { recursive: true, force: true });
+  }
 }
 
 async function existingResources() {
   const repository = await contentStore();
   return repository.list().map(asLegacyCatalogItem);
-}
-
-// Turn raw CLI failures into a reason the operator can act on: usage limits,
-// login state, missing binary, or the first ERROR line of the log.
-function describeAgentFailure(message, toolLabel) {
-  const text = String(message || "");
-  const reset = text.match(/try again at (\d{1,2}:\d{2}\s*[AP]M)/i);
-  if (/usage limit|hit your usage/i.test(text)) return `${toolLabel} 额度已用尽${reset ? `，${reset[1]} 后重置` : ""}`;
-  if (/not logged in|unauthorized|invalid api key/i.test(text)) return `${toolLabel} 未登录或凭证失效`;
-  if (/ENOENT|command not found/i.test(text)) return `${toolLabel} 命令不存在或不在 PATH`;
-  const firstError = text.split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line && !/^\d{4}-\d{2}-\d{2}T/.test(line) && !/codex_models_manager/.test(line))
-    .find((line) => /^error/i.test(line));
-  return firstError ? firstError.slice(0, 140) : `${toolLabel} 没有返回结构化结果`;
 }
 
 function loadSkill() {
@@ -480,6 +550,7 @@ async function agentDraft(url, note, tool, model, targetBlock = "tool", options 
       : await runCodex(prompt, model, options);
     return { draft, agent: { mode: selected, tool: selected, model } };
   } catch (error) {
+    if (error?.agentDetail) throw error;
     const toolLabel = selected === "claude" ? "Claude Code" : "Codex";
     throw new Error(describeAgentFailure(error instanceof Error ? error.message : "", toolLabel));
   }
@@ -521,6 +592,7 @@ function publicRun(run) {
       ...(run.input?.block ? { block: run.input.block } : {}),
       ...(run.input?.mode ? { mode: run.input.mode } : {}),
       ...(run.input?.contentId ? { contentId: run.input.contentId } : {}),
+      ...(run.input?.conversationId ? { conversationId: run.input.conversationId } : {}),
       ...(run.input?.tool ? { tool: run.input.tool } : {}),
       ...(run.input?.model ? { model: run.input.model } : {}),
     },
@@ -625,6 +697,7 @@ async function restoreRuns() {
         block: INGEST_BLOCKS.includes(item.input?.block) ? item.input.block : "tool",
         ...(item.input?.mode ? { mode: item.input.mode } : {}),
         ...(item.input?.contentId ? { contentId: item.input.contentId } : {}),
+        ...(item.input?.conversationId ? { conversationId: item.input.conversationId } : {}),
         tool: item.input?.tool === "claude" ? "claude" : "codex",
         model: item.input?.model || "",
       },
@@ -707,7 +780,10 @@ async function executeRun(run) {
     emitRunEvent(run, "run", "phase.started", "info", "Agent 正在整理", {
       tool: run.input.tool,
       model: run.input.model,
+      policy: AGENT_POLICY,
     });
+    emitRunEvent(run, "run", "agent.log", "info",
+      agentPolicyNote(), { stream: "policy" });
     const catalogText = (await existingResources())
       .map((item) => `${item.slug} | ${item.name} | ${item.kind || "tool"}`)
       .join("\n");
@@ -715,6 +791,7 @@ async function executeRun(run) {
       catalog: catalogText,
       existingContent,
       onChild: (child) => { run.child = child; },
+      onProgress: (message, data) => emitRunEvent(run, "run", "phase.progress", "info", message, data),
       onAgentLog: (text, stream) => emitRunEvent(run, "run", "agent.log", "info", text, { stream }),
       onToolOutput: (payload) => {
         if (!payload.stdout && !payload.stderr) return;
@@ -754,6 +831,16 @@ async function executeRun(run) {
     }
 
     run.status = "awaiting_review";
+    if (run.input.conversationId) {
+      const repository = await contentStore();
+      repository.addMessage(run.input.conversationId, {
+        role: "assistant",
+        kind: "run",
+        text: run.input.mode === "reprocess" ? "新版草稿已生成，请检查后采用。" : "整理完成，请检查后保存。",
+        data: { runId: run.id, status: run.status, tool: run.agent?.tool || run.agent?.mode, draft: run.draft },
+        runId: run.id,
+      });
+    }
     emitRunEvent(run, "complete", "run.completed", "success", run.input.mode === "reprocess" ? "新版草稿已生成，请预览采用" : "整理完成，等待确认", {
       draft: run.draft,
       agent: run.agent,
@@ -764,6 +851,16 @@ async function executeRun(run) {
     if (run.status === "cancelled" || error?.cancelled) return;
     run.status = "failed";
     run.error = error instanceof Error ? error.message : "整理失败";
+    if (run.input.conversationId) {
+      const repository = await contentStore();
+      repository.addMessage(run.input.conversationId, {
+        role: "assistant",
+        kind: "run",
+        text: run.error,
+        data: { runId: run.id, status: run.status, error: run.error, tool: run.input.tool },
+        runId: run.id,
+      });
+    }
     emitRunEvent(run, run.phase || "run", "run.failed", "error", run.error);
   }
 }
@@ -782,6 +879,7 @@ function createRun(input) {
       block: input.block === "auto" ? "auto" : INGEST_BLOCKS.includes(input.block) ? input.block : "auto",
       ...(input.mode === "reprocess" ? { mode: "reprocess" } : { mode: "ingest" }),
       ...(input.contentId ? { contentId: String(input.contentId) } : {}),
+      ...(input.conversationId ? { conversationId: String(input.conversationId) } : {}),
       tool: input.tool === "claude" ? "claude" : "codex",
       model: cleanText(input.model, 80),
       ...(input.seed ? { seed: input.seed } : {}),
@@ -1136,10 +1234,10 @@ async function saveCandidate(run, draft) {
 }
 
 let writeQueue = Promise.resolve();
-async function saveDraft(rawDraft) {
+async function saveDraft(rawDraft, conversationId) {
   const repository = await contentStore();
   return writeQueue = writeQueue.catch(() => undefined).then(async () => {
-    const finalUrl = (await assertPublicUrl(rawDraft.url)).toString();
+    const finalUrl = (await assertUrlShape(rawDraft.url)).toString();
     const draft = normalizeDraft(rawDraft, finalUrl);
     const existing = await existingResources();
     if (existing.some((item) => item.id === draft.slug || item.slug === draft.slug || item.url === finalUrl)) {
@@ -1189,6 +1287,7 @@ async function saveDraft(rawDraft) {
       payload,
     };
     const saved = repository.save(item, { revisionKind: "manual", note: "从收录草稿保存" });
+    if (conversationId) repository.bindConversation(conversationId, saved.id);
     await bumpSite();
     await exportPublicContent();
     recordActivity({
@@ -1205,38 +1304,6 @@ async function saveDraft(rawDraft) {
       publicUrl: `http://localhost:${SITE_PORT}/zh/`,
     };
   });
-}
-
-const CONTENT_BLOCKS = ["tool", "skill", "project", "prompt", "course", "article"];
-
-function assertContentItemShape(item) {
-  if (!item || typeof item !== "object") throw new Error("内容必须是对象");
-  if (!CONTENT_BLOCKS.includes(item.blockType)) throw new Error("未知内容板块");
-  if (!String(item.id || item.slug || "").trim()) throw new Error("内容缺少 id 或 slug");
-  if (!String(item.title || "").trim()) throw new Error("标题不能为空");
-  if (!item.payload || typeof item.payload !== "object") throw new Error("内容 payload 无效");
-}
-
-function validateContentPayload(item) {
-  if (item.status !== "active") return;
-  if (["skill", "project", "course", "article"].includes(item.blockType) && !String(item.payload.body || "").trim()) {
-    throw new Error("已发布的长文必须填写正文");
-  }
-  if (item.blockType === "prompt" && !String(item.payload.prompt || "").trim()) {
-    throw new Error("已发布的提示词必须填写正文");
-  }
-}
-
-function contentIssueCount(item) {
-  const payload = item.payload || {};
-  let count = 0;
-  if (!String(item.title || "").trim()) count += 1;
-  if (!String(item.slug || "").trim()) count += 1;
-  if (!String(payload.summary?.zh || "").trim() || !String(payload.summary?.en || "").trim()) count += 1;
-  if (item.blockType === "tool" && (!String(payload.url || "").trim() || !String(payload.tagline?.zh || "").trim() || !String(payload.tagline?.en || "").trim())) count += 1;
-  if (["skill", "project"].includes(item.blockType) && !String(payload.body || "").trim()) count += 1;
-  if (item.blockType === "prompt" && !String(payload.prompt || "").trim()) count += 1;
-  return count;
 }
 
 async function listContentPage(searchParams) {
@@ -1290,13 +1357,18 @@ async function listContentPage(searchParams) {
 async function updateContentBatch(ids, status) {
   if (!["active", "archived"].includes(status)) throw new Error("批量操作只支持发布或归档");
   const repository = await contentStore();
-  const updated = [];
+  const note = status === "active" ? "批量发布" : "批量归档";
+  // Validate everything before the first write: a rejection halfway through
+  // would otherwise leave SQLite updated but the exported files untouched.
+  const entries = [];
   for (const id of [...new Set((ids || []).map(String))]) {
     const current = repository.get(id);
     if (!current) continue;
-    validateContentPayload({ ...current, status });
-    updated.push(repository.save({ ...current, status }, { expectedRevisionId: current.revision?.id, note: status === "active" ? "批量发布" : "批量归档" }));
+    const next = { ...current, status };
+    validateContentPayload(next);
+    entries.push({ item: next, expectedRevisionId: current.revision?.id, note });
   }
+  const updated = repository.saveMany(entries);
   await bumpSite();
   await exportPublicContent();
   return { updated: updated.length, message: `已${status === "active" ? "发布" : "归档"} ${updated.length} 条内容` };
@@ -1361,6 +1433,67 @@ async function abandonCandidate(itemId, revisionId) {
   return { message: "候选版本已放弃。" };
 }
 
+function firstPublicUrl(text) {
+  const match = String(text || "").match(/https?:\/\/[^\s<>"']+/i);
+  return match ? assertUrlShape(match[0].replace(/[),.;!?，。；！？]+$/, "")).toString() : "";
+}
+
+async function createConversationRun(repository, conversation, body) {
+  const text = cleanText(body.text, 4000);
+  if (!text) throw new Error("请输入要交给 Agent 的内容");
+  if (!["codex", "claude", undefined].includes(body.tool)) throw new Error("未知 Agent");
+
+  let input;
+  if (conversation.contentId) {
+    const item = repository.get(conversation.contentId);
+    if (!item) throw Object.assign(new Error("会话绑定的内容不存在"), { statusCode: 404 });
+    const sourceUrl = item.sourceUrl || item.payload?.url;
+    if (!sourceUrl) throw new Error("这条内容没有来源链接，无法重新处理");
+    input = {
+      url: sourceUrl,
+      note: text,
+      block: item.blockType,
+      mode: "reprocess",
+      contentId: item.id,
+      conversationId: conversation.id,
+      tool: body.tool,
+      model: body.model,
+    };
+  } else {
+    const url = firstPublicUrl(text);
+    if (!url) throw new Error("新收录需要包含一个完整的 http 或 https 链接");
+    input = {
+      url,
+      note: text.replace(url, "").trim(),
+      block: INGEST_BLOCKS.includes(body.block) ? body.block : "auto",
+      mode: "ingest",
+      conversationId: conversation.id,
+      tool: body.tool,
+      model: body.model,
+    };
+  }
+  const run = createRun(input);
+  const message = repository.addMessage(conversation.id, {
+    role: "user",
+    kind: "text",
+    text,
+    data: { runId: run.id },
+  });
+  return { messages: [message], run: publicRun(run) };
+}
+
+async function recordCancelledConversationRun(run) {
+  if (!run.input.conversationId) return;
+  const repository = await contentStore();
+  repository.addMessage(run.input.conversationId, {
+    role: "assistant",
+    kind: "run",
+    text: "已停止这次整理。",
+    data: { runId: run.id, status: "cancelled", tool: run.input.tool },
+    runId: run.id,
+  });
+}
+
 const server = http.createServer(async (request, response) => {
   const origin = allowedOrigin(request);
   if (origin === false) return sendJson(response, 403, { error: "当前页面来源不允许访问本地整理服务" });
@@ -1413,6 +1546,34 @@ const server = http.createServer(async (request, response) => {
       const limit = Math.min(Number(url.searchParams.get("limit")) || 30, ACTIVITY_KEEP);
       return sendJson(response, 200, { items: items.slice(0, limit) }, origin);
     }
+    if (url.pathname === "/conversations") {
+      const repository = await contentStore();
+      if (request.method === "GET") {
+        const contentId = url.searchParams.get("contentId") || undefined;
+        return sendJson(response, 200, { items: repository.listConversations({ contentId }) }, origin);
+      }
+      if (request.method === "POST") {
+        const body = await readJson(request);
+        const contentId = body.contentId ? cleanText(body.contentId, 160) : null;
+        const title = cleanText(body.title, 160);
+        return sendJson(response, 201, repository.createConversation({ title, contentId }), origin);
+      }
+    }
+    const conversationMessageMatch = url.pathname.match(/^\/conversations\/([^/]+)\/messages$/);
+    if (request.method === "POST" && conversationMessageMatch) {
+      const repository = await contentStore();
+      const conversation = repository.getConversation(decodeURIComponent(conversationMessageMatch[1]));
+      if (!conversation) return sendJson(response, 404, { error: "找不到这段对话" }, origin);
+      return sendJson(response, 202, await createConversationRun(repository, conversation, await readJson(request)), origin);
+    }
+    const conversationMatch = url.pathname.match(/^\/conversations\/([^/]+)$/);
+    if (request.method === "GET" && conversationMatch) {
+      const repository = await contentStore();
+      const conversation = repository.getConversation(decodeURIComponent(conversationMatch[1]));
+      return conversation
+        ? sendJson(response, 200, conversation, origin)
+        : sendJson(response, 404, { error: "找不到这段对话" }, origin);
+    }
     if (request.method === "GET" && url.pathname === "/content") {
       return sendJson(response, 200, await listContentPage(url.searchParams), origin);
     }
@@ -1440,6 +1601,13 @@ const server = http.createServer(async (request, response) => {
       const id = decodeURIComponent(contentItemMatch[1]);
       const current = repository.get(id);
       if (!current) return sendJson(response, 404, { error: "找不到对应内容" }, origin);
+      // Same staleness guard as saving: an editor opened before someone else
+      // edited this item must not be able to delete the newer version.
+      const expectedRevisionId = url.searchParams.get("revisionId");
+      if (!expectedRevisionId) return sendJson(response, 400, { error: "删除请求缺少版本号" }, origin);
+      if (Number(current.revision?.id || 0) !== Number(expectedRevisionId)) {
+        return sendJson(response, 409, { error: "内容已在其他窗口更新，请重新加载后再删除", code: "stale-revision" }, origin);
+      }
       repository.remove(id);
       await bumpSite();
       await exportPublicContent();
@@ -1462,6 +1630,7 @@ const server = http.createServer(async (request, response) => {
         model: body.model,
         mode: "reprocess",
         contentId: item.id,
+        conversationId: body.conversationId,
       });
       return sendJson(response, 202, publicRun(run), origin);
     }
@@ -1505,7 +1674,9 @@ const server = http.createServer(async (request, response) => {
         return;
       }
       if (request.method === "POST" && action === "cancel") {
-        return sendJson(response, 200, publicRun(cancelRun(run)), origin);
+        const cancelled = cancelRun(run);
+        await recordCancelledConversationRun(cancelled);
+        return sendJson(response, 200, publicRun(cancelled), origin);
       }
       if (request.method === "POST" && action === "retry") {
         const body = await readJson(request);
@@ -1514,6 +1685,15 @@ const server = http.createServer(async (request, response) => {
           ...(body.tool ? { tool: body.tool } : {}),
           ...(body.model !== undefined ? { model: body.model } : {}),
         });
+        if (next.input.conversationId) {
+          const repository = await contentStore();
+          repository.addMessage(next.input.conversationId, {
+            role: "user",
+            kind: "text",
+            text: "重试上一次整理",
+            data: { runId: next.id },
+          });
+        }
         return sendJson(response, 202, publicRun(next), origin);
       }
       if (request.method === "POST" && action === "save") {
@@ -1522,7 +1702,7 @@ const server = http.createServer(async (request, response) => {
         const draft = { ...(body.draft || run.draft || {}) };
         const result = run.input.mode === "reprocess"
           ? await saveCandidate(run, draft)
-          : await saveDraft(draft);
+          : await saveDraft(draft, run.input.conversationId);
         run.status = "saved";
         run.draft = { ...run.draft, ...draft };
         run.updatedAt = new Date().toISOString();
@@ -1555,7 +1735,7 @@ const server = http.createServer(async (request, response) => {
 
 await restoreRuns().catch(() => undefined);
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`Curator service: http://127.0.0.1:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Curator service: http://${HOST}:${PORT}`);
   console.log(`Allowed browser origins: ${[...allowedOrigins].join(", ")}`);
 });

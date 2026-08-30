@@ -17,7 +17,8 @@
     "links",
     "prompt",
     "variables",
-    "examples"
+    "examples",
+    "logoUrl"
   ],
   "properties": {
     "name": {

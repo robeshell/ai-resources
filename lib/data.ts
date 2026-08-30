@@ -25,9 +25,9 @@ export function loadSite(): SiteConfig {
 }
 
 export function loadResources(): Tool[] {
-  const tools = toolsJson.items as Tool[];
-  validateResources(tools);
-  return tools
-    .filter((tool) => tool.status === "active")
-    .map((tool) => ({ ...tool, kind: tool.kind ?? "tool" }) as Tool);
+  // Only published entries carry the completeness contract: an archived tool
+  // with unfinished copy is not a reason to fail the build.
+  const published = (toolsJson.items as Tool[]).filter((tool) => tool.status === "active");
+  validateResources(published);
+  return published.map((tool) => ({ ...tool, kind: tool.kind ?? "tool" }) as Tool);
 }
