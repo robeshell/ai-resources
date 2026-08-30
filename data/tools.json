@@ -197,19 +197,19 @@
       "name": "Codex",
       "url": "https://openai.com/codex",
       "logo": "/logos/codex.png",
-      "pricing": "paid",
+      "pricing": "freemium",
       "platforms": [
-        "cli",
-        "web"
+        "app",
+        "cli"
       ],
       "status": "active",
       "verdict": {
-        "en": "OpenAI’s coding agent for complete tasks.",
-        "zh": "面向完整任务的 OpenAI 编程 Agent。"
+        "en": "Coding agent for real work.",
+        "zh": "终端里的编程 Agent。"
       },
       "summary": {
-        "en": "Whole tasks, not ghost text. Cloud or local.",
-        "zh": "整段任务，不是补全。云端或本地。"
+        "en": "Handles end-to-end engineering tasks across ChatGPT, editors, and the terminal.",
+        "zh": "端到端处理工程任务，覆盖 ChatGPT、编辑器与终端。"
       }
     },
     {
