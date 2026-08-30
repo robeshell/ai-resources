@@ -2,19 +2,52 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Accordion, Alert, Badge, Box, Button, Checkbox, Drawer, Flex, Group, Modal,
-  Paper, SegmentedControl, Select, SimpleGrid, Skeleton, Stack, Text, Textarea,
-  TextInput, Timeline, Title,
+  Paper, Select, SimpleGrid, Skeleton, Stack, Text, Textarea,
+  TextInput, Title,
 } from "@mantine/core";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
 import type { ArticlePayload, ContentBlockId, ContentStatus, PromptPayload, ToolPayload } from "@/lib/content-blocks";
-import { agentEventMessage, BLOCK_LABELS, PHASE_LABEL, curatorEventUrl, curatorRequest, type CuratorContentItem, type CuratorRun, type CuratorRunEvent } from "@/lib/curator-client";
+import { agentEventMessage, BLOCK_LABELS, describeAgentFailure, PHASE_LABEL, curatorEventUrl, curatorRequest, type CuratorContentItem, type CuratorDraft, type CuratorRun, type CuratorRunEvent } from "@/lib/curator-client";
 
 type EditableBlock = Extract<ContentBlockId, "tool" | "skill" | "project" | "prompt">;
-type Candidate = { id: number; payload: CuratorContentItem["payload"]; createdAt: string; createdBy: string; note: string };
 type Notice = { text: string; tone: "success" | "error" } | null;
+
+const FIELD_LABEL: Record<string, string> = {
+  summary: "摘要", body: "正文", links: "相关链接", tagline: "定位", description: "描述",
+  prompt: "提示词", variables: "变量", examples: "示例", logo: "Logo 路径", url: "官网链接",
+  pricing: "定价", platforms: "平台",
+};
+
+function readableValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") return "（空）";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map((item) => readableValue(item)).join("\n");
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (typeof record.zh === "string" || typeof record.en === "string") return `${record.zh ?? ""}${record.en ? `（${record.en}）` : ""}`;
+    if (typeof record.label === "string" && typeof record.url === "string") return `${record.label}：${record.url}`;
+    if (typeof record.input === "string") return `${record.input} → ${record.output ?? ""}`;
+    if (typeof record.name === "string") return `${record.name}：${record.description ?? ""}`;
+  }
+  return JSON.stringify(value);
+}
+
+// Mirror of the server's contentPayloadFromDraft: turn the run draft into the
+// block payload shape so the drawer can preview a diff against current content.
+function draftPayload(draft: CuratorDraft, current: CuratorContentItem["payload"]): CuratorContentItem["payload"] {
+  const base = current as Record<string, unknown>;
+  const block = draft.blockType || "tool";
+  if (block === "tool") {
+    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, url: draft.url, pricing: draft.pricing, platforms: draft.platforms } as CuratorContentItem["payload"];
+  }
+  if (block === "prompt") {
+    return { ...base, summary: draft.summary, prompt: (draft.prompt || "").trim(), variables: draft.variables || [], examples: draft.examples || [], links: draft.links?.length ? draft.links : base.links || [] } as CuratorContentItem["payload"];
+  }
+  return { ...base, summary: draft.summary, body: (draft.body || "").trim(), links: draft.links?.length ? draft.links : base.links || [] } as CuratorContentItem["payload"];
+}
 const PLATFORM_VALUES = ["web", "app", "api", "cli"] as const;
 
 function blankPayload(block: EditableBlock): CuratorContentItem["payload"] {
@@ -39,23 +72,13 @@ function EditorSection({ title, description, children }: { title: string; descri
   </Paper>;
 }
 
-function jsonValue(value: unknown) { return value === undefined ? "—" : typeof value === "string" ? value : JSON.stringify(value, null, 2); }
-
 function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorContentItem; open: boolean; onOpenChange: (open: boolean) => void; onAccept: (payload: CuratorContentItem["payload"]) => void }) {
   const [note, setNote] = useState("");
   const [run, setRun] = useState<CuratorRun | null>(null);
   const [events, setEvents] = useState<CuratorRunEvent[]>([]);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const loadCandidates = useCallback(async () => {
-    const result = await curatorRequest<{ candidates: Candidate[] }>(`/content/${encodeURIComponent(item.id)}/candidates`);
-    setCandidates(result.candidates || []); setSelectedCandidate((result.candidates || [])[0] || null);
-  }, [item.id]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (open && item.id) void loadCandidates().catch(() => undefined); }, [item.id, loadCandidates, open]);
   useEffect(() => {
     if (!run || ["failed", "cancelled", "saved"].includes(run.status)) return;
     const runId = run.id;
@@ -70,60 +93,61 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
   }, [run?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function start() {
-    setBusy(true); setError(""); setEvents([]); setSelectedCandidate(null);
+    setBusy(true); setError(""); setEvents([]);
     try { setRun(await curatorRequest<CuratorRun>(`/content/${encodeURIComponent(item.id)}/reprocess`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }) })); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "无法启动 Agent"); }
     finally { setBusy(false); }
   }
-  async function createCandidate() {
-    if (!run) return;
-    setBusy(true); setError("");
-    try { await curatorRequest(`/runs/${run.id}/save`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ draft: run.draft }) }); await loadCandidates(); setRun((current) => current ? { ...current, status: "saved" } : current); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "候选生成失败"); }
-    finally { setBusy(false); }
-  }
-  async function abandon(candidate: Candidate) {
-    setBusy(true);
-    try { await curatorRequest(`/content/${encodeURIComponent(item.id)}/candidates/${candidate.id}/abandon`, { method: "POST" }); await loadCandidates(); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "放弃失败"); }
-    finally { setBusy(false); }
-  }
 
-  const changes = useMemo(() => {
-    if (!selectedCandidate) return [];
-    const oldPayload = item.payload as Record<string, unknown>; const newPayload = selectedCandidate.payload as Record<string, unknown>;
-    return Array.from(new Set([...Object.keys(oldPayload), ...Object.keys(newPayload)])).filter((key) => JSON.stringify(oldPayload[key]) !== JSON.stringify(newPayload[key]));
-  }, [item.payload, selectedCandidate]);
   const running = Boolean(run && ["queued", "running"].includes(run.status));
-  const warnings = events.filter((event) => event.level === "warning" || event.level === "error");
-  const toolOutput = events.filter((event) => event.type === "tool.output");
+  const failed = run?.status === "failed";
+  const rulesFallback = run?.status === "awaiting_review" && run.agent?.mode === "rules";
+  const ready = run?.status === "awaiting_review" && run.agent?.mode !== "rules";
+  const proposed = useMemo(() => (ready && run?.draft ? draftPayload(run.draft, item.payload) : null), [ready, run, item.payload]);
+  const changes = useMemo(() => {
+    if (!proposed) return [];
+    const oldPayload = item.payload as Record<string, unknown>; const newPayload = proposed as Record<string, unknown>;
+    return Array.from(new Set([...Object.keys(oldPayload), ...Object.keys(newPayload)])).filter((key) => JSON.stringify(oldPayload[key]) !== JSON.stringify(newPayload[key]));
+  }, [item.payload, proposed]);
+  const latest = events[events.length - 1] ?? null;
+  const toolLabel = run?.agent?.tool === "claude" ? "Claude Code" : "Codex";
 
-  return <Drawer opened={open} onClose={() => onOpenChange(false)} position="right" size="xl" title={<Box><Text fw={600}>Agent 重新处理</Text><Text size="sm" c="dimmed" mt={2}>只生成候选，接受后仍需在编辑器中保存。</Text></Box>} overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}>
+  return <Drawer opened={open} onClose={() => onOpenChange(false)} position="right" size="xl" title={<Box><Text fw={600}>Agent 重新处理</Text><Text size="sm" c="dimmed" mt={2}>改写结果先在这里预览；采用后回到编辑器保存生效。</Text></Box>} overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}>
     <Stack gap="lg">
-      <Textarea label="处理要求" description="说明想改什么、保留什么；留空则由 Agent 自行判断。" value={note} minRows={4} onChange={(event) => setNote(event.currentTarget.value)} />
-      <Group justify="flex-end"><Button loading={busy} disabled={!item.sourceUrl} onClick={() => void start()}>开始处理</Button></Group>
+      <Textarea label="处理要求" description="说明想改什么、保留什么；留空则由 Agent 自行判断。" value={note} minRows={3} onChange={(event) => setNote(event.currentTarget.value)} />
+      <Group justify="flex-end"><Button loading={busy} disabled={!item.sourceUrl || running} onClick={() => void start()}>开始处理</Button></Group>
       {!item.sourceUrl ? <Alert color="yellow" title="缺少来源链接">这条内容暂时无法重新处理。</Alert> : null}
-      {error ? <Alert color="red" title="Agent 处理失败">{error}</Alert> : null}
-      {!run && !error && !candidates.length ? <Paper withBorder p="md"><Text fw={600} size="sm">处理流程</Text><Timeline mt="md" active={-1} bulletSize={18} lineWidth={2}>
-        <Timeline.Item title="读取页面"><Text size="sm" c="dimmed">按来源链接读取当前内容。</Text></Timeline.Item>
-        <Timeline.Item title="生成候选"><Text size="sm" c="dimmed">按处理要求生成结构化结果。</Text></Timeline.Item>
-        <Timeline.Item title="人工确认"><Text size="sm" c="dimmed">逐字段接受，再由编辑器保存。</Text></Timeline.Item>
-      </Timeline></Paper> : null}
-      {run ? <Paper withBorder p="md"><Stack gap="md">
-        <Group justify="space-between"><Text fw={600}>{run.status === "awaiting_review" ? "候选草稿已就绪" : run.status === "saved" ? "候选已生成" : run.status === "failed" ? "处理失败" : "处理过程"}</Text><Badge color={running ? "curator" : run.status === "failed" ? "red" : "teal"}>{PHASE_LABEL[run.phase] ?? run.phase}</Badge></Group>
-        <Timeline active={events.length} bulletSize={18} lineWidth={2}>{events.map((event) => <Timeline.Item key={event.sequence} color={event.level === "error" ? "red" : event.level === "warning" ? "yellow" : "teal"} title={PHASE_LABEL[event.phase] ?? event.phase}><Text size="sm" c="dimmed">{agentEventMessage(event)}</Text></Timeline.Item>)}</Timeline>
-        {!events.length ? <Skeleton h={64} /> : null}
-        {run.agent?.mode === "rules" ? <Alert color="yellow" title="备用草稿">{run.agent?.message || "已生成备用草稿，文案需要人工补写"}</Alert> : null}
-        {warnings.length ? <Alert color="yellow" title="需要检查">{warnings.map((entry) => <Text size="sm" key={entry.sequence}>{entry.message}</Text>)}</Alert> : null}
-        {toolOutput.length ? <Accordion variant="contained"><Accordion.Item value="technical"><Accordion.Control>技术输出</Accordion.Control><Accordion.Panel>{toolOutput.map((entry) => { const data = (entry.data || {}) as { stdout?: string; stderr?: string }; return <Stack key={entry.sequence} gap="xs" mb="sm"><Text size="sm" fw={600}>{entry.message}</Text>{data.stderr ? <pre className="curator-code-block">{data.stderr}</pre> : null}{data.stdout ? <pre className="curator-code-block">{data.stdout}</pre> : null}</Stack>; })}</Accordion.Panel></Accordion.Item></Accordion> : null}
-        {run.status === "awaiting_review" ? <Button loading={busy} onClick={() => void createCandidate()}>生成可比较候选</Button> : null}
-        {run.status === "failed" ? <Accordion variant="contained"><Accordion.Item value="error"><Accordion.Control>技术信息</Accordion.Control><Accordion.Panel><pre className="curator-code-block">{run.error || events.filter((event) => event.type === "tool.output").map((event) => agentEventMessage(event)).join("\n")}</pre></Accordion.Panel></Accordion.Item></Accordion> : null}
-      </Stack></Paper> : null}
-      {candidates.length ? <Stack gap="md"><Title order={3}>候选版本</Title><SegmentedControl value={selectedCandidate ? String(selectedCandidate.id) : ""} onChange={(value) => setSelectedCandidate(candidates.find((candidate) => String(candidate.id) === value) || null)} data={candidates.map((candidate) => ({ value: String(candidate.id), label: `#${candidate.id}` }))} />
-        {selectedCandidate ? <Stack gap="md">{changes.length ? changes.map((field) => <Paper withBorder p="md" key={field}><Group justify="space-between" mb="sm"><Text fw={600}>{field}</Text><Badge color="curator" variant="light">已修改</Badge></Group><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm"><Box><Text size="xs" fw={600} c="dimmed" mb={4}>当前值</Text><pre className="curator-code-block">{jsonValue((item.payload as Record<string, unknown>)[field])}</pre></Box><Box><Text size="xs" fw={600} c="dimmed" mb={4}>候选值</Text><pre className="curator-code-block is-new">{jsonValue((selectedCandidate.payload as Record<string, unknown>)[field])}</pre></Box></SimpleGrid><Button mt="sm" variant="default" onClick={() => onAccept({ ...(item.payload as Record<string, unknown>), [field]: (selectedCandidate.payload as Record<string, unknown>)[field] } as CuratorContentItem["payload"])}>接受此字段</Button></Paper>) : <Text c="dimmed">候选与当前内容没有字段差异。</Text>}
-          <Group><Button onClick={() => onAccept(selectedCandidate.payload)}>接受全部字段</Button><Button color="red" variant="light" loading={busy} onClick={() => void abandon(selectedCandidate)}>放弃候选</Button></Group>
-        </Stack> : null}
+      {error ? <Alert color="red" title="无法开始">{error}</Alert> : null}
+
+      {running ? <Paper withBorder p="md">
+        <Group gap="sm"><span className="curator-pulse-dot" aria-hidden="true" /><Text fw={600} size="sm">{latest ? PHASE_LABEL[latest.phase] ?? latest.phase : "正在启动"}</Text></Group>
+        <Text size="sm" c="dimmed" mt={4}>{latest ? agentEventMessage(latest) : "正在启动 Agent…"}</Text>
+      </Paper> : null}
+
+      {failed ? <Stack gap="md">
+        <Alert color="red" title="处理失败">{run?.error || describeAgentFailure("", toolLabel)}</Alert>
+        <Button variant="default" onClick={() => void start()}>重试</Button>
       </Stack> : null}
+
+      {rulesFallback ? <Stack gap="md">
+        <Alert color="yellow" title="Agent 没有产出结果">{run.agent?.message ?? "已生成备用草稿"}</Alert>
+        <Group>
+          <Button variant="default" onClick={() => void start()}>重试</Button>
+          <Button variant="subtle" color="gray" onClick={() => onOpenChange(false)}>放弃</Button>
+        </Group>
+      </Stack> : null}
+
+      {ready && proposed ? <Paper withBorder p="md">
+        <Group justify="space-between" mb="sm"><Text fw={600}>Agent 改了这些地方</Text><Badge color="teal" variant="light">{changes.length ? `${changes.length} 处修改` : "无修改"}</Badge></Group>
+        {changes.length ? <Stack gap={0}>{changes.map((field) => <Box key={field} className="curator-diff-row">
+          <Text size="sm" fw={600} mb={4}>{FIELD_LABEL[field] ?? field}</Text>
+          <Text size="sm" c="dimmed" lineClamp={3}>当前：{readableValue((item.payload as Record<string, unknown>)[field])}</Text>
+          <Text size="sm" lineClamp={6}>建议：{readableValue((proposed as Record<string, unknown>)[field])}</Text>
+        </Box>)}</Stack> : <Text size="sm" c="dimmed">Agent 没有改动任何字段，可以直接放弃。</Text>}
+        <Group mt="md"><Button disabled={!changes.length} onClick={() => { onAccept(proposed); onOpenChange(false); }}>采用新版本</Button><Button variant="subtle" color="gray" onClick={() => onOpenChange(false)}>放弃</Button></Group>
+      </Paper> : null}
+
+      {events.length ? <Accordion variant="contained"><Accordion.Item value="log"><Accordion.Control>运行日志</Accordion.Control><Accordion.Panel><Stack gap={6}>{events.map((event) => <Text key={event.sequence} size="xs" c="dimmed">{agentEventMessage(event)}</Text>)}</Stack></Accordion.Panel></Accordion.Item></Accordion> : null}
     </Stack>
   </Drawer>;
 }
@@ -165,7 +189,7 @@ export function ContentEditor({ block, slug }: { block: EditableBlock; slug: str
       {prompt ? <><EditorSection title="摘要"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><Textarea label="中文摘要" minRows={4} value={prompt.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} /><Textarea label="English summary" minRows={4} value={prompt.summary.en} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection><EditorSection title="提示词正文"><Textarea className="curator-markdown-input" label="Prompt" minRows={18} value={prompt.prompt} onChange={(event) => updatePayload({ ...prompt, prompt: event.currentTarget.value })} /></EditorSection><EditorSection title="变量"><VariablesEditor value={prompt.variables} onChange={(variables) => updatePayload({ ...prompt, variables })} /></EditorSection><EditorSection title="示例"><ExamplesEditor value={prompt.examples} onChange={(examples) => updatePayload({ ...prompt, examples })} /></EditorSection><EditorSection title="相关链接"><StructuredLinks value={prompt.links} onChange={(links) => updatePayload({ ...prompt, links })} /></EditorSection></> : null}
     </Stack>
     <Paper withBorder p="sm" className="curator-savebar-mantine"><Flex align="center" justify="space-between" gap="md" wrap="wrap"><Badge color={dirty ? "orange" : "teal"} variant="light">{dirty ? "有未保存修改" : "已保存"}</Badge><Group gap="xs">{!isNew ? <Button color="red" variant="subtle" onClick={() => setConfirm("delete")}>删除</Button> : null}{draft.status !== "archived" && !isNew ? <Button variant="default" onClick={() => setConfirm("archive")}>归档</Button> : null}<Button variant="subtle" disabled={!dirty || busy} onClick={() => original && setDraft(structuredClone(original))}>放弃修改</Button>{draft.status === "active" && draft.slug ? <Button component={Link} href={publicPath(draft)} target="_blank" variant="subtle">打开公开站</Button> : null}<Button loading={busy} disabled={!dirty || !draft.title.trim() || !draft.slug.trim()} onClick={() => void save()}>保存修改</Button></Group></Flex></Paper>
-    {!isNew ? <AgentDrawer item={draft} open={agentOpen} onOpenChange={setAgentOpen} onAccept={(payload) => { updatePayload(payload); setAgentOpen(false); setNotice({ text: "已将候选载入编辑器，请检查后保存。", tone: "success" }); }} /> : null}
+    {!isNew ? <AgentDrawer item={draft} open={agentOpen} onOpenChange={setAgentOpen} onAccept={(payload) => { updatePayload(payload); setAgentOpen(false); setNotice({ text: "已采用新版内容，检查后点「保存修改」生效。", tone: "success" }); }} /> : null}
     <Modal opened={confirm !== null} onClose={() => setConfirm(null)} title={confirm === "delete" ? "永久删除这条内容？" : "归档这条内容？"} centered><Text size="sm" c="dimmed">{confirm === "delete" ? "删除后无法从资源库恢复，公开派生文件也会同步移除。" : "归档后内容不会出现在公开站，保存后生效。"}</Text><Group justify="flex-end" mt="xl"><Button variant="default" onClick={() => setConfirm(null)}>取消</Button><Button color={confirm === "delete" ? "red" : "curator"} onClick={() => confirm === "delete" ? void remove() : void archive()}>{confirm === "delete" ? "确认删除" : "确认归档"}</Button></Group></Modal>
   </Stack>;
 }
