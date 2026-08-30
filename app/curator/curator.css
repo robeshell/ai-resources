@@ -292,6 +292,18 @@
 .curator-row-main span { overflow: hidden; color: #77736c; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
 .curator-empty-state { padding: 0.75rem 0; color: #77736c; font-size: 0.8125rem; }
 
+.curator-warnings-block {
+  padding: 0.85rem 1rem;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-color-yellow-0);
+}
+
+.curator-warnings-block li {
+  color: #514f49;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 .curator-workspace {
   display: grid;
   grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr);

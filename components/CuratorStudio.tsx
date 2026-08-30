@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Badge, Button, Checkbox, Flex, List, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Box, Button, Checkbox, Flex, List, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ToolLogo } from "@/components/ToolLogo";
 import { useMediaQuery } from "@/components/Transitions";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
@@ -410,7 +410,7 @@ export function CuratorStudio() {
               })}
             </ol>
             {!events.length && run.status !== "queued" ? <p className="curator-panel-note">这次分析来自上一次会话，过程记录已折叠。</p> : null}
-            {warnings.length ? <Alert color="yellow" variant="light" title="需要检查"><List spacing={4} size="sm" center>{warnings.map((item) => <List.Item key={item.sequence}>{agentEventMessage(item)}</List.Item>)}</List></Alert> : null}
+            {warnings.length ? <Box className="curator-warnings-block"><Text size="0.8125rem" fw={600} c="yellow.9">需要检查</Text><List spacing={4} mt={6} center c="#514f49">{warnings.map((item) => <List.Item key={item.sequence}>{agentEventMessage(item)}</List.Item>)}</List></Box> : null}
             {evidence.length ? (
               <details className="curator-evidence">
                 <summary>查看证据</summary>
