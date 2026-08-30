@@ -499,7 +499,7 @@ export function CuratorStudio() {
             {missing.length && draft.name ? <Alert color="yellow">还需要补齐：{missing.join("、")}</Alert> : null}
             <Paper withBorder p="sm" className="curator-savebar-mantine" mt="md">
               <Flex align="center" justify="space-between" gap="md" wrap="wrap">
-                {running ? <Badge variant="light" color="gray">分析进行中</Badge> : run.status !== "awaiting_review" ? <Badge variant="light" color="gray">{formatRunStatus(run)}</Badge> : missing.length && draft.name ? <Badge variant="light" color="orange">还需补齐 {missing.length} 项</Badge> : <Badge variant="light" color="teal">等待确认</Badge>}
+                {running ? <Badge variant="light" color="gray">分析进行中</Badge> : run.status !== "awaiting_review" ? <Badge variant="light" color="gray">{formatRunStatus(run)}</Badge> : missing.length && draft.name ? <Badge variant="light" color="orange">还需补齐 {missing.length} 项</Badge> : null}
                 <Button loading={busy} disabled={running || run.status !== "awaiting_review" || missing.length > 0} onClick={() => void save()}>保存资源</Button>
               </Flex>
             </Paper>
