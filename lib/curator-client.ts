@@ -173,6 +173,28 @@ export type SaveResult = {
   publicUrl?: string;
 };
 
+// Mirror of the server's describeAgentFailure: replays old tool.output
+// events (whose stored message is the raw "退出码 N") as the real reason.
+export function describeAgentFailure(message: string, toolLabel: string): string {
+  const text = String(message || "");
+  const reset = text.match(/try again at (\d{1,2}:\d{2}\s*[AP]M)/i);
+  if (/usage limit|hit your usage/i.test(text)) return `${toolLabel} 额度已用尽${reset ? `，${reset[1]} 后重置` : ""}`;
+  if (/not logged in|unauthorized|invalid api key/i.test(text)) return `${toolLabel} 未登录或凭证失效`;
+  if (/ENOENT|command not found/i.test(text)) return `${toolLabel} 命令不存在或不在 PATH`;
+  const firstError = text.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !/^\d{4}-\d{2}-\d{2}T/.test(line) && !/codex_models_manager/.test(line))
+    .find((line) => /^error/i.test(line));
+  return firstError ? firstError.slice(0, 140) : `${toolLabel} 没有返回结构化结果`;
+}
+
+export function agentEventMessage(event: { type: string; message: string; data?: Record<string, unknown> }): string {
+  if (event.type !== "tool.output") return event.message;
+  const data = (event.data || {}) as { command?: string; stdout?: string; stderr?: string };
+  const toolLabel = data.command === "claude" ? "Claude Code" : "Codex";
+  return describeAgentFailure(data.stderr || data.stdout || event.message, toolLabel);
+}
+
 export function curatorEventUrl(runId: string): string {
   return `${CURATOR_API}/runs/${encodeURIComponent(runId)}/events`;
 }

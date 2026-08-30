@@ -10,6 +10,7 @@ import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/c
 import {
   KIND_LABEL,
   PHASE_LABEL,
+  agentEventMessage,
   curatorRequest,
   curatorEventUrl,
   type AgentInfo,
@@ -410,11 +411,11 @@ export function CuratorStudio() {
               })}
             </ol>
             {!events.length && run.status !== "queued" ? <p className="curator-panel-note">这次分析来自上一次会话，过程记录已折叠。</p> : null}
-            {warnings.length ? <section className="curator-run-notes"><h3>需要检查</h3>{warnings.map((item) => <p key={item.sequence}>{item.message}</p>)}</section> : null}
+            {warnings.length ? <section className="curator-run-notes"><h3>需要检查</h3>{warnings.map((item) => <p key={item.sequence}>{agentEventMessage(item)}</p>)}</section> : null}
             {evidence.length ? (
               <details className="curator-evidence">
                 <summary>查看证据</summary>
-                {evidence.map((item) => <div key={item.sequence}><strong>{item.message}</strong>{item.data ? <pre>{JSON.stringify(item.data, null, 2)}</pre> : null}</div>)}
+                {evidence.map((item) => <div key={item.sequence}><strong>{agentEventMessage(item)}</strong>{item.data ? <pre>{JSON.stringify(item.data, null, 2)}</pre> : null}</div>)}
               </details>
             ) : null}
             {toolOutput.length ? (
@@ -424,7 +425,7 @@ export function CuratorStudio() {
                   const data = (item.data || {}) as { stdout?: string; stderr?: string };
                   return (
                     <div key={item.sequence}>
-                      <strong>{item.message}</strong>
+                      <strong>{agentEventMessage(item)}</strong>
                       {data.stderr ? <pre>{data.stderr}</pre> : null}
                       {data.stdout ? <pre>{data.stdout}</pre> : null}
                     </div>
