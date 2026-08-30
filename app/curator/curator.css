@@ -309,9 +309,6 @@
 .curator-timeline li.is-error > span { background: var(--mantine-color-red-6); }
 .curator-timeline strong { display: block; font-size: 0.8125rem; font-weight: 600; }
 .curator-timeline p { margin: 0.15rem 0 0; color: #77736c; font-size: 0.75rem; line-height: 1.5; }
-.curator-run-notes { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ebe8e2; }
-.curator-run-notes h3 { margin: 0 0 0.4rem; color: var(--mantine-color-yellow-9); font-size: 0.8125rem; }
-.curator-run-notes p { margin: 0.2rem 0; color: #68655f; font-size: 0.8125rem; }
 .curator-evidence { margin-top: 1rem; }
 .curator-evidence pre { max-height: 14rem; overflow: auto; margin: 0.5rem 0 0; padding: 0.75rem; border-radius: var(--mantine-radius-md); background: #f5f3ef; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.75rem; white-space: pre-wrap; }
 .curator-retry-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }

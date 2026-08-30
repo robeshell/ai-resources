@@ -13,7 +13,7 @@ npm run curator:server    # 只启动服务
 
 ## Agent 配置
 
-收录和「AI 重新处理」调用本机 CLI，两者都不存在时自动退回规则草稿并在界面明确标注：
+收录和「AI 重新处理」调用本机 CLI，两者都不存在时自动退回备用草稿并在界面明确标注：
 
 | Agent | 调用方式 | 模型来源 |
 |-------|----------|----------|
@@ -21,7 +21,7 @@ npm run curator:server    # 只启动服务
 | Claude Code | `claude --print --output-format json --json-schema …`，禁用全部工具 | `~/.claude/settings.json`、`ANTHROPIC_MODEL*`、`/v1/models` |
 
 - 「运行设置」里可切换 Agent 与模型；中断恢复的 run 会记住原选择。
-- `CURATOR_DISABLE_AI=1`（`.env.local`）跳过 Agent，直接产出规则草稿——适合离线或纯手工整理。
+- `CURATOR_DISABLE_AI=1`（`.env.local`）跳过 Agent，直接产出备用草稿——适合离线或纯手工整理。
 - 单次 Agent 调用超时 120 秒；CLI 以只读沙箱运行（Claude 侧禁用全部工具），页面正文按不可信材料处理。
 
 ## 收录流程（`/curator/ingest/`）

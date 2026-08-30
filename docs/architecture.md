@@ -65,7 +65,7 @@ flowchart LR
 | `GET /activity` | 最近写入记录（保留 120 条） |
 | `GET /site` `PUT /site` | `data/site.json` 读取 / 更新 |
 
-AI 收录管线（`executeRun`）：`fetch`（SSRF 校验 + 抓取，失败时重处理可降级用当前内容）→ `extract`（元信息 + Logo 候选）→ `compare`（同域/同名查重）→ `generate`（Agent 或规则草稿）→ `validate`（双语字段检查）→ `asset`（Logo 固化检查）→ `complete`。每个阶段通过 SSE 推送事件，凭据与本地路径在输出中被脱敏。
+AI 收录管线（`executeRun`）：`fetch`（SSRF 校验 + 抓取，失败时重处理可降级用当前内容）→ `extract`（元信息 + Logo 候选）→ `compare`（同域/同名查重）→ `generate`（Agent 或备用草稿）→ `validate`（双语字段检查）→ `asset`（Logo 固化检查）→ `complete`。每个阶段通过 SSE 推送事件，凭据与本地路径在输出中被脱敏。
 
 ## 环境变量
 
@@ -74,7 +74,7 @@ AI 收录管线（`executeRun`）：`fetch`（SSRF 校验 + 抓取，失败时�
 | `CURATOR_PORT` | `4317` | 服务端口 |
 | `CURATOR_SITE_PORT` | `3000` | 公开站 dev 端口（决定 CORS 白名单与"打开公开站"链接） |
 | `CURATOR_CONTENT_DB` | `.curator/content.sqlite` | 数据库路径 |
-| `CURATOR_DISABLE_AI` | 未设置 | `1` 时跳过 Agent，直接生成规则草稿 |
+| `CURATOR_DISABLE_AI` | 未设置 | `1` 时跳过 Agent，直接生成备用草稿 |
 | `CURATOR_CODEX_BIN` / `CURATOR_CLAUDE_BIN` | `codex` / `claude` | Agent CLI 路径 |
 | `CURATOR_ALLOWED_ORIGIN` | 本站来源 | 追加允许的 CORS 来源 |
 | `NEXT_PUBLIC_CURATOR_API_URL` | `http://127.0.0.1:4317` | 前端访问的服务地址 |

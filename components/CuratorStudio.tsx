@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Badge, Button, Checkbox, Flex, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Button, Checkbox, Flex, List, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ToolLogo } from "@/components/ToolLogo";
 import { useMediaQuery } from "@/components/Transitions";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
@@ -394,10 +394,9 @@ export function CuratorStudio() {
           </Tabs>
           <aside className="curator-agent-panel">
             <header className="curator-panel-header">
-              <div><Text className="curator-eyebrow-mantine">{run.agent?.mode === "rules" ? "规则草稿" : run.agent?.model || currentAgent?.label || "Agent"}</Text><h2>分析过程</h2></div>
+              <div><Text className="curator-eyebrow-mantine">{run.agent?.mode === "rules" ? "备用草稿" : run.agent?.model || currentAgent?.label || "Agent"}</Text><h2>分析过程</h2></div>
               {running ? <Button type="button" variant="default" onClick={cancel}>取消分析</Button> : null}
             </header>
-            {run.agent?.mode === "rules" ? <Alert color="yellow">{run.agent?.message || "已使用规则草稿"}</Alert> : null}
             <ol className="curator-timeline">
               {timeline.map((item) => {
                 const active = run.phase === item.phase && running;
@@ -411,7 +410,7 @@ export function CuratorStudio() {
               })}
             </ol>
             {!events.length && run.status !== "queued" ? <p className="curator-panel-note">这次分析来自上一次会话，过程记录已折叠。</p> : null}
-            {warnings.length ? <section className="curator-run-notes"><h3>需要检查</h3>{warnings.map((item) => <p key={item.sequence}>{agentEventMessage(item)}</p>)}</section> : null}
+            {warnings.length ? <Alert color="yellow" variant="light" title="需要检查"><List spacing={4} size="sm" center>{warnings.map((item) => <List.Item key={item.sequence}>{agentEventMessage(item)}</List.Item>)}</List></Alert> : null}
             {evidence.length ? (
               <details className="curator-evidence">
                 <summary>查看证据</summary>
@@ -442,7 +441,7 @@ export function CuratorStudio() {
                 <Group gap="sm" wrap="wrap">
                   {run.status === "failed" || run.status === "cancelled" ? <Button type="button" onClick={() => retry("fetch")}>重新分析</Button> : null}
                   {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>重新生成草稿</Button> : null}
-                  <Button type="button" variant="subtle" color="gray" onClick={reset}>重新开始</Button>
+                  <Button type="button" variant="subtle" color="gray" onClick={reset}>放弃这条</Button>
                 </Group>
               </Stack>
             ) : null}

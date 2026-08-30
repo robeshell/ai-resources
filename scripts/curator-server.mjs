@@ -656,7 +656,7 @@ function describeAgentFailure(message, toolLabel) {
 async function agentDraft(meta, finalUrl, note, tool, model, targetBlock = "tool", options = {}) {
   const fallback = ruleDraft(meta, finalUrl, targetBlock);
   if (process.env.CURATOR_DISABLE_AI === "1") {
-    return { draft: fallback, agent: { mode: "rules", tool, model, message: "已通过环境变量关闭 Agent" } };
+    return { draft: fallback, agent: { mode: "rules", tool, model, message: "已生成备用草稿：Agent 已通过环境变量关闭" } };
   }
   const existing = await existingResources();
   const catalog = existing.map((item) => `${item.slug} | ${item.name} | ${item.kind || "tool"}`).join("\n");
@@ -676,7 +676,7 @@ async function agentDraft(meta, finalUrl, note, tool, model, targetBlock = "tool
         mode: "rules",
         tool: selected,
         model,
-        message: `已使用规则草稿：${describeAgentFailure(error instanceof Error ? error.message : "", toolLabel)}`,
+        message: `已生成备用草稿：${describeAgentFailure(error instanceof Error ? error.message : "", toolLabel)}`,
       },
     };
   }
@@ -985,7 +985,7 @@ async function executeRun(run) {
     const catalog = await existingResources();
     const similar = similarResources(meta, finalUrl, catalog);
     if (similar.length) {
-      emitRunEvent(run, "compare", "warning.added", "warning", `找到 ${similar.length} 条相似资源`, {
+      emitRunEvent(run, "compare", "warning.added", "warning", `目录里已有同域或同名的资源：${similar.slice(0, 3).map((item) => item.name).join("、")}${similar.length > 3 ? " 等" : ""}，确认不是重复再保存`, {
         items: similar.map((item) => ({ slug: item.slug, name: item.name, url: item.url })),
       });
     } else {
@@ -1019,7 +1019,8 @@ async function executeRun(run) {
             return;
           }
           const toolLabel = payload.command === "claude" ? "Claude Code" : "Codex";
-          emitRunEvent(run, "generate", "tool.output", "warning", describeAgentFailure(payload.stderr || payload.stdout || "", toolLabel), payload);
+          run.failureReason = describeAgentFailure(payload.stderr || payload.stdout || "", toolLabel);
+          emitRunEvent(run, "generate", "tool.output", "warning", run.failureReason, payload);
         },
       },
     );
@@ -1033,7 +1034,10 @@ async function executeRun(run) {
     run.draft = normalizeDraft(result.draft, finalUrl, meta, run.input.block);
     emitRunEvent(run, "generate", "draft.patch", "success", "草稿已生成", { draft: run.draft });
     if (result.agent.mode === "rules") {
-      emitRunEvent(run, "generate", "warning.added", "warning", result.agent.message || "已使用规则草稿");
+      const fallbackNote = run.failureReason && result.agent.message?.includes(run.failureReason)
+        ? "已生成备用草稿，文案需要人工补写"
+        : result.agent.message || "已生成备用草稿";
+      emitRunEvent(run, "generate", "warning.added", "warning", fallbackNote);
     }
     if (run.draft.confidence < 0.6) {
       emitRunEvent(run, "generate", "warning.added", "warning", "建议置信度较低，请重点检查板块和文案", {
