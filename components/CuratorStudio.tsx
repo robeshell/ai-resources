@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Badge, Button, Checkbox, Flex, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Button, Checkbox, Flex, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ToolLogo } from "@/components/ToolLogo";
 import { useMediaQuery } from "@/components/Transitions";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
@@ -128,6 +128,10 @@ export function CuratorStudio() {
     curatorRequest<CuratorRun>(`/runs/${resumeRunId}`)
       .then((current) => {
         setRun(current);
+        // Retries reuse the form state; a resumed run retries with its own
+        // agent/model until the operator changes them in the workspace.
+        if (current.input?.tool) setTool(current.input.tool);
+        if (current.input) setModel(current.input.model || "");
         if (current.input?.block) setTargetBlock(current.input.block);
         if (current.draft) {
           setDraft(current.draft);
@@ -167,6 +171,13 @@ export function CuratorStudio() {
   }, [run?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentAgent = agents.find((item) => item.id === tool);
+  const agentOptions = agents.map((item) => ({ value: item.id, label: `${item.label}${item.available ? "" : "（不可用）"}`, disabled: !item.available }));
+  const modelOptions = [{ value: "__default__", label: "默认模型" }, ...(currentAgent?.models || []).map((item) => ({ value: item.id, label: item.label }))];
+  function switchAgent(next: AgentTool) {
+    setTool(next);
+    const info = agents.find((item) => item.id === next);
+    setModel(info?.defaultModel || info?.models[0]?.id || "");
+  }
   const running = Boolean(run && ["queued", "running"].includes(run.status));
   const warnings = events.filter((event) => event.level === "warning" || event.level === "error");
   const evidence = events.filter((event) => event.type === "evidence.added");
@@ -347,8 +358,8 @@ export function CuratorStudio() {
             <details className="curator-run-settings">
               <summary>运行设置</summary>
               <div>
-                <Select label="Agent" aria-label="Agent" value={tool} onChange={(value) => { const next = (value || tool) as AgentTool; setTool(next); const info = agents.find((item) => item.id === next); setModel(info?.defaultModel || info?.models[0]?.id || ""); }} data={agents.map((item) => ({ value: item.id, label: `${item.label}${item.available ? "" : "（不可用）"}`, disabled: !item.available }))} />
-                <Select label="模型" aria-label="模型" value={model || "__default__"} onChange={(value) => setModel(value === "__default__" || !value ? "" : value)} data={[{ value: "__default__", label: "默认模型" }, ...(currentAgent?.models || []).map((item) => ({ value: item.id, label: item.label }))]} />
+                <Select label="Agent" aria-label="Agent" value={tool} onChange={(value) => value && switchAgent(value as AgentTool)} data={agentOptions} />
+                <Select label="模型" aria-label="模型" value={model || "__default__"} onChange={(value) => setModel(value === "__default__" || !value ? "" : value)} data={modelOptions} />
               </div>
             </details>
           </form>
@@ -422,12 +433,18 @@ export function CuratorStudio() {
               </details>
             ) : null}
             {!running ? (
-              <div className="curator-retry-row">
-                {run.status === "failed" || run.status === "cancelled" ? <Button type="button" onClick={() => retry("fetch")}>重新分析</Button> : null}
-                {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>重新生成草稿</Button> : null}
-                <Button type="button" variant="default" onClick={reset}>换一个链接</Button>
-                {run.status === "awaiting_review" ? <Text size="xs" c="dimmed" w="100%">重新生成草稿会复用已读取的页面，只重跑 Agent 这一步；要换 Agent 或模型，回「换一个链接」后在运行设置里选择。</Text> : null}
-              </div>
+              <Stack gap="sm" mt="md">
+                <Group align="flex-end" gap="sm" wrap="wrap">
+                  <Select label="Agent" aria-label="重试使用的 Agent" value={tool} onChange={(value) => value && switchAgent(value as AgentTool)} data={agentOptions} w={180} />
+                  <Select label="模型" aria-label="重试使用的模型" value={model || "__default__"} onChange={(value) => setModel(value === "__default__" || !value ? "" : value)} data={modelOptions} w={240} />
+                </Group>
+                <Group gap="sm" wrap="wrap">
+                  {run.status === "failed" || run.status === "cancelled" ? <Button type="button" onClick={() => retry("fetch")}>重新分析</Button> : null}
+                  {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>重新生成草稿</Button> : null}
+                  <Button type="button" variant="default" onClick={reset}>换一个链接</Button>
+                </Group>
+                <Text size="xs" c="dimmed">重新分析会重新读取页面；重新生成草稿复用已读取的页面，只重跑 Agent。额度用尽或结果不好时，换上面的 Agent 再点对应按钮。</Text>
+              </Stack>
             ) : null}
           </aside>
 
