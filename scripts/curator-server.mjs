@@ -408,7 +408,7 @@ function parseClaudeDraft(stdout) {
 
 async function runClaude(prompt, model, options = {}) {
   const args = [
-    "--print", "--output-format", "json", "--json-schema", SCHEMA_PATH,
+    "--print", "--output-format", "json", "--json-schema", readFileSync(SCHEMA_PATH, "utf8"),
     "--dangerously-skip-permissions",
     "--disallowedTools", "Bash,Edit,Write,WebSearch,Agent,NotebookEdit",
   ];

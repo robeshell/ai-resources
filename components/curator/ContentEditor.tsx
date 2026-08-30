@@ -10,7 +10,7 @@ import {
 } from "@mantine/core";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
 import type { ArticlePayload, ContentBlockId, ContentStatus, PromptPayload, ToolPayload } from "@/lib/content-blocks";
-import { agentEventMessage, BLOCK_LABELS, describeAgentFailure, PHASE_LABEL, curatorEventUrl, curatorRequest, type CuratorContentItem, type CuratorDraft, type CuratorRun, type CuratorRunEvent } from "@/lib/curator-client";
+import { agentEventMessage, BLOCK_LABELS, describeAgentFailure, PHASE_LABEL, curatorEventUrl, curatorRequest, type AgentInfo, type AgentTool, type CuratorContentItem, type CuratorDraft, type CuratorRun, type CuratorRunEvent } from "@/lib/curator-client";
 
 type EditableBlock = Extract<ContentBlockId, "tool" | "skill" | "project" | "prompt">;
 type Notice = { text: string; tone: "success" | "error" } | null;
@@ -78,6 +78,31 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
   const [events, setEvents] = useState<CuratorRunEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+  const [tool, setTool] = useState<AgentTool>("codex");
+  const [model, setModel] = useState("");
+
+  // 打开抽屉时拉取一次本机可用的 Agent 与模型
+  useEffect(() => {
+    if (!open || agents.length) return;
+    let cancelled = false;
+    curatorRequest<{ tools: AgentInfo[] }>("/agents").then((payload) => {
+      if (cancelled) return;
+      const tools = payload.tools || [];
+      setAgents(tools);
+      const first = tools.find((item) => item.available);
+      if (first) { setTool(first.id); setModel(first.defaultModel || first.models[0]?.id || ""); }
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [open, agents.length]);
+
+  const agentOptions = agents.map((item) => ({ value: item.id, label: `${item.label}${item.available ? "" : "（不可用）"}`, disabled: !item.available }));
+  const modelOptions = [{ value: "__default__", label: "默认模型" }, ...(agents.find((item) => item.id === tool)?.models || []).map((item) => ({ value: item.id, label: item.label }))];
+  function switchAgent(next: AgentTool) {
+    setTool(next);
+    const info = agents.find((item) => item.id === next);
+    setModel(info?.defaultModel || info?.models[0]?.id || "");
+  }
 
   useEffect(() => {
     if (!run || ["failed", "cancelled", "saved"].includes(run.status)) return;
@@ -94,7 +119,7 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
 
   async function start() {
     setBusy(true); setError(""); setEvents([]);
-    try { setRun(await curatorRequest<CuratorRun>(`/content/${encodeURIComponent(item.id)}/reprocess`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note }) })); }
+    try { setRun(await curatorRequest<CuratorRun>(`/content/${encodeURIComponent(item.id)}/reprocess`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note, tool, model }) })); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "无法启动 Agent"); }
     finally { setBusy(false); }
   }
@@ -119,7 +144,11 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
   return <Drawer opened={open} onClose={() => onOpenChange(false)} position="right" size="xl" title={<Box><Text fw={600}>Agent 重新处理</Text><Text size="sm" c="dimmed" mt={2}>改写结果先在这里预览；采用后回到编辑器保存生效。</Text></Box>} overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}>
     <Stack gap="lg">
       <Textarea label="处理要求" description="说明想改什么、保留什么；留空则由 Agent 自行判断。" value={note} minRows={3} onChange={(event) => setNote(event.currentTarget.value)} />
-      <Group justify="flex-end"><Button loading={busy} disabled={!item.sourceUrl || running} onClick={() => void start()}>开始处理</Button></Group>
+      <Group align="flex-end" gap="sm" wrap="wrap">
+        <Select label="Agent" aria-label="整理使用的 Agent" value={tool} onChange={(value) => value && switchAgent(value as AgentTool)} data={agentOptions} w={180} />
+        <Select label="模型" aria-label="整理使用的模型" value={model || "__default__"} onChange={(value) => setModel(value === "__default__" || !value ? "" : value)} data={modelOptions} w={240} />
+        <Button loading={busy} disabled={!item.sourceUrl || running} onClick={() => void start()} style={{ flex: "0 0 auto" }}>开始处理</Button>
+      </Group>
       {!item.sourceUrl ? <Alert color="yellow" title="缺少来源链接">这条内容暂时无法重新处理。</Alert> : null}
       {error ? <Alert color="red" title="无法开始">{error}</Alert> : null}
 
