@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Accordion, Alert, Badge, Box, Button, Checkbox, Drawer, Flex, Group, Modal,
   Paper, Select, SimpleGrid, Skeleton, Stack, Text, Textarea,
@@ -109,6 +109,11 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
     return Array.from(new Set([...Object.keys(oldPayload), ...Object.keys(newPayload)])).filter((key) => JSON.stringify(oldPayload[key]) !== JSON.stringify(newPayload[key]));
   }, [item.payload, proposed]);
   const latest = events[events.length - 1] ?? null;
+  const agentLog = events.filter((event) => event.type === "agent.log").map((event) => event.message);
+  const streamRef = useRef<HTMLPreElement>(null);
+  useEffect(() => {
+    if (running && streamRef.current) streamRef.current.scrollTop = streamRef.current.scrollHeight;
+  }, [events, running]);
   const toolLabel = run?.agent?.tool === "claude" ? "Claude Code" : "Codex";
 
   return <Drawer opened={open} onClose={() => onOpenChange(false)} position="right" size="xl" title={<Box><Text fw={600}>Agent 重新处理</Text><Text size="sm" c="dimmed" mt={2}>改写结果先在这里预览；采用后回到编辑器保存生效。</Text></Box>} overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}>
@@ -119,8 +124,8 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
       {error ? <Alert color="red" title="无法开始">{error}</Alert> : null}
 
       {running ? <Paper withBorder p="md">
-        <Group gap="sm"><span className="curator-pulse-dot" aria-hidden="true" /><Text fw={600} size="sm">{latest ? PHASE_LABEL[latest.phase] ?? latest.phase : "正在启动"}</Text></Group>
-        <Text size="sm" c="dimmed" mt={4}>{latest ? agentEventMessage(latest) : "正在启动 Agent…"}</Text>
+        <Group gap="sm" mb="sm"><span className="curator-pulse-dot" aria-hidden="true" /><Text fw={600} size="sm">{latest ? PHASE_LABEL[latest.phase] ?? latest.phase : "正在启动"}</Text></Group>
+        <pre className="curator-agent-stream" ref={streamRef}>{agentLog.length ? agentLog.join("\n") : "等待 Agent 输出…"}</pre>
       </Paper> : null}
 
       {failed ? <Stack gap="md">

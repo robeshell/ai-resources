@@ -111,6 +111,7 @@ export type CuratorRunEvent = {
   type:
     | "phase.started"
     | "phase.progress"
+    | "agent.log"
     | "evidence.added"
     | "draft.patch"
     | "warning.added"

@@ -293,12 +293,19 @@ export function CuratorStudio() {
   const timeline = useMemo(() => {
     const latest = new Map<CuratorRunEvent["phase"], CuratorRunEvent>();
     for (const event of events) latest.set(event.phase, event);
-    return Object.entries(PHASE_LABEL).map(([phase, label]) => ({
-      phase: phase as CuratorRunEvent["phase"],
-      label,
-      event: latest.get(phase as CuratorRunEvent["phase"]),
-    }));
+    return Object.entries(PHASE_LABEL)
+      .map(([phase, label]) => ({
+        phase: phase as CuratorRunEvent["phase"],
+        label,
+        event: latest.get(phase as CuratorRunEvent["phase"]),
+      }))
+      .filter((item) => item.event);
   }, [events]);
+  const agentLog = events.filter((event) => event.type === "agent.log").map((event) => event.message);
+  const streamRef = useRef<HTMLPreElement>(null);
+  useEffect(() => {
+    if (running && streamRef.current) streamRef.current.scrollTop = streamRef.current.scrollHeight;
+  }, [events, running]);
 
   const missing = [
     !draft.name.trim() && "名称",
@@ -399,7 +406,7 @@ export function CuratorStudio() {
               {running ? <Button type="button" variant="default" onClick={cancel}>取消分析</Button> : null}
             </header>
             <ol className="curator-timeline">
-              {timeline.map((item) => {
+              {timeline.filter((item) => item.event).map((item) => {
                 const active = run.phase === item.phase && running;
                 const complete = Boolean(item.event && item.event.type !== "phase.started" && item.event.level !== "error");
                 return (
@@ -410,6 +417,7 @@ export function CuratorStudio() {
                 );
               })}
             </ol>
+            {running ? <pre className="curator-agent-stream" ref={streamRef} aria-hidden="true">{agentLog.length ? agentLog.join("\n") : "等待 Agent 输出…"}</pre> : null}
             {!events.length && run.status !== "queued" ? <p className="curator-panel-note">这次分析来自上一次会话，过程记录已折叠。</p> : null}
             {warnings.length ? <Box className="curator-warnings-block"><Text size="0.8125rem" fw={600} c="yellow.9">需要检查</Text><List spacing={4} mt={6} center c="#514f49">{warnings.map((item) => <List.Item key={item.sequence}>{agentEventMessage(item)}</List.Item>)}</List></Box> : null}
             {evidence.length ? (
