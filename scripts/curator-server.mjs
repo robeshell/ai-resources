@@ -1560,8 +1560,17 @@ async function listContentPage(searchParams) {
     prompt: every.filter((item) => item.blockType === "prompt").length,
     active: every.filter((item) => item.status === "active").length,
     archived: every.filter((item) => item.status === "archived").length,
+    draft: every.filter((item) => item.status === "draft").length,
     issues: withIssuesAll.filter((item) => item.issueCount > 0).length,
     issueTotal: withIssuesAll.reduce((total, item) => total + item.issueCount, 0),
+    blocks: Object.fromEntries(INGEST_BLOCKS.map((block) => {
+      const inBlock = every.filter((item) => item.blockType === block);
+      return [block, {
+        total: inBlock.length,
+        active: inBlock.filter((item) => item.status === "active").length,
+        draft: inBlock.filter((item) => item.status === "draft").length,
+      }];
+    })),
   };
   let items = every;
   if (block !== "all") items = items.filter((item) => item.blockType === block);
