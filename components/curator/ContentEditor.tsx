@@ -101,7 +101,7 @@ function AgentDrawer({ item, open, onOpenChange, onAccept }: { item: CuratorCont
   return <Drawer opened={open} onClose={() => onOpenChange(false)} position="right" size="xl" title={<Box><Text fw={600}>Agent 重新处理</Text><Text size="sm" c="dimmed" mt={2}>只生成候选，接受后仍需在编辑器中保存。</Text></Box>} overlayProps={{ backgroundOpacity: 0.35, blur: 2 }}>
     <Stack gap="lg">
       <Textarea label="处理要求" description="说明想改什么、保留什么；留空则由 Agent 自行判断。" value={note} minRows={4} onChange={(event) => setNote(event.currentTarget.value)} />
-      <Group justify="space-between" align="center"><Text size="sm" c="dimmed">读取来源页面后生成候选，不直接覆盖正式内容。</Text><Button loading={busy} disabled={!item.sourceUrl} onClick={() => void start()}>开始处理</Button></Group>
+      <Group justify="flex-end"><Button loading={busy} disabled={!item.sourceUrl} onClick={() => void start()}>开始处理</Button></Group>
       {!item.sourceUrl ? <Alert color="yellow" title="缺少来源链接">这条内容暂时无法重新处理。</Alert> : null}
       {error ? <Alert color="red" title="Agent 处理失败">{error}</Alert> : null}
       {!run && !error && !candidates.length ? <Paper withBorder p="md"><Text fw={600} size="sm">处理流程</Text><Timeline mt="md" active={-1} bulletSize={18} lineWidth={2}>

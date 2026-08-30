@@ -89,7 +89,7 @@ export function CuratorDashboard() {
     queue.push({ key: run.id, tone: "error", title: run.draft?.name || run.source?.title || run.input?.url || "资源分析", detail: `${run.error || "分析失败"} · ${relativeTime(run.updatedAt)}`, action: "重新分析", href: `/curator/ingest/?run=${run.id}` });
   }
   for (const run of data?.runs.filter((item) => item.status === "awaiting_review") ?? []) {
-    queue.push({ key: run.id, tone: "warn", title: run.draft?.name || run.source?.title || "资源草稿", detail: `分析完成，确认后保存 · ${relativeTime(run.updatedAt)}`, action: "继续处理", href: `/curator/ingest/?run=${run.id}` });
+    queue.push({ key: run.id, tone: "warn", title: run.draft?.name || run.source?.title || "资源草稿", detail: `分析完成 · ${relativeTime(run.updatedAt)}`, action: "继续处理", href: `/curator/ingest/?run=${run.id}` });
   }
   for (const draft of (data?.draftItems ?? []).slice(0, 3)) {
     queue.push({ key: draft.id, tone: "info", title: draft.title, detail: `${contentBlocks[draft.blockType]?.label.zh ?? draft.blockType}草稿，发布后公开可见 · ${relativeTime(draft.updatedAt)}`, action: "去发布", href: `/curator/resources/${draft.blockType}/${encodeURIComponent(draft.slug)}` });
@@ -106,7 +106,6 @@ export function CuratorDashboard() {
       <Box>
         <Text className="curator-eyebrow-mantine">Curator / 工作台</Text>
         <Title order={1} mt={4}>今天要处理的内容</Title>
-        <Text c="dimmed" mt="xs">失败和待确认优先，然后是草稿与补齐。</Text>
       </Box>
       <Group gap="sm" wrap="wrap">
         <Button component={Link} href="/curator/ingest/">收录新资源</Button>
@@ -138,7 +137,6 @@ export function CuratorDashboard() {
       ) : (
         <Stack align="center" py="xl" gap={4}>
           <Text fw={600}>都处理完了</Text>
-          <Text size="sm" c="dimmed">收录一条新资源，或运行构建校验确认公开站状态。</Text>
           <Group mt="sm">
             <Button component={Link} href="/curator/ingest/" size="xs">收录新资源</Button>
             <Button variant="default" size="xs" disabled={buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>构建校验</Button>
@@ -169,7 +167,6 @@ export function CuratorDashboard() {
           </Paper>;
         })}
       </SimpleGrid>
-      {counts?.issueTotal ? <Text size="xs" c="dimmed" mt="sm">{counts.issueTotal} 个待补齐字段会让构建校验失败，处理后需要在系统页重新校验。</Text> : null}
     </div>
 
     <Paper withBorder p="xl">

@@ -400,7 +400,7 @@ export function CuratorStudio() {
               const other = agents.find((item) => item.id !== tool && item.available);
               return <Alert color="yellow">
                 <Group justify="space-between" gap="sm" wrap="wrap">
-                  <Box>{run.agent?.message || "已使用规则草稿"}。文案需要人工重写。</Box>
+                  <Box>{run.agent?.message || "已使用规则草稿"}</Box>
                   {other ? <Button size="xs" variant="light" color="curator" style={{ flex: "0 0 auto" }} onClick={() => { const info = agents.find((item) => item.id === other.id); switchAgent(other.id as AgentTool); void retry("generate", { tool: other.id as AgentTool, model: info?.defaultModel || info?.models[0]?.id || "" }); }}>换用 {other.label} 重新生成</Button> : null}
                 </Group>
               </Alert>;
@@ -449,9 +449,8 @@ export function CuratorStudio() {
                 <Group gap="sm" wrap="wrap">
                   {run.status === "failed" || run.status === "cancelled" ? <Button type="button" onClick={() => retry("fetch")}>重新分析</Button> : null}
                   {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>重新生成草稿</Button> : null}
-                  <Button type="button" variant="default" onClick={reset}>换一个链接</Button>
+                  <Button type="button" variant="subtle" color="gray" onClick={reset}>重新开始</Button>
                 </Group>
-                <Text size="xs" c="dimmed">重新分析会重新读取页面；重新生成草稿复用已读取的页面，只重跑 Agent。额度用尽或结果不好时，换上面的 Agent 再点对应按钮。</Text>
               </Stack>
             ) : null}
           </aside>
