@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Badge, Button, Checkbox, Flex, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Box, Button, Checkbox, Flex, Stack, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ToolLogo } from "@/components/ToolLogo";
 import { useMediaQuery } from "@/components/Transitions";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
@@ -228,7 +228,7 @@ export function CuratorStudio() {
     setRun(await curatorRequest<CuratorRun>(`/runs/${run.id}/cancel`, { method: "POST" }));
   }
 
-  async function retry(fromPhase: "fetch" | "generate") {
+  async function retry(fromPhase: "fetch" | "generate", overrides?: { tool: AgentTool; model: string }) {
     if (!run) return;
     setEvents([]);
     setMessage("");
@@ -236,7 +236,7 @@ export function CuratorStudio() {
     setRun(await curatorRequest<CuratorRun>(`/runs/${run.id}/retry`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fromPhase, block: targetBlock, tool, model }),
+      body: JSON.stringify({ fromPhase, block: targetBlock, tool: overrides?.tool ?? tool, model: overrides?.model ?? model }),
     }));
   }
 
@@ -396,7 +396,15 @@ export function CuratorStudio() {
               <div><Text className="curator-eyebrow-mantine">{run.agent?.mode === "rules" ? "规则草稿" : run.agent?.model || currentAgent?.label || "Agent"}</Text><h2>分析过程</h2></div>
               {running ? <Button type="button" variant="default" onClick={cancel}>取消分析</Button> : null}
             </header>
-            {run.agent?.mode === "rules" ? <Alert color="yellow">{run.agent?.message || "已使用规则草稿"}。文案需要人工重写。</Alert> : null}
+            {run.agent?.mode === "rules" ? (() => {
+              const other = agents.find((item) => item.id !== tool && item.available);
+              return <Alert color="yellow">
+                <Group justify="space-between" gap="sm" wrap="wrap">
+                  <Box>{run.agent?.message || "已使用规则草稿"}。文案需要人工重写。</Box>
+                  {other ? <Button size="xs" variant="light" color="curator" style={{ flex: "0 0 auto" }} onClick={() => { const info = agents.find((item) => item.id === other.id); switchAgent(other.id as AgentTool); void retry("generate", { tool: other.id as AgentTool, model: info?.defaultModel || info?.models[0]?.id || "" }); }}>换用 {other.label} 重新生成</Button> : null}
+                </Group>
+              </Alert>;
+            })() : null}
             <ol className="curator-timeline">
               {timeline.map((item) => {
                 const active = run.phase === item.phase && running;
