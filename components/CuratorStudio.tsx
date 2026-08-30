@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Badge, Button, Checkbox, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
+import { Alert, Badge, Button, Checkbox, Flex, Group, Paper, Select, SimpleGrid, Tabs, Text, Textarea, TextInput, Title } from "@mantine/core";
 import { ToolLogo } from "@/components/ToolLogo";
 import { useMediaQuery } from "@/components/Transitions";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
@@ -354,7 +354,7 @@ export function CuratorStudio() {
           </form>
 
           <aside className="curator-panel">
-            <header className="curator-panel-header"><div><p className="curator-eyebrow">最近</p><h2>最近分析</h2></div></header>
+            <header className="curator-panel-header"><div><Text className="curator-eyebrow-mantine">最近</Text><h2>最近分析</h2></div></header>
             {recentRuns.length ? (
               <ul className="curator-row-list">
                 {recentRuns.slice(0, 6).map((item) => (
@@ -364,7 +364,7 @@ export function CuratorStudio() {
                       <div className="curator-row-main">
                         <strong>{item.draft?.name || item.source?.title || item.input?.url || "资源分析"}</strong>
                       </div>
-                      <span className="curator-status-pill">{formatRunStatus(item)}</span>
+                      <Badge variant="light" color={item.status === "failed" ? "red" : item.status === "awaiting_review" ? "orange" : "gray"}>{formatRunStatus(item)}</Badge>
                     </Link>
                   </li>
                 ))}
@@ -382,10 +382,10 @@ export function CuratorStudio() {
           </Tabs>
           <aside className="curator-agent-panel">
             <header className="curator-panel-header">
-              <div><p className="curator-eyebrow">{run.agent?.mode === "rules" ? "规则草稿" : run.agent?.model || currentAgent?.label || "Agent"}</p><h2>分析过程</h2></div>
+              <div><Text className="curator-eyebrow-mantine">{run.agent?.mode === "rules" ? "规则草稿" : run.agent?.model || currentAgent?.label || "Agent"}</Text><h2>分析过程</h2></div>
               {running ? <Button type="button" variant="default" onClick={cancel}>取消分析</Button> : null}
             </header>
-            {run.agent?.mode === "rules" ? <Alert color="yellow">已使用规则草稿，不是 Agent 结果。文案需要人工重写。</Alert> : null}
+            {run.agent?.mode === "rules" ? <Alert color="yellow">{run.agent?.message || "已使用规则草稿"}。文案需要人工重写。</Alert> : null}
             <ol className="curator-timeline">
               {timeline.map((item) => {
                 const active = run.phase === item.phase && running;
@@ -424,8 +424,9 @@ export function CuratorStudio() {
             {!running ? (
               <div className="curator-retry-row">
                 {run.status === "failed" || run.status === "cancelled" ? <Button type="button" onClick={() => retry("fetch")}>重新分析</Button> : null}
-                {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>换设置重新生成</Button> : null}
+                {run.status === "awaiting_review" ? <Button type="button" variant="default" onClick={() => retry("generate")}>重新生成草稿</Button> : null}
                 <Button type="button" variant="default" onClick={reset}>换一个链接</Button>
+                {run.status === "awaiting_review" ? <Text size="xs" c="dimmed" w="100%">重新生成草稿会复用已读取的页面，只重跑 Agent 这一步；要换 Agent 或模型，回「换一个链接」后在运行设置里选择。</Text> : null}
               </div>
             ) : null}
           </aside>
@@ -436,7 +437,7 @@ export function CuratorStudio() {
                 <ToolLogo tool={{ id: draft.slug || "draft", name: draft.name || "新资源", url: draft.url || url, logo: draft.sourceLogoUrl }} size={44} />
                 <div><p>{ingestBlockLabels[draftBlock as CuratorIngestBlock] || KIND_LABEL[draft.kind as CatalogItem["kind"]]}</p><h2>{draft.name || "等待 Agent 输出"}</h2></div>
               </div>
-              {draft.confidence ? <span className="curator-status-pill">置信度 {Math.round(draft.confidence * 100)}%</span> : null}
+              {draft.confidence ? <Badge variant="light" color="curator">置信度 {Math.round(draft.confidence * 100)}%</Badge> : null}
             </header>
 
             {draft.name ? (
@@ -479,15 +480,12 @@ export function CuratorStudio() {
 
             {message ? <Alert color="red" role="status">{message}</Alert> : null}
             {missing.length && draft.name ? <Alert color="yellow">还需要补齐：{missing.join("、")}</Alert> : null}
-            <footer className="curator-save-bar">
-              <span>{running ? "分析进行中" : run.status === "awaiting_review" ? "确认后保存" : formatRunStatus(run)}</span>
-              <div>
-                <Button type="button" variant="default" onClick={reset}>返回</Button>
-                <Button type="button" onClick={save} disabled={busy || running || run.status !== "awaiting_review" || missing.length > 0}>
-                  {busy ? "正在保存" : "保存资源"}
-                </Button>
-              </div>
-            </footer>
+            <Paper withBorder p="sm" className="curator-savebar-mantine" mt="md">
+              <Flex align="center" justify="space-between" gap="md" wrap="wrap">
+                {running ? <Badge variant="light" color="gray">分析进行中</Badge> : run.status !== "awaiting_review" ? <Badge variant="light" color="gray">{formatRunStatus(run)}</Badge> : missing.length && draft.name ? <Badge variant="light" color="orange">还需补齐 {missing.length} 项</Badge> : <Badge variant="light" color="teal">草稿已就绪</Badge>}
+                <Button loading={busy} disabled={running || run.status !== "awaiting_review" || missing.length > 0} onClick={() => void save()}>保存资源</Button>
+              </Flex>
+            </Paper>
           </section>
         </div>
       )}

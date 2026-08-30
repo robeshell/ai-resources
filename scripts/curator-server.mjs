@@ -638,6 +638,18 @@ ${JSON.stringify({
   }, null, 2)}`;
 }
 
+// Turn raw CLI failures into a reason the operator can act on: usage limits,
+// login state, missing binary, or the first ERROR line of the log.
+function describeAgentFailure(message, toolLabel) {
+  const text = String(message || "");
+  const reset = text.match(/try again at (\d{1,2}:\d{2}\s*[AP]M)/i);
+  if (/usage limit|hit your usage/i.test(text)) return `${toolLabel} 额度已用尽${reset ? `，${reset[1]} 后重置` : ""}`;
+  if (/not logged in|unauthorized|invalid api key/i.test(text)) return `${toolLabel} 未登录或凭证失效`;
+  if (/ENOENT|command not found/i.test(text)) return `${toolLabel} 命令不存在或不在 PATH`;
+  const firstError = text.split("\n").map((line) => line.trim()).find((line) => /^error/i.test(line));
+  return firstError ? firstError.slice(0, 140) : `${toolLabel} 没有返回结构化结果`;
+}
+
 async function agentDraft(meta, finalUrl, note, tool, model, targetBlock = "tool", options = {}) {
   const fallback = ruleDraft(meta, finalUrl, targetBlock);
   if (process.env.CURATOR_DISABLE_AI === "1") {
@@ -654,13 +666,14 @@ async function agentDraft(meta, finalUrl, note, tool, model, targetBlock = "tool
     return { draft, agent: { mode: selected, tool: selected, model } };
   } catch (error) {
     console.warn(`Agent classification failed: ${error instanceof Error ? error.message.slice(0, 180) : "unknown error"}`);
+    const toolLabel = selected === "claude" ? "Claude Code" : "Codex";
     return {
       draft: fallback,
       agent: {
         mode: "rules",
         tool: selected,
         model,
-        message: "Agent 未返回结构化结果，已使用规则草稿",
+        message: `已使用规则草稿：${describeAgentFailure(error instanceof Error ? error.message : "", toolLabel)}`,
       },
     };
   }
