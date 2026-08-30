@@ -316,6 +316,7 @@ export function CuratorStudio() {
       <header className="curator-page-heading is-compact">
         <div><Text className="curator-eyebrow-mantine">新收录</Text><Title order={1} mt={4}>整理一条资源</Title></div>
         {run ? <Badge color={run.status === "failed" ? "red" : run.status === "saved" ? "teal" : "curator"} variant="light">{formatRunStatus(run)}</Badge> : null}
+        {run ? <span role="status" className="mantine-visually-hidden">{formatRunStatus(run)}</span> : null}
       </header>
 
       {!run ? (
@@ -458,20 +459,20 @@ export function CuratorStudio() {
 
             {draft.name ? (
               <div>
-                <Paper withBorder p="md" mb="md"><Title order={3} mb="md">公开内容</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                <Paper withBorder p="md" mb="xl"><Title order={3} mb="md">公开内容</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                   <TextInput label="名称" value={draft.name} onChange={(event) => update("name", event.currentTarget.value)} />
                   <TextInput label="Slug" value={draft.slug} onChange={(event) => update("slug", event.currentTarget.value)} />
-                  <TextInput label="中文定位" description={`${draft.verdict.zh.length}/${COPY_LIMITS.verdictZh} 字`} error={draft.verdict.zh.length > COPY_LIMITS.verdictZh ? "超过建议长度" : undefined} value={draft.verdict.zh} onChange={(event) => updateLocalized("verdict", "zh", event.currentTarget.value)} />
-                  <TextInput label="English verdict" description={`${words(draft.verdict.en)}/${COPY_LIMITS.verdictEn} words`} error={words(draft.verdict.en) > COPY_LIMITS.verdictEn ? "超过建议长度" : undefined} value={draft.verdict.en} onChange={(event) => updateLocalized("verdict", "en", event.currentTarget.value)} />
-                  <Textarea label="中文简介" description={`${draft.summary.zh.length}/${COPY_LIMITS.summaryZh} 字`} error={draft.summary.zh.length > COPY_LIMITS.summaryZh ? "超过建议长度" : undefined} minRows={3} value={draft.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} />
-                  <Textarea label="English summary" description={`${words(draft.summary.en)}/${COPY_LIMITS.summaryEn} words`} error={words(draft.summary.en) > COPY_LIMITS.summaryEn ? "超过建议长度" : undefined} minRows={3} value={draft.summary.en} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} />
+                  <TextInput label="中文定位" description={<span className="curator-number">{draft.verdict.zh.length}/{COPY_LIMITS.verdictZh} 字</span>} error={draft.verdict.zh.length > COPY_LIMITS.verdictZh ? `精简到 ${COPY_LIMITS.verdictZh} 字以内` : undefined} value={draft.verdict.zh} onChange={(event) => updateLocalized("verdict", "zh", event.currentTarget.value)} />
+                  <TextInput label="English verdict" description={<span className="curator-number">{words(draft.verdict.en)}/{COPY_LIMITS.verdictEn} words</span>} error={words(draft.verdict.en) > COPY_LIMITS.verdictEn ? `精简到 ${COPY_LIMITS.verdictEn} 个词以内` : undefined} value={draft.verdict.en} onChange={(event) => updateLocalized("verdict", "en", event.currentTarget.value)} />
+                  <Textarea label="中文简介" description={<span className="curator-number">{draft.summary.zh.length}/{COPY_LIMITS.summaryZh} 字</span>} error={draft.summary.zh.length > COPY_LIMITS.summaryZh ? `精简到 ${COPY_LIMITS.summaryZh} 字以内` : undefined} minRows={3} value={draft.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} />
+                  <Textarea label="English summary" description={<span className="curator-number">{words(draft.summary.en)}/{COPY_LIMITS.summaryEn} words</span>} error={words(draft.summary.en) > COPY_LIMITS.summaryEn ? `精简到 ${COPY_LIMITS.summaryEn} 个词以内` : undefined} minRows={3} value={draft.summary.en} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} />
                 </SimpleGrid></Paper>
-                <Paper withBorder p="md" mb="md"><Title order={3} mb="md">收录属性</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                <Paper withBorder p="md" mb="xl"><Title order={3} mb="md">收录属性</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                   <Select label="收录板块" aria-label="收录板块" value={draftBlock} onChange={(value) => setDraftBlock((value || "tool") as CuratorIngestBlock)} data={[{ value: "tool", label: "工具卡片" }, { value: "skill", label: "技能文章" }, { value: "project", label: "项目文章" }, { value: "prompt", label: "提示词模板" }]} />
                   {draftBlock === "tool" ? <Select label="定价" aria-label="定价" value={draft.pricing} onChange={(value) => update("pricing", (value || "free") as CuratorDraft["pricing"])} data={[{ value: "free", label: "免费" }, { value: "freemium", label: "免费增值" }, { value: "paid", label: "付费" }, { value: "api", label: "按量计费" }]} /> : null}
                 </SimpleGrid>{draftBlock === "tool" ? <Checkbox.Group label="平台" value={draft.platforms} onChange={(value) => update("platforms", value as CatalogItem["platforms"])} mt="md"><Group mt="xs">{platforms.map((platform) => <Checkbox key={platform} value={platform} label={platform.toUpperCase()} />)}</Group></Checkbox.Group> : null}</Paper>
                 {isLongformDraft ? (
-                  <Paper withBorder p="md" mb="md">
+                  <Paper withBorder p="md" mb="xl">
                     <Title order={3} mb="md">正文（Markdown）</Title>
                     <Textarea className="curator-markdown-input" label="正文" minRows={16} value={draft.body || ""} onChange={(event) => update("body", event.currentTarget.value)} placeholder="说明它解决什么问题、怎么用、适用边界和相关链接。" />
                     <Text size="sm" fw={600} mt="lg" mb="xs">相关链接</Text>
@@ -479,7 +480,7 @@ export function CuratorStudio() {
                   </Paper>
                 ) : null}
                 {isPromptDraft ? (
-                  <Paper withBorder p="md" mb="md">
+                  <Paper withBorder p="md" mb="xl">
                     <Title order={3} mb="md">提示词模板</Title>
                     <Textarea className="curator-markdown-input" label="Prompt" minRows={10} value={draft.prompt || ""} onChange={(event) => update("prompt", event.currentTarget.value)} placeholder="使用 {{variable}} 标记需要填写的变量。" />
                     <Text size="sm" fw={600} mt="lg" mb="xs">变量</Text>
@@ -490,15 +491,15 @@ export function CuratorStudio() {
                     <StructuredLinks value={draft.links || []} onChange={(links) => update("links", links)} />
                   </Paper>
                 ) : null}
-                {draft.rationale ? <p className="curator-panel-note">Agent 判断依据：{draft.rationale}</p> : null}
+                {draft.rationale && run.agent?.mode !== "rules" ? <p className="curator-panel-note">Agent 判断依据：{draft.rationale}</p> : null}
               </div>
             ) : <div className="curator-draft-loading"><span /><span /><span /></div>}
 
-            {message ? <Alert color="red" role="status">{message}</Alert> : null}
+            {message ? <Alert color="red" role="alert">{message}</Alert> : null}
             {missing.length && draft.name ? <Alert color="yellow">还需要补齐：{missing.join("、")}</Alert> : null}
             <Paper withBorder p="sm" className="curator-savebar-mantine" mt="md">
               <Flex align="center" justify="space-between" gap="md" wrap="wrap">
-                {running ? <Badge variant="light" color="gray">分析进行中</Badge> : run.status !== "awaiting_review" ? <Badge variant="light" color="gray">{formatRunStatus(run)}</Badge> : missing.length && draft.name ? <Badge variant="light" color="orange">还需补齐 {missing.length} 项</Badge> : <Badge variant="light" color="teal">草稿已就绪</Badge>}
+                {running ? <Badge variant="light" color="gray">分析进行中</Badge> : run.status !== "awaiting_review" ? <Badge variant="light" color="gray">{formatRunStatus(run)}</Badge> : missing.length && draft.name ? <Badge variant="light" color="orange">还需补齐 {missing.length} 项</Badge> : <Badge variant="light" color="teal">等待确认</Badge>}
                 <Button loading={busy} disabled={running || run.status !== "awaiting_review" || missing.length > 0} onClick={() => void save()}>保存资源</Button>
               </Flex>
             </Paper>

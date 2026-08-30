@@ -178,6 +178,10 @@
   font-weight: 500;
 }
 
+.curator-root .mantine-Input-description {
+  color: #68655f;
+}
+
 .curator-root .mantine-Paper-root {
   border-color: #dedbd4;
   background: rgba(255, 255, 255, 0.72);
