@@ -296,6 +296,18 @@
 .curator-row-main span { overflow: hidden; color: #77736c; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
 .curator-empty-state { padding: 0.75rem 0; color: #77736c; font-size: 0.8125rem; }
 
+.curator-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .curator-warnings-block {
   padding: 0.85rem 1rem;
   border-radius: var(--mantine-radius-md);

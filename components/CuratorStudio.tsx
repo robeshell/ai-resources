@@ -323,7 +323,7 @@ export function CuratorStudio() {
       <header className="curator-page-heading is-compact">
         <div><Text className="curator-eyebrow-mantine">新收录</Text><Title order={1} mt={4}>整理一条资源</Title></div>
         {run ? <Badge color={run.status === "failed" ? "red" : run.status === "saved" ? "teal" : "curator"} variant="light">{formatRunStatus(run)}</Badge> : null}
-        {run ? <span role="status" className="mantine-visually-hidden">{formatRunStatus(run)}</span> : null}
+        {run ? <span role="status" className="curator-sr-only">{formatRunStatus(run)}</span> : null}
       </header>
 
       {!run ? (
