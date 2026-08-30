@@ -1326,6 +1326,19 @@ input {
 .public-article dd { margin: 0; color: var(--muted); }
 .public-article > footer { display: grid; gap: 0.5rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--line); }
 .public-article > footer a { color: var(--accent-ink); }
+.markdown-body > * { margin-block: 0 1.25rem; }
+.markdown-body > :last-child { margin-bottom: 0; }
+.markdown-body h2 { margin-top: 2.5rem; font-size: 1.5rem; letter-spacing: -0.02em; }
+.markdown-body h3 { margin-top: 2rem; font-size: 1.2rem; }
+.markdown-body h4, .markdown-body h5, .markdown-body h6 { margin-top: 1.75rem; font-size: 1rem; }
+.markdown-body ul, .markdown-body ol { padding-left: 1.5rem; }
+.markdown-body li { margin-block: 0.35rem; }
+.markdown-body a { color: var(--accent-ink); text-underline-offset: 0.2em; }
+.markdown-body code { padding: 0.1em 0.35em; border-radius: 0.3rem; background: var(--color-muted); font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.9em; }
+.markdown-body pre code { padding: 0; background: none; font-size: 0.875rem; }
+.markdown-body blockquote { margin-inline: 0; padding-left: 1.25rem; border-left: 3px solid var(--line-strong); color: var(--muted); }
+.markdown-body blockquote p { margin: 0; }
+.markdown-body hr { margin-block: 2.5rem; border: 0; border-top: 1px solid var(--line); }
 .prompt-copy-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .prompt-copy-button { min-height: 2.5rem; padding: 0.55rem 0.8rem; border: 1px solid var(--line-strong); border-radius: 0.4rem; background: var(--surface); color: var(--ink); font-weight: 650; }
 .prompt-example { padding: 1rem 0; border-top: 1px solid var(--line); }

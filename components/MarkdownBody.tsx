@@ -1,38 +1,156 @@
 import type { ReactNode } from "react";
 
+/** Inline spans, longest delimiter first so `**bold**` wins over `*em*`.
+ *  Kept as a source string: `inline` recurses into its own matches, so each
+ *  call needs its own regex object rather than a shared `lastIndex`. */
+const INLINE_SOURCE = "(`[^`\\n]+`)|(\\[[^\\]\\n]+\\]\\([^)\\s]+\\))|(\\*\\*[^*\\n]+\\*\\*)|(__[^_\\n]+__)|(\\*[^*\\n]+\\*)|(_[^_\\n]+_)";
+
+/** Only schemes that cannot execute script; anything else renders as text. */
+function safeHref(url: string): string | null {
+  const value = url.trim();
+  if (/^(https?:\/\/|mailto:)/i.test(value)) return value;
+  if (value.startsWith("/") || value.startsWith("#")) return value;
+  return null;
+}
+
+function inline(source: string, keyPrefix: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  const pattern = new RegExp(INLINE_SOURCE, "g");
+  let cursor = 0;
+  let index = 0;
+  for (let match = pattern.exec(source); match; match = pattern.exec(source)) {
+    if (match.index > cursor) nodes.push(source.slice(cursor, match.index));
+    const token = match[0];
+    const key = `${keyPrefix}-${index++}`;
+    if (token.startsWith("`")) {
+      nodes.push(<code key={key}>{token.slice(1, -1)}</code>);
+    } else if (token.startsWith("[")) {
+      const link = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+      const href = link ? safeHref(link[2]) : null;
+      if (link && href) {
+        const external = /^https?:\/\//i.test(href);
+        nodes.push(
+          <a key={key} href={href} {...(external ? { target: "_blank", rel: "noreferrer noopener" } : {})}>
+            {inline(link[1], key)}
+          </a>,
+        );
+      } else {
+        nodes.push(token);
+      }
+    } else if (token.startsWith("**") || token.startsWith("__")) {
+      nodes.push(<strong key={key}>{inline(token.slice(2, -2), key)}</strong>);
+    } else {
+      nodes.push(<em key={key}>{inline(token.slice(1, -1), key)}</em>);
+    }
+    cursor = match.index + token.length;
+  }
+  if (cursor < source.length) nodes.push(source.slice(cursor));
+  return nodes;
+}
+
+const HEADING = /^(#{1,4})\s+(.+)$/;
+const BULLET = /^\s*[-*+]\s+(.+)$/;
+const ORDERED = /^\s*\d+[.)]\s+(.+)$/;
+const QUOTE = /^\s*>\s?(.*)$/;
+const RULE = /^\s*([-*_])(\s*\1){2,}\s*$/;
+
+/**
+ * Markdown rendered straight to React elements — no HTML string is ever built,
+ * so Agent-written bodies cannot inject markup. Nested lists are flattened.
+ */
 export function MarkdownBody({ source }: { source: string }) {
   const lines = source.replaceAll("\r\n", "\n").split("\n");
   const nodes: ReactNode[] = [];
-  let paragraph: string[] = [];
-  let list: string[] = [];
-  let code: string[] | null = null;
-  const flushParagraph = () => {
-    if (paragraph.length) nodes.push(<p key={`p-${nodes.length}`}>{paragraph.join(" ")}</p>);
-    paragraph = [];
-  };
-  const flushList = () => {
-    if (list.length) nodes.push(<ul key={`ul-${nodes.length}`}>{list.map((item, index) => <li key={index}>{item}</li>)}</ul>);
-    list = [];
-  };
+  let cursor = 0;
+
+  // The page owns the <h1>, so the shallowest heading in the body becomes <h2>
+  // whether the author started at `#` or at `##`. Without this, a body that
+  // starts at `##` would skip a heading level.
+  let inFence = false;
+  let shallowest = 6;
   for (const line of lines) {
-    if (line.startsWith("```")) {
-      flushParagraph(); flushList();
-      if (code) { nodes.push(<pre key={`pre-${nodes.length}`}><code>{code.join("\n")}</code></pre>); code = null; }
-      else code = [];
+    if (line.trimStart().startsWith("```")) inFence = !inFence;
+    else if (!inFence) {
+      const heading = line.match(HEADING);
+      if (heading) shallowest = Math.min(shallowest, heading[1].length);
+    }
+  }
+
+  const push = (node: ReactNode) => nodes.push(node);
+
+  while (cursor < lines.length) {
+    const line = lines[cursor];
+    const key = `md-${nodes.length}`;
+
+    if (line.trimStart().startsWith("```")) {
+      const language = line.trim().slice(3).trim();
+      const body: string[] = [];
+      cursor += 1;
+      while (cursor < lines.length && !lines[cursor].trimStart().startsWith("```")) {
+        body.push(lines[cursor]);
+        cursor += 1;
+      }
+      cursor += 1;
+      push(<pre key={key}><code {...(language ? { className: `language-${language}` } : {})}>{body.join("\n")}</code></pre>);
       continue;
     }
-    if (code) { code.push(line); continue; }
-    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+
+    if (!line.trim()) {
+      cursor += 1;
+      continue;
+    }
+
+    if (RULE.test(line)) {
+      push(<hr key={key} />);
+      cursor += 1;
+      continue;
+    }
+
+    const heading = line.match(HEADING);
     if (heading) {
-      flushParagraph(); flushList();
-      const level = heading[1].length;
-      nodes.push(level === 1 ? <h2 key={`h-${nodes.length}`}>{heading[2]}</h2> : level === 2 ? <h3 key={`h-${nodes.length}`}>{heading[2]}</h3> : <h4 key={`h-${nodes.length}`}>{heading[2]}</h4>);
-    } else if (/^[-*]\s+/.test(line)) {
-      flushParagraph(); list.push(line.replace(/^[-*]\s+/, ""));
-    } else if (!line.trim()) {
-      flushParagraph(); flushList();
-    } else paragraph.push(line.trim());
+      const Tag = (["h2", "h3", "h4", "h5", "h6"] as const)[Math.min(4, heading[1].length - shallowest)];
+      push(<Tag key={key}>{inline(heading[2].trim(), key)}</Tag>);
+      cursor += 1;
+      continue;
+    }
+
+    if (BULLET.test(line) || ORDERED.test(line)) {
+      const ordered = !BULLET.test(line);
+      const pattern = ordered ? ORDERED : BULLET;
+      const items: string[] = [];
+      while (cursor < lines.length) {
+        const item = lines[cursor].match(pattern);
+        if (!item) break;
+        items.push(item[1].trim());
+        cursor += 1;
+      }
+      const children = items.map((item, itemIndex) => <li key={itemIndex}>{inline(item, `${key}-${itemIndex}`)}</li>);
+      push(ordered ? <ol key={key}>{children}</ol> : <ul key={key}>{children}</ul>);
+      continue;
+    }
+
+    const quote = line.match(QUOTE);
+    if (quote) {
+      const quoted: string[] = [];
+      while (cursor < lines.length) {
+        const next = lines[cursor].match(QUOTE);
+        if (!next) break;
+        quoted.push(next[1].trim());
+        cursor += 1;
+      }
+      push(<blockquote key={key}><p>{inline(quoted.join(" ").trim(), key)}</p></blockquote>);
+      continue;
+    }
+
+    const paragraph: string[] = [];
+    while (cursor < lines.length) {
+      const next = lines[cursor];
+      if (!next.trim() || HEADING.test(next) || BULLET.test(next) || ORDERED.test(next) || QUOTE.test(next) || RULE.test(next) || next.trimStart().startsWith("```")) break;
+      paragraph.push(next.trim());
+      cursor += 1;
+    }
+    push(<p key={key}>{inline(paragraph.join(" "), key)}</p>);
   }
-  flushParagraph(); flushList();
+
   return <div className="markdown-body">{nodes}</div>;
 }
