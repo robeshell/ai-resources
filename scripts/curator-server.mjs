@@ -646,7 +646,10 @@ function describeAgentFailure(message, toolLabel) {
   if (/usage limit|hit your usage/i.test(text)) return `${toolLabel} 额度已用尽${reset ? `，${reset[1]} 后重置` : ""}`;
   if (/not logged in|unauthorized|invalid api key/i.test(text)) return `${toolLabel} 未登录或凭证失效`;
   if (/ENOENT|command not found/i.test(text)) return `${toolLabel} 命令不存在或不在 PATH`;
-  const firstError = text.split("\n").map((line) => line.trim()).find((line) => /^error/i.test(line));
+  const firstError = text.split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !/^\d{4}-\d{2}-\d{2}T/.test(line) && !/codex_models_manager/.test(line))
+    .find((line) => /^error/i.test(line));
   return firstError ? firstError.slice(0, 140) : `${toolLabel} 没有返回结构化结果`;
 }
 
@@ -1015,7 +1018,8 @@ async function executeRun(run) {
             run.pendingToolOutput = payload;
             return;
           }
-          emitRunEvent(run, "generate", "tool.output", "warning", `${payload.command} 退出码 ${payload.exitCode ?? "未知"}`, payload);
+          const toolLabel = payload.command === "claude" ? "Claude Code" : "Codex";
+          emitRunEvent(run, "generate", "tool.output", "warning", describeAgentFailure(payload.stderr || payload.stdout || "", toolLabel), payload);
         },
       },
     );
