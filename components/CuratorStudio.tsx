@@ -459,7 +459,7 @@ export function CuratorStudio() {
 
             {draft.name ? (
               <div>
-                <Paper withBorder p="md" mb="xl"><Title order={3} mb="md">公开内容</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                <Paper withBorder p="md" mb="xl"><Title order={2} mb="md">公开内容</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                   <TextInput label="名称" value={draft.name} onChange={(event) => update("name", event.currentTarget.value)} />
                   <TextInput label="Slug" value={draft.slug} onChange={(event) => update("slug", event.currentTarget.value)} />
                   <TextInput label="中文定位" description={<span className="curator-number">{draft.verdict.zh.length}/{COPY_LIMITS.verdictZh} 字</span>} error={draft.verdict.zh.length > COPY_LIMITS.verdictZh ? `精简到 ${COPY_LIMITS.verdictZh} 字以内` : undefined} value={draft.verdict.zh} onChange={(event) => updateLocalized("verdict", "zh", event.currentTarget.value)} />
@@ -467,13 +467,13 @@ export function CuratorStudio() {
                   <Textarea label="中文简介" description={<span className="curator-number">{draft.summary.zh.length}/{COPY_LIMITS.summaryZh} 字</span>} error={draft.summary.zh.length > COPY_LIMITS.summaryZh ? `精简到 ${COPY_LIMITS.summaryZh} 字以内` : undefined} minRows={3} value={draft.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} />
                   <Textarea label="English summary" description={<span className="curator-number">{words(draft.summary.en)}/{COPY_LIMITS.summaryEn} words</span>} error={words(draft.summary.en) > COPY_LIMITS.summaryEn ? `精简到 ${COPY_LIMITS.summaryEn} 个词以内` : undefined} minRows={3} value={draft.summary.en} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} />
                 </SimpleGrid></Paper>
-                <Paper withBorder p="md" mb="xl"><Title order={3} mb="md">收录属性</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+                <Paper withBorder p="md" mb="xl"><Title order={2} mb="md">收录属性</Title><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                   <Select label="收录板块" aria-label="收录板块" value={draftBlock} onChange={(value) => setDraftBlock((value || "tool") as CuratorIngestBlock)} data={[{ value: "tool", label: "工具卡片" }, { value: "skill", label: "技能文章" }, { value: "project", label: "项目文章" }, { value: "prompt", label: "提示词模板" }]} />
                   {draftBlock === "tool" ? <Select label="定价" aria-label="定价" value={draft.pricing} onChange={(value) => update("pricing", (value || "free") as CuratorDraft["pricing"])} data={[{ value: "free", label: "免费" }, { value: "freemium", label: "免费增值" }, { value: "paid", label: "付费" }, { value: "api", label: "按量计费" }]} /> : null}
                 </SimpleGrid>{draftBlock === "tool" ? <Checkbox.Group label="平台" value={draft.platforms} onChange={(value) => update("platforms", value as CatalogItem["platforms"])} mt="md"><Group mt="xs">{platforms.map((platform) => <Checkbox key={platform} value={platform} label={platform.toUpperCase()} />)}</Group></Checkbox.Group> : null}</Paper>
                 {isLongformDraft ? (
                   <Paper withBorder p="md" mb="xl">
-                    <Title order={3} mb="md">正文（Markdown）</Title>
+                    <Title order={2} mb="md">正文（Markdown）</Title>
                     <Textarea className="curator-markdown-input" label="正文" minRows={16} value={draft.body || ""} onChange={(event) => update("body", event.currentTarget.value)} placeholder="说明它解决什么问题、怎么用、适用边界和相关链接。" />
                     <Text size="sm" fw={600} mt="lg" mb="xs">相关链接</Text>
                     <StructuredLinks value={draft.links || []} onChange={(links) => update("links", links)} />
@@ -481,7 +481,7 @@ export function CuratorStudio() {
                 ) : null}
                 {isPromptDraft ? (
                   <Paper withBorder p="md" mb="xl">
-                    <Title order={3} mb="md">提示词模板</Title>
+                    <Title order={2} mb="md">提示词模板</Title>
                     <Textarea className="curator-markdown-input" label="Prompt" minRows={10} value={draft.prompt || ""} onChange={(event) => update("prompt", event.currentTarget.value)} placeholder="使用 {{variable}} 标记需要填写的变量。" />
                     <Text size="sm" fw={600} mt="lg" mb="xs">变量</Text>
                     <VariablesEditor value={draft.variables || []} onChange={(variables) => update("variables", variables)} />
