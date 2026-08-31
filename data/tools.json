@@ -204,12 +204,16 @@
       ],
       "status": "active",
       "verdict": {
-        "en": "Coding agent for real work.",
-        "zh": "终端里的编程 Agent。"
+        "en": "Multi-agent coding, end to end.",
+        "zh": "多 Agent 端到端干工程活。"
       },
       "summary": {
-        "en": "Handles end-to-end engineering tasks across ChatGPT, editors, and the terminal.",
-        "zh": "端到端处理工程任务，覆盖 ChatGPT、编辑器与终端。"
+        "en": "End-to-end engineering with parallel agents in cloud worktrees, across ChatGPT, IDE, and CLI.",
+        "zh": "端到端跑工程任务，多 Agent 在云端工作区并行，入口覆盖 ChatGPT、IDE 与 CLI。"
+      },
+      "description": {
+        "en": "Codex is OpenAI's coding agent for real engineering work. It carries a task from start to finish — breaking down requirements, editing code, running tests, and reviewing the changes. In multi-agent mode, subtasks run in parallel inside built-in worktrees and cloud environments, compressing weeks of work into days. Skills let a team teach Codex its own standards and workflows.\n\nIt fits tasks with a concrete deliverable: feature work, large refactors, migrations, and code review, plus scheduled background jobs like issue triage, alert monitoring, or CI/CD. All three surfaces share one ChatGPT account — the ChatGPT app, the IDE extension, and the CLI. The page doesn't state pricing separately; access rides on ChatGPT subscription plans.",
+        "zh": "Codex 是 OpenAI 的编程 Agent，把工程任务从拆解需求到改代码、跑测试、走审查一路做完。多 Agent 模式下子任务并行，借助内置 worktree 和云端环境压缩交付周期；Skills 能让团队把自家规范和工作流教给它。\n\n适合迁移、大型重构、代码审查这类有明确产出的工程活，也能定时跑工单分类、告警监控、CI/CD 等日常任务。三种入口共用同一个 ChatGPT 账号：ChatGPT 应用、IDE 扩展和 CLI。页面未单列定价，费用跟随 ChatGPT 订阅方案。"
       }
     },
     {
