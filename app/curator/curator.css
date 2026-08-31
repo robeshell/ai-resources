@@ -161,6 +161,14 @@
   background: #f5f3ef;
 }
 .curator-markdown-preview .markdown-body pre code { padding: 0; background: none; }
+.curator-markdown-preview .markdown-code-block pre {
+  margin: 0;
+  padding: 0.85rem 1rem 1rem;
+  background: transparent;
+  color: inherit;
+  white-space: pre;
+}
+.curator-markdown-preview .markdown-code-block pre code { color: inherit; }
 .curator-markdown-preview .markdown-body blockquote {
   margin-inline: 0;
   padding-left: 1rem;
@@ -298,10 +306,10 @@
 .curator-editor-split {
   display: grid;
   grid-template-columns: minmax(24rem, 0.95fr) minmax(34rem, 1.55fr);
-  height: calc(100dvh - 8rem);
-  /* Below this the two-column workspace stops fitting the viewport; the short-
-     viewport branch below stacks it rather than pushing the composer offscreen. */
-  min-height: 32rem;
+  /* Header (58px) + the page's responsive top inset + a small bottom inset.
+     Both panes stay inside this frame and own their vertical scrolling. */
+  height: calc(100dvh - 58px - clamp(1.5rem, 3vw, 3rem) - 1.5rem);
+  min-height: 0;
   gap: 1rem;
   align-items: start;
   overflow: hidden;
@@ -309,26 +317,44 @@
 
 .curator-editor-chat {
   height: 100%;
+  min-height: 0;
   min-width: 0;
 }
 
 .curator-editor-main {
   height: 100%;
   min-height: 0;
-  overflow-y: auto;
-  padding-inline-end: 0.25rem;
-  scrollbar-gutter: stable;
+  overflow: hidden;
 }
 
-/* The last section must clear the sticky save bar, otherwise it is only found
-   by scrolling past what looks like the end of the form. */
-.curator-editor-main > .mantine-Stack-root:first-of-type {
-  padding-bottom: 0.5rem;
+.curator-editor-form-scroll {
+  display: grid;
+  min-height: 0;
+  gap: 1rem;
+}
+
+.curator-editor-split .curator-editor-form-scroll {
+  overflow-y: auto;
+  flex: 1 1 auto;
+  padding: 0 0.3rem 1rem 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .curator-editor-section-heading h2 {
   font-size: 1rem;
   letter-spacing: -0.015em;
+}
+
+.curator-editor-section {
+  box-shadow: 0 1px 2px rgba(68, 54, 40, 0.035);
+}
+
+.curator-editor-split .curator-savebar-mantine {
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 0.75rem;
+  box-shadow: 0 -1px 0 rgba(68, 54, 40, 0.03);
 }
 
 .curator-conversation {
@@ -366,8 +392,10 @@
 .curator-conversation-scroll {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
   padding: 1rem;
+  scrollbar-gutter: stable;
   scroll-padding-block: 1rem;
 }
 
@@ -433,10 +461,53 @@
 }
 
 .curator-conversation-diff {
-  padding: 0.65rem;
+  padding: 0.75rem;
   border: 1px solid #ebe8e2;
   border-radius: var(--mantine-radius-sm);
   background: #faf9f6;
+}
+
+.curator-diff-header {
+  margin-bottom: 0.65rem;
+}
+
+.curator-diff-label {
+  color: #89857d;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+}
+
+.curator-diff-label-proposed {
+  margin-top: 0.35rem;
+  color: #4e4b45;
+}
+
+.curator-diff-value {
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  overflow: auto;
+  border: 1px solid #e7e3dc;
+  border-radius: 0.4rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  scrollbar-gutter: stable;
+}
+
+.curator-diff-value-current {
+  max-height: 6.5rem;
+  background: #f3f1ed;
+  color: #77736c;
+}
+
+.curator-diff-value-proposed {
+  max-height: 18rem;
+  border-color: #ddd7ce;
+  background: #fff;
+  color: #272521;
 }
 
 /* The progress trail: older steps fade back so the newest line reads first. */
@@ -473,9 +544,10 @@
   50% { opacity: 1; }
 }
 
-/* Stack when the workspace cannot fit side by side — narrow, or too short for
-   an equal-height split (a zoomed-in window hits the height case first). */
-@media (max-width: 64rem), (max-height: 44rem) {
+/* Stack only when the workspace cannot fit side by side. A short desktop
+   viewport keeps the two panes and scrolls inside them, so the composer and
+   save controls remain visible. */
+@media (max-width: 64rem) {
   .curator-editor-split {
     height: auto;
     min-height: 0;
@@ -488,6 +560,11 @@
     height: auto;
     overflow: visible;
     padding-inline-end: 0;
+  }
+
+  .curator-editor-split .curator-editor-form-scroll {
+    overflow: visible;
+    padding: 0;
   }
 
   .curator-conversation {

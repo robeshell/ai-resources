@@ -1014,6 +1014,19 @@ input {
   line-height: 1.65;
 }
 
+.dialog-description {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+  line-height: 1.72;
+}
+
+.dialog-description p {
+  margin: 0;
+}
+
 .dialog-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1305,7 +1318,7 @@ input {
 .public-content-empty { color: var(--muted); }
 
 .public-article {
-  width: min(100% - 2rem, 52rem);
+  width: min(100% - 2rem, 48rem);
   margin: 0 auto;
   padding: clamp(2rem, 6vw, 5rem) 0 6rem;
   color: var(--ink);
@@ -1314,10 +1327,10 @@ input {
 }
 
 .public-article-back { color: var(--accent-ink); }
-.public-article > header { margin: 2rem 0 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line); }
+.public-article > header { margin: 2rem 0 3.5rem; padding-bottom: 2.5rem; border-bottom: 1px solid var(--line); }
 .public-article > header p { margin: 0; color: var(--accent-ink); font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.75rem; text-transform: uppercase; }
 .public-article > header h1 { margin: 0.5rem 0; font-size: clamp(2.5rem, 7vw, 4.5rem); line-height: 1; letter-spacing: -0.055em; }
-.public-article > header span { color: var(--muted); font-size: 1.125rem; }
+.public-article > header span { display: block; max-width: 42rem; color: var(--muted); font-size: 1.125rem; line-height: 1.6; text-wrap: pretty; }
 .public-article section { margin-block: 2.5rem; }
 .public-article h2 { margin: 0 0 1rem; font-size: 1.2rem; }
 .public-article pre { overflow-x: auto; padding: 1.25rem; border: 1px solid var(--line); border-radius: 0.65rem; background: var(--surface); white-space: pre-wrap; }
@@ -1326,19 +1339,32 @@ input {
 .public-article dd { margin: 0; color: var(--muted); }
 .public-article > footer { display: grid; gap: 0.5rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--line); }
 .public-article > footer a { color: var(--accent-ink); }
-.markdown-body > * { margin-block: 0 1.25rem; }
+.markdown-body { max-width: 68ch; font-size: 1.025rem; line-height: 1.82; }
+.markdown-body > * { margin-block: 0 1.4rem; }
 .markdown-body > :last-child { margin-bottom: 0; }
-.markdown-body h2 { margin-top: 2.5rem; font-size: 1.5rem; letter-spacing: -0.02em; }
-.markdown-body h3 { margin-top: 2rem; font-size: 1.2rem; }
-.markdown-body h4, .markdown-body h5, .markdown-body h6 { margin-top: 1.75rem; font-size: 1rem; }
-.markdown-body ul, .markdown-body ol { padding-left: 1.5rem; }
-.markdown-body li { margin-block: 0.35rem; }
-.markdown-body a { color: var(--accent-ink); text-underline-offset: 0.2em; }
-.markdown-body code { padding: 0.1em 0.35em; border-radius: 0.3rem; background: var(--color-muted); font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.9em; }
-.markdown-body pre code { padding: 0; background: none; font-size: 0.875rem; }
-.markdown-body blockquote { margin-inline: 0; padding-left: 1.25rem; border-left: 3px solid var(--line-strong); color: var(--muted); }
+.markdown-body h2 { margin: 4rem 0 1.25rem; font-size: clamp(1.55rem, 3vw, 1.85rem); line-height: 1.2; letter-spacing: -0.035em; text-wrap: balance; }
+.markdown-body h2::before { display: block; width: 2rem; height: 2px; margin-bottom: 1rem; background: var(--accent); content: ""; }
+.markdown-body h3 { margin: 2.75rem 0 1rem; font-size: 1.25rem; line-height: 1.3; letter-spacing: -0.02em; }
+.markdown-body h4, .markdown-body h5, .markdown-body h6 { margin-top: 2.25rem; font-size: 1rem; line-height: 1.4; }
+.markdown-body p { text-wrap: pretty; }
+.markdown-body strong { color: var(--ink); font-weight: 680; }
+.markdown-body ul, .markdown-body ol { padding-left: 1.4rem; }
+.markdown-body li { margin-block: 0.55rem; padding-left: 0.25rem; }
+.markdown-body li::marker { color: var(--accent-ink); font-weight: 650; }
+.markdown-body a { color: var(--accent-ink); text-decoration-thickness: from-font; text-underline-offset: 0.22em; }
+.markdown-body code { padding: 0.13em 0.38em; border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 0.3rem; background: var(--color-muted); font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.86em; line-height: 1.5; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.markdown-code-block { margin-block: 2rem; overflow: hidden; border-radius: 0.75rem; background: #171918; box-shadow: 0 1rem 2.5rem rgba(var(--shadow-rgb), 0.12); color: #f3f1eb; }
+.markdown-code-header { display: flex; align-items: center; min-height: 2.25rem; padding-inline: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: #aaa9a3; font-family: var(--font-plex-mono), ui-monospace, monospace; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.public-article .markdown-code-block pre { margin: 0; padding: 1.1rem 1.25rem 1.25rem; border: 0; border-radius: 0; background: transparent; white-space: pre; }
+.markdown-body .markdown-code-block pre code { padding: 0; border: 0; background: transparent; color: inherit; font-size: 0.875rem; line-height: 1.75; }
+.markdown-body blockquote { margin: 2rem 0; padding: 1rem 1.15rem; border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line)); border-left: 3px solid var(--accent); border-radius: 0 0.55rem 0.55rem 0; background: var(--accent-soft); color: var(--ink-soft); }
 .markdown-body blockquote p { margin: 0; }
 .markdown-body hr { margin-block: 2.5rem; border: 0; border-top: 1px solid var(--line); }
+.markdown-table-wrap { margin-block: 2rem; overflow-x: auto; border: 1px solid var(--line); border-radius: 0.65rem; }
+.markdown-body table { width: 100%; border-collapse: collapse; font-size: 0.9rem; line-height: 1.55; }
+.markdown-body th, .markdown-body td { padding: 0.75rem 0.85rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.markdown-body th { background: var(--color-muted); color: var(--ink); font-size: 0.78rem; font-weight: 680; }
+.markdown-body tr:last-child td { border-bottom: 0; }
 .prompt-copy-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .prompt-copy-button { min-height: 2.5rem; padding: 0.55rem 0.8rem; border: 1px solid var(--line-strong); border-radius: 0.4rem; background: var(--surface); color: var(--ink); font-weight: 650; }
 .prompt-example { padding: 1rem 0; border-top: 1px solid var(--line); }

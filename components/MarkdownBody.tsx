@@ -53,6 +53,11 @@ const BULLET = /^\s*[-*+]\s+(.+)$/;
 const ORDERED = /^\s*\d+[.)]\s+(.+)$/;
 const QUOTE = /^\s*>\s?(.*)$/;
 const RULE = /^\s*([-*_])(\s*\1){2,}\s*$/;
+const TABLE_DIVIDER = /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/;
+
+function tableCells(line: string) {
+  return line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+}
 
 /**
  * Markdown rendered straight to React elements — no HTML string is ever built,
@@ -91,7 +96,10 @@ export function MarkdownBody({ source }: { source: string }) {
         cursor += 1;
       }
       cursor += 1;
-      push(<pre key={key}><code {...(language ? { className: `language-${language}` } : {})}>{body.join("\n")}</code></pre>);
+      push(<div className="markdown-code-block" key={key}>
+        <div className="markdown-code-header"><span>{language || "code"}</span></div>
+        <pre><code {...(language ? { className: `language-${language}` } : {})}>{body.join("\n")}</code></pre>
+      </div>);
       continue;
     }
 
@@ -103,6 +111,21 @@ export function MarkdownBody({ source }: { source: string }) {
     if (RULE.test(line)) {
       push(<hr key={key} />);
       cursor += 1;
+      continue;
+    }
+
+    if (cursor + 1 < lines.length && line.includes("|") && TABLE_DIVIDER.test(lines[cursor + 1])) {
+      const headers = tableCells(line);
+      const rows: string[][] = [];
+      cursor += 2;
+      while (cursor < lines.length && lines[cursor].includes("|") && lines[cursor].trim()) {
+        rows.push(tableCells(lines[cursor]));
+        cursor += 1;
+      }
+      push(<div className="markdown-table-wrap" key={key}><table>
+        <thead><tr>{headers.map((cell, index) => <th key={index}>{inline(cell, `${key}-head-${index}`)}</th>)}</tr></thead>
+        <tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{headers.map((_, cellIndex) => <td key={cellIndex}>{inline(row[cellIndex] || "", `${key}-${rowIndex}-${cellIndex}`)}</td>)}</tr>)}</tbody>
+      </table></div>);
       continue;
     }
 
@@ -145,7 +168,7 @@ export function MarkdownBody({ source }: { source: string }) {
     const paragraph: string[] = [];
     while (cursor < lines.length) {
       const next = lines[cursor];
-      if (!next.trim() || HEADING.test(next) || BULLET.test(next) || ORDERED.test(next) || QUOTE.test(next) || RULE.test(next) || next.trimStart().startsWith("```")) break;
+      if (!next.trim() || HEADING.test(next) || BULLET.test(next) || ORDERED.test(next) || QUOTE.test(next) || RULE.test(next) || next.trimStart().startsWith("```") || (cursor + 1 < lines.length && next.includes("|") && TABLE_DIVIDER.test(lines[cursor + 1]))) break;
       paragraph.push(next.trim());
       cursor += 1;
     }
