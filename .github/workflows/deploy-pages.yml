@@ -27,11 +27,14 @@ jobs:
           node-version: 24
           cache: npm
 
+      # 不要 static_site_generator: next。该参数只认 next.config.js，看不到本仓库
+      # 的 next.config.ts，于是会写入一份空白的 next.config.js 并注入
+      # output: "export"。Next 优先加载 .js，真实配置整个被顶掉——trailingSlash、
+      # basePath、NEXT_PUBLIC_BASE_PATH 全部失效，产出扁平 html 且 logo 少了
+      # 路径前缀。output: "export" 本来就写在 next.config.ts 里，无需注入。
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@v5
-        with:
-          static_site_generator: next
 
       - name: Install dependencies
         run: npm ci
