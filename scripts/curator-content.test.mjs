@@ -7,6 +7,7 @@ import test from "node:test";
 import { createContentRepository, openContentDb } from "./curator-db.mjs";
 import { validateContentPayload } from "./curator-content-rules.mjs";
 import { sortTags } from "./curator-tags.mjs";
+import { parseList } from "./curator-batch.mjs";
 import { exportContent } from "./curator-export.mjs";
 
 function tool(id, status) {
@@ -175,4 +176,23 @@ test("the vocabulary is internally consistent and shared by both sides", () => {
   // which order the tags were saved in.
   assert.deepEqual(sortTags(["web", "free", "china", "coding"]), ["coding", "china", "free", "web"]);
   assert.deepEqual(sortTags(["zzz-proposed", "coding"]), ["coding", "zzz-proposed"]);
+});
+
+test("the batch list parser rejects junk instead of ingesting it", () => {
+  const { entries, problems } = parseList([
+    "# 注释",
+    "",
+    "tool | https://claude.ai | 备注",
+    "project | https://github.com/openclaw/openclaw |",
+    "widget | https://example.com |",
+    "tool | example.com |",
+  ].join("\n"));
+  assert.deepEqual(entries.map((entry) => entry.block), ["tool", "project"]);
+  assert.equal(entries[0].note, "备注");
+  assert.equal(entries[1].note, "");
+  // A typo'd board or a bare hostname is worth one loud line, not 70 Agent runs
+  // that all save to the wrong place.
+  assert.equal(problems.length, 2);
+  assert.match(problems[0], /板块「widget」不认识/);
+  assert.match(problems[1], /不是 http\(s\) 开头/);
 });
