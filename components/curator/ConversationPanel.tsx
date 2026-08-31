@@ -50,6 +50,10 @@ type DraftResultData = {
   error?: string | null;
   tool?: string;
   draft?: CuratorDraft | null;
+  /** Persisted on the result message: the live progress card is gone by the
+   *  time the operator reads the outcome, taking the timer with it. */
+  elapsedMs?: number;
+  polished?: boolean;
 };
 
 type ProgressData = { phase: string; activity: string; trail: string[]; tokens: number; elapsed: string; logs: string[] };
@@ -112,6 +116,13 @@ function toThreadMessage(message: ConversationMessage): ThreadMessageLike {
     };
   }
   return { ...common, role: message.role, content: [{ type: "text", text: message.text }] };
+}
+
+/** mm:ss for a finished run's total cost. */
+function durationLabel(ms?: number) {
+  if (!ms || ms < 0) return "";
+  const seconds = Math.round(ms / 1000);
+  return seconds < 60 ? `${seconds} 秒` : `${Math.floor(seconds / 60)} 分 ${String(seconds % 60).padStart(2, "0")} 秒`;
 }
 
 /** mm:ss since the run started, so a slow Agent still reads as "working". */
@@ -369,7 +380,10 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
   const DraftResult = useMemo<DataMessagePartComponent<DraftResultData>>(() => function DraftResult({ data }) {
     if (data.status === "failed" || data.status === "cancelled") {
       return <Stack gap="xs" className="curator-msg-run">
-        <Text fw={600} size="sm" c={data.status === "cancelled" ? "dimmed" : "red"}>{data.status === "cancelled" ? "已停止" : "整理失败"}</Text>
+        <Group gap="xs" align="baseline" wrap="nowrap">
+          <Text fw={600} size="sm" c={data.status === "cancelled" ? "dimmed" : "red"}>{data.status === "cancelled" ? "已停止" : "整理失败"}</Text>
+          {data.elapsedMs ? <Text size="xs" c="dimmed" className="curator-number">{durationLabel(data.elapsedMs)}</Text> : null}
+        </Group>
         {data.error ? <Text size="sm" c="dimmed">{data.error}</Text> : null}
         {data.runId ? <Button size="xs" variant="default" loading={busy} onClick={() => void retryRun(data.runId)}>重试</Button> : null}
       </Stack>;
@@ -383,7 +397,12 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
     const adopted = !changes.length && fields.some((field) => proposed[field] !== undefined && proposed[field] !== "");
     return <Stack gap="sm" className="curator-msg-run">
       <Group justify="space-between" align="center">
-        <Text fw={600} size="sm">整理完成</Text>
+        <Group gap="xs" align="baseline" wrap="nowrap">
+          <Text fw={600} size="sm">整理完成</Text>
+          {data.elapsedMs ? <Text size="xs" c="dimmed" className="curator-number">
+            {durationLabel(data.elapsedMs)}{data.polished ? " · 含润色" : ""}
+          </Text> : null}
+        </Group>
         <Badge color={changes.length || mode !== "editor" ? "teal" : "gray"} variant="light">
           {mode !== "editor" ? "等待确认" : changes.length ? `${changes.length} 处建议` : adopted ? "已采用" : "无改动"}
         </Badge>

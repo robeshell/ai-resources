@@ -797,6 +797,13 @@ function throwIfCancelled(run) {
   if (run.status === "cancelled") throw Object.assign(new Error("分析已取消"), { cancelled: true });
 }
 
+/** Wall-clock cost of a run, stored on the result message so the finished card
+ *  still shows it after the live progress card is gone (and after a reload). */
+function runElapsedMs(run) {
+  const started = Date.parse(run.createdAt);
+  return Number.isFinite(started) ? Math.max(0, Date.now() - started) : undefined;
+}
+
 async function executeRun(run) {
   run.status = "running";
   try {
@@ -871,7 +878,7 @@ async function executeRun(run) {
         role: "assistant",
         kind: "run",
         text: run.input.mode === "reprocess" ? "新版草稿已生成，请检查后采用。" : "整理完成，请检查后保存。",
-        data: { runId: run.id, status: run.status, tool: run.agent?.tool || run.agent?.mode, draft: run.draft },
+        data: { runId: run.id, status: run.status, tool: run.agent?.tool || run.agent?.mode, draft: run.draft, elapsedMs: runElapsedMs(run), polished: run.agent?.polished },
         runId: run.id,
       });
     }
@@ -891,7 +898,7 @@ async function executeRun(run) {
         role: "assistant",
         kind: "run",
         text: run.error,
-        data: { runId: run.id, status: run.status, error: run.error, tool: run.input.tool },
+        data: { runId: run.id, status: run.status, error: run.error, tool: run.input.tool, elapsedMs: runElapsedMs(run) },
         runId: run.id,
       });
     }
@@ -1529,7 +1536,7 @@ async function recordCancelledConversationRun(run) {
     role: "assistant",
     kind: "run",
     text: "已停止这次整理。",
-    data: { runId: run.id, status: "cancelled", tool: run.input.tool },
+    data: { runId: run.id, status: "cancelled", tool: run.input.tool, elapsedMs: runElapsedMs(run) },
     runId: run.id,
   });
 }
