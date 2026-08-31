@@ -113,3 +113,20 @@ test("codex progress skips JSON, timestamps and banners", () => {
   assert.equal(codexProgressLine(""), "");
   assert.equal(codexProgressLine("x".repeat(200)).length, 91);
 });
+
+test("a diagnostic line on stderr must not hide the failure in stdout", () => {
+  // The CLI exits 1, writes only `[claude-code:…]` noise to stderr, and puts the
+  // real reason in the result envelope on stdout. Reading stderr first turned
+  // that into the useless "没有输出任何内容".
+  const envelope = JSON.stringify({
+    type: "result",
+    is_error: true,
+    result: "API Error: 400 Invalid content type: output_text.",
+  });
+  assert.throws(() => parseClaudeDraft(envelope), (error) => {
+    assert.equal(error.agentDetail, true);
+    assert.match(error.message, /Invalid content type: output_text/);
+    return true;
+  });
+  assert.equal(describeAgentFailure('[claude-code:unrecognized_model] {"model":"x"}', "Claude Code"), "Claude Code 没有输出任何内容");
+});

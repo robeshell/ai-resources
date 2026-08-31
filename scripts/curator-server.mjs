@@ -357,9 +357,16 @@ function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, o
       });
       try {
         if (timedOut) throw new Error(`${command} 超过 ${Math.round(AGENT_TIMEOUT_MS / 1000)} 秒没有完成，已停止`);
+        // Parse before judging the exit code: a CLI that reports its failure in
+        // a structured envelope says far more than its exit status does. Taking
+        // stderr first meant a single `[claude-code:…]` diagnostic line beat the
+        // real "API Error: 400 …" sitting in stdout.
+        const parsed = await parseOutput(stdout);
         if (code !== 0) throw new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`);
-        resolve(await parseOutput(stdout));
+        resolve(parsed);
       } catch (error) {
+        if (error?.agentDetail) return reject(error);
+        if (code !== 0) return reject(new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`));
         reject(error);
       }
     });
