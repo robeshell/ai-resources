@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { canonicalResourceUrl } from "./curator-agent-policy.mjs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -18,6 +19,10 @@ import { fileURLToPath } from "node:url";
  *   node scripts/curator-batch.mjs                    # 预演，只打印要收什么
  *   node scripts/curator-batch.mjs --write            # 真收
  *   node scripts/curator-batch.mjs --write --only 5   # 先跑前 5 条试水
+ *   node scripts/curator-batch.mjs --write --redo      # 连已收的也重收
+ *
+ * 已经在库里的默认跳过，所以中途挂了直接重跑同一条命令就能接着走——
+ * 一次 50 条的重收里，第 37 条失败不该让前 36 条重来一遍。
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -50,6 +55,22 @@ export function parseList(text) {
   return { entries, problems };
 }
 
+/** Canonical URLs already in the catalog, so a resumed batch does not pay for
+ *  the same Agent run twice. Matches on the resource URL rather than the slug:
+ *  the slug is derived from a title the Agent picks, so it is not stable enough
+ *  to dedupe against. */
+async function catalogUrls() {
+  const { items = [] } = await api("/content");
+  const urls = new Set();
+  for (const item of items) {
+    for (const candidate of [item.sourceUrl, item.payload?.url]) {
+      const canonical = canonicalResourceUrl(candidate);
+      if (canonical) urls.add(canonical);
+    }
+  }
+  return urls;
+}
+
 async function api(pathname, init) {
   const response = await fetch(`${SERVER}${pathname}`, init);
   const body = await response.json().catch(() => ({}));
@@ -79,11 +100,20 @@ async function main() {
   const only = Number(argValue("--only", 0)) || 0;
   const { entries, problems } = parseList(await readFile(LIST_FILE, "utf8"));
   for (const problem of problems) console.error(`跳过 ${problem}`);
-  const queue = only ? entries.slice(0, only) : entries;
+  const listed = only ? entries.slice(0, only) : entries;
+
+  let queue = listed;
+  let skipped = 0;
+  if (!process.argv.includes("--redo")) {
+    const existing = await catalogUrls().catch(() => new Set());
+    queue = listed.filter((entry) => !existing.has(canonicalResourceUrl(entry.url)));
+    skipped = listed.length - queue.length;
+  }
 
   const counts = queue.reduce((all, entry) => ({ ...all, [entry.block]: (all[entry.block] || 0) + 1 }), {});
   console.log(`清单 ${LIST_FILE}`);
   console.log(`共 ${queue.length} 条：${Object.entries(counts).map(([block, n]) => `${block} ${n}`).join(" / ")}`);
+  if (skipped) console.log(`跳过 ${skipped} 条已经在库里的（要重收加 --redo）`);
   if (!write) {
     for (const entry of queue) console.log(`  ${entry.block.padEnd(8)} ${entry.url}`);
     console.log("\n预演结束。加 --write 才会真的收录。");

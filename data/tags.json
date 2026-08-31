@@ -1,13 +1,13 @@
 {
-  "note": "标签总表。板块（工具/技能/项目/提示词）决定形态，标签决定怎么找到。id 用英文做稳定键，label 存中英文，多语言只在这里维护一次。Agent 收录时先在这份表里找，实在没有合适的才提新标签；提出的新标签不会自动进表，会在编辑器里标成待归入，由人决定收编还是换成已有的。",
+  "note": "分类与标签词表。板块（工具/技能/项目/提示词）决定内容形态，category 是板块内的二级分类，tags 是卡片自身的属性。id 用英文做稳定键，label 存中英文。Agent 必须选择一个已有分类；属性标签实在没有合适的才可提新标签。",
   "groups": [
     {
-      "id": "task",
+      "id": "category",
       "label": {
-        "zh": "用途",
-        "en": "Use"
+        "zh": "二级分类",
+        "en": "Category"
       },
-      "note": "主轴。每条 1-2 个。"
+      "note": "板块内的主导航。每条必须且只能选一个。"
     },
     {
       "id": "trait",
@@ -37,7 +37,7 @@
   "tags": [
     {
       "id": "coding",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "编程",
         "en": "Coding"
@@ -46,7 +46,7 @@
     },
     {
       "id": "agent",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "通用 Agent",
         "en": "General agent"
@@ -55,7 +55,7 @@
     },
     {
       "id": "chat",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "通用对话",
         "en": "Chat"
@@ -64,7 +64,7 @@
     },
     {
       "id": "image",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "图像",
         "en": "Image"
@@ -73,7 +73,7 @@
     },
     {
       "id": "video",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "视频",
         "en": "Video"
@@ -82,7 +82,7 @@
     },
     {
       "id": "automation",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "自动化",
         "en": "Automation"
@@ -91,7 +91,7 @@
     },
     {
       "id": "infra",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "基础设施",
         "en": "Infrastructure"
@@ -100,7 +100,7 @@
     },
     {
       "id": "audio",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "音频",
         "en": "Audio"
@@ -109,7 +109,7 @@
     },
     {
       "id": "research",
-      "group": "task",
+      "group": "category",
       "label": {
         "zh": "研究",
         "en": "Research"

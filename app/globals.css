@@ -479,15 +479,47 @@ input {
   letter-spacing: 0.02em;
 }
 
-/* 一行标签筛选。分组之间只用间距区分，不加标题——组名对读者没用，
-   看得懂「免费」「命令行」就够了。 */
+/* 分类是板块内导航，标签只是对当前分类做进一步收窄。两层不共用视觉。 */
 .library-filters {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  margin-left: auto;
+}
+
+.library-categories,
+.library-attributes,
+.category-options,
+.attribute-options {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.3rem 0.75rem;
-  margin-left: auto;
 }
+
+.library-categories,
+.library-attributes { gap: 0.65rem; }
+.category-options { gap: 0.2rem; }
+.attribute-options { gap: 0.3rem 0.75rem; }
+
+.filter-label {
+  color: var(--muted-dim);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: var(--text-micro);
+}
+
+.category-option {
+  padding: 0.28rem 0.58rem;
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.category-option:hover { color: var(--ink); background: rgba(var(--edge), 0.055); }
+.category-option[aria-pressed="true"] { color: var(--ink); background: var(--card); box-shadow: 0 0 0 1px var(--line); }
 
 .filter-group {
   display: flex;

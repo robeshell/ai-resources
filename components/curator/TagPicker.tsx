@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Badge, Box, Button, Chip, Group, Stack, Text, TextInput } from "@mantine/core";
-import { TAG_GROUPS, TAGS, knownTag, sortTags } from "@/lib/tags";
+import { ATTRIBUTE_TAG_GROUPS, CATEGORY_TAGS, TAGS, knownTag, sortTags } from "@/lib/tags";
 
 /**
  * One picker for the whole vocabulary — pricing and platform used to be their
@@ -14,7 +14,7 @@ import { TAG_GROUPS, TAGS, knownTag, sortTags } from "@/lib/tags";
  * anything outside the vocabulary is kept and shown as pending rather than
  * silently dropped.
  */
-export function TagPicker({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
+export function TagPicker({ category, value, onCategoryChange, onChange }: { category: string; value: string[]; onCategoryChange: (next: string) => void; onChange: (next: string[]) => void }) {
   const [proposal, setProposal] = useState("");
   const selected = useMemo(() => new Set(value), [value]);
   const pending = useMemo(() => sortTags(value).filter((id) => !knownTag(id)), [value]);
@@ -31,7 +31,15 @@ export function TagPicker({ value, onChange }: { value: string[]; onChange: (nex
   }
 
   return <Stack gap="md">
-    {TAG_GROUPS.map((group) => (
+    <Box>
+      <Text size="sm" fw={600}>二级分类</Text>
+      <Text size="xs" c="dimmed" mb={8}>在当前板块中只能选一个，用于资源库的主导航。</Text>
+      <Group gap="xs">
+        {CATEGORY_TAGS.map((item) => <Chip key={item.id} size="sm" checked={category === item.id} onChange={() => onCategoryChange(item.id)} title={item.hint}>{item.label.zh}</Chip>)}
+      </Group>
+    </Box>
+    <Box><Text size="sm" fw={600}>卡片标签</Text><Text size="xs" c="dimmed">描述定价、平台和特性，可以多选。</Text></Box>
+    {ATTRIBUTE_TAG_GROUPS.map((group) => (
       <Box key={group.id}>
         <Text size="xs" c="dimmed" mb={6}>{group.label.zh}</Text>
         <Group gap="xs">

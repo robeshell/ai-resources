@@ -1,7 +1,8 @@
 import tagsJson from "@/data/tags.json";
 import type { Locale, Localized } from "./types";
 
-export type TagGroupId = "task" | "trait" | "pricing" | "platform";
+export type TagGroupId = "category" | "trait" | "pricing" | "platform";
+export type AttributeTagGroupId = Exclude<TagGroupId, "category">;
 
 export type TagDefinition = {
   id: string;
@@ -17,6 +18,8 @@ export type TagGroup = {
 
 export const TAG_GROUPS = tagsJson.groups as TagGroup[];
 export const TAGS = tagsJson.tags as TagDefinition[];
+export const CATEGORY_TAGS = TAGS.filter((tag) => tag.group === "category");
+export const ATTRIBUTE_TAG_GROUPS = TAG_GROUPS.filter((group) => group.id !== "category");
 
 const BY_ID = new Map(TAGS.map((tag) => [tag.id, tag]));
 /** Group order in the file is the display order: 用途 first, platform last. */
@@ -56,10 +59,26 @@ export function tagsInGroup(group: TagGroupId): TagDefinition[] {
   return TAGS.filter((tag) => tag.group === group);
 }
 
+/** Read old records too: before category became a first-class field, its value
+ * lived among tags. */
+export function categoryOf(item: { category?: string; tags?: readonly string[] }): string {
+  if (item.category && BY_ID.get(item.category)?.group === "category") return item.category;
+  return item.tags?.find((id) => BY_ID.get(id)?.group === "category") ?? "";
+}
+
+export function attributeTags(ids: readonly string[]): string[] {
+  return sortTags(ids.filter((id) => BY_ID.get(id)?.group !== "category"));
+}
+
+export function usedCategories(items: ReadonlyArray<{ category?: string; tags?: readonly string[] }>): string[] {
+  const used = new Set(items.map(categoryOf).filter(Boolean));
+  return CATEGORY_TAGS.map((tag) => tag.id).filter((id) => used.has(id));
+}
+
 /** Tags actually present across a set of items, kept in vocabulary order, so a
  *  filter bar only ever offers what would return something. */
 export function usedTags(items: ReadonlyArray<{ tags?: readonly string[] }>): string[] {
   const used = new Set<string>();
   for (const item of items) for (const tag of item.tags ?? []) used.add(tag);
-  return sortTags([...used]);
+  return attributeTags([...used]);
 }

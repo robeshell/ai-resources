@@ -1,6 +1,7 @@
 import siteJson from "@/data/site.json";
 import toolsJson from "@/data/tools.json";
 import type { SiteConfig, Tool } from "./types";
+import { attributeTags, categoryOf } from "./tags";
 
 function validateResources(resources: Tool[]): void {
   const ids = new Set<string>();
@@ -29,5 +30,10 @@ export function loadResources(): Tool[] {
   // with unfinished copy is not a reason to fail the build.
   const published = (toolsJson.items as Tool[]).filter((tool) => tool.status === "active");
   validateResources(published);
-  return published.map((tool) => ({ ...tool, kind: tool.kind ?? "tool" }) as Tool);
+  return published.map((tool) => ({
+    ...tool,
+    kind: tool.kind ?? "tool",
+    category: categoryOf(tool),
+    tags: attributeTags(tool.tags ?? []),
+  }) as Tool);
 }

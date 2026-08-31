@@ -18,6 +18,7 @@ export type ContentItem<TPayload = unknown> = {
   slug: string;
   title: string;
   status: ContentStatus;
+  category: string;
   tags: string[];
   sourceUrl?: string;
   /** Stable imported order; not a user-facing priority system. */

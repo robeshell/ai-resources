@@ -66,9 +66,9 @@ export function validateContentPayload(item) {
   }
   if (item.status !== "active") return;
   assertLocalized(payload.summary, "简介");
-  // 标签是唯一的分类维度，发布后没有标签就等于进不了任何筛选。
+  if (knownTag(String(item.category || ""))?.group !== "category") throw new Error("请选择一个有效的二级分类");
   const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-  if (!tags.some((tag) => knownTag(tag)?.group === "task")) throw new Error("至少选择一个用途标签");
+  if (tags.some((tag) => knownTag(tag)?.group === "category")) throw new Error("二级分类不能放在卡片标签中");
   if (tags.filter((tag) => knownTag(tag)?.group === "pricing").length > 1) throw new Error("定价标签只能选一个");
   if (item.blockType === "tool") {
     assertLocalized(payload.tagline, "定位");
@@ -93,7 +93,7 @@ export function contentIssueCount(item) {
   if (!String(payload.summary?.zh || "").trim() || !String(payload.summary?.en || "").trim()) count += 1;
   if (item.blockType === "tool" && (!String(payload.url || "").trim() || !String(payload.tagline?.zh || "").trim() || !String(payload.tagline?.en || "").trim())) count += 1;
   const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-  if (!tags.some((tag) => knownTag(tag)?.group === "task")) count += 1;
+  if (knownTag(String(item.category || ""))?.group !== "category") count += 1;
   // Agent 提的新标签不会自动进词表，留在这里等人处理。
   if (tags.some((tag) => !knownTag(tag))) count += 1;
   if (["skill", "project"].includes(item.blockType) && !String(payload.body || "").trim()) count += 1;

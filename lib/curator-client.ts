@@ -31,7 +31,7 @@ export type CatalogItem = {
   url: string;
   logo?: string;
   kind: "tool" | "skill" | "open-source";
-  /** Ids from data/tags.json; pricing and platform are tags now. */
+  category: string;
   tags: string[];
   status: "active" | "archived";
   verdict: { en: string; zh: string };
@@ -74,6 +74,7 @@ export type CuratorDraft = {
   url: string;
   kind: CatalogItem["kind"] | "prompt";
   blockType?: CuratorIngestBlock;
+  category: string;
   tags: string[];
   verdict: CatalogItem["verdict"];
   summary: CatalogItem["summary"];
@@ -188,7 +189,7 @@ export type Conversation = {
 export function draftPayload(draft: CuratorDraft, current: Record<string, unknown>): Record<string, unknown> {
   // tags 是条目级字段，不在 payload 里；差量预览按一个扁平记录比对，
   // 采用时由编辑器再拆回去（见 ContentEditor 的 onAdopt）。
-  const base: Record<string, unknown> = { ...current, ...(draft.tags?.length ? { tags: draft.tags } : {}) };
+  const base: Record<string, unknown> = { ...current, ...(draft.category ? { category: draft.category } : {}), ...(draft.tags?.length ? { tags: draft.tags } : {}) };
   const block = draft.blockType || "tool";
   if (block === "tool") {
     return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, ...(draft.description ? { description: draft.description } : {}), url: draft.url };

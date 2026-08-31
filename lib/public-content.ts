@@ -2,15 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import type { ContentBlockId, ContentLink, PromptExample, PromptVariable } from "./content-blocks";
 import type { Localized } from "./types";
-import { sortTags } from "./tags";
+import { attributeTags, categoryOf } from "./tags";
 
 export type PublicContentSummary = {
   id: string;
   blockType: "skill" | "project" | "prompt";
   slug: string;
   title: string;
-  /** Ids from data/tags.json — the boards share one vocabulary, so a filter
-   *  works the same on a tool card and a skill card. */
+  category: string;
   tags: string[];
   summary: Localized;
 };
@@ -41,6 +40,7 @@ function parseFile(file: string): PublicContentDocument | null {
     blockType: ContentBlockId;
     title: string;
     status: string;
+    category?: string;
     tags?: string[];
     sourceUrl?: string;
     payload?: Record<string, unknown>;
@@ -53,7 +53,8 @@ function parseFile(file: string): PublicContentDocument | null {
     blockType: meta.blockType as PublicContentDocument["blockType"],
     slug: meta.slug,
     title: meta.title,
-    tags: sortTags(Array.isArray(meta.tags) ? meta.tags.map(String) : []),
+    category: categoryOf({ category: meta.category, tags: meta.tags }),
+    tags: attributeTags(Array.isArray(meta.tags) ? meta.tags.map(String) : []),
     summary: summary || { en: meta.title, zh: meta.title },
     ...(meta.sourceUrl ? { sourceUrl: meta.sourceUrl } : {}),
     body: String(payload.body || match[2] || "").trim(),

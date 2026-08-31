@@ -7,6 +7,7 @@
     "slug",
     "kind",
     "blockType",
+    "category",
     "tags",
     "verdict",
     "summary",
@@ -48,8 +49,13 @@
         null
       ]
     },
+    "category": {
+      "description": "二级分类 id，必须从提示词列出的二级分类中选择且只选一个。",
+      "type": "string",
+      "minLength": 1
+    },
     "tags": {
-      "description": "标签 id，从提示词给出的词表里选。用途至少 1 个，定价最多 1 个，平台有几个填几个。词表里实在没有合适的才自造，用英文小写连字符。",
+      "description": "卡片属性标签 id，不要把二级分类放进来。定价最多 1 个，平台有几个填几个。词表里实在没有合适的才自造，用英文小写连字符。",
       "type": "array",
       "items": {
         "type": "string"

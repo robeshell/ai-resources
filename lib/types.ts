@@ -21,8 +21,9 @@ export type Tool = {
   url: string;
   logo?: string;
   kind?: ResourceKind;
-  /** Ids from data/tags.json. Pricing and platform used to be their own fields;
-   *  they are tags now so the site has exactly one classification concept. */
+  /** One second-level category within the Tools board. */
+  category: string;
+  /** Card attributes such as pricing, platform and traits. */
   tags: string[];
   status: "active" | "archived";
   verdict: Localized;
