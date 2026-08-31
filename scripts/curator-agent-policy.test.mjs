@@ -71,3 +71,16 @@ test("the Agent gets the real tag vocabulary, ids and judgement hints included",
   assert.match(prompt, /先在表里找/);
   assert.match(prompt, /定价 — 互斥，取一个。/);
 });
+
+test("the ingest rules keep the Agent out of this site's own published copy", () => {
+  const skill = readFileSync(new URL("../skills/curator-ingest/SKILL.md", import.meta.url), "utf8");
+  // The deployed site outranks some product pages for its own entries, and an
+  // Agent that finds it will lift the very copy this rebuild is replacing —
+  // observed verbatim on three of the first three runs.
+  assert.match(skill, /robeshell\.github\.io\/ai-resources/);
+  assert.match(skill, /一个字都不要引用/);
+  // Verdicts must differentiate, not define a category, and the check has to be
+  // a test the model applies — naming exemplars just gets them pastiched back.
+  assert.match(skill, /把这句话原样套到同类的另外两个产品上/);
+  assert.match(skill, /用途看这个产品\*\*主要是干什么的\*\*/);
+});

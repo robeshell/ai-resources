@@ -1,3 +1,81 @@
 {
-  "items": []
+  "items": [
+    {
+      "id": "claude",
+      "slug": "claude",
+      "name": "Claude",
+      "url": "https://claude.ai/",
+      "logo": "/logos/claude.png",
+      "tags": [
+        "chat",
+        "freemium",
+        "web",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Turn conversations into working artifacts.",
+        "zh": "边聊边做成品。"
+      },
+      "summary": {
+        "en": "Creates documents, code, and visuals inside chat; free usage is limited.",
+        "zh": "对话中生成文档、代码与图形，免费版有用量限制。"
+      },
+      "description": {
+        "en": "Claude is Anthropic’s general-purpose AI assistant. It works through conversation, while Artifacts lets you draft and revise websites, graphics, documents, code, and data visualizations beside the chat. It can also analyze uploaded text and images and bring web search results into the conversation.\n\nIt suits writing, analysis, coding, and longer projects that benefit from iteration and extended thinking. Claude runs on the web and on iOS and Android. A free plan is available, while paid tiers raise usage limits and unlock additional models, research tools, Projects, integrations, and Claude Code.",
+        "zh": "Claude 是 Anthropic 的通用 AI 助手。它以对话为主要入口，并通过 Artifacts 在聊天旁生成和迭代网站、图形、文档、代码与数据可视化；也能分析上传的文本和图片，把网页搜索结果带进对话。\n\n它适合写作、分析、编程，以及需要多轮推敲和延伸思考的长任务。Claude 可在网页、iOS 和 Android 使用。免费方案有用量限制，付费档位增加可用量，并开放更多模型、深度研究、Projects、集成和 Claude Code。"
+      }
+    },
+    {
+      "id": "chatgpt",
+      "slug": "chatgpt",
+      "name": "ChatGPT",
+      "url": "https://chatgpt.com/",
+      "logo": "/logos/chatgpt.png",
+      "tags": [
+        "chat",
+        "freemium",
+        "web"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "One tab for most things.",
+        "zh": "一个窗口就够。"
+      },
+      "summary": {
+        "en": "Chat with AI, upload files, create images, or research; saved context requires an account.",
+        "zh": "对话、传文件、做图和研究；登录后可沿用聊天记录。"
+      },
+      "description": {
+        "en": "ChatGPT centers everyday AI work in a conversational interface. Ask questions, develop ideas, upload files, create images, and start deeper research from the same browser workspace.\n\nIt fits mixed daily tasks where switching among specialized tools would slow you down. You can sign up for free, while paid plans are also available; logging in enables saved chats and responses tailored with that history.",
+        "zh": "ChatGPT 把常见 AI 工作集中在一个对话窗口里。你可以直接提问、梳理想法、上传文件、生成图片，也能从同一网页入口开始深度研究。\n\n它适合任务类型经常变化、又不想来回切换工具的日常工作。注册后可免费开始使用，另有付费方案；登录后才能保存聊天记录，并让回答结合这些历史信息。"
+      }
+    },
+    {
+      "id": "gemini",
+      "slug": "gemini",
+      "name": "Gemini",
+      "url": "https://gemini.google.com/",
+      "logo": "/logos/gemini.png",
+      "tags": [
+        "chat",
+        "freemium",
+        "web",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Google, in a chatbox.",
+        "zh": "住在 Google 里。"
+      },
+      "summary": {
+        "en": "Chat across text, files, images, and connected Google apps; advanced access requires a paid plan.",
+        "zh": "能读文字、文件和图片，也能连接 Google 应用；进阶额度需订阅。"
+      },
+      "description": {
+        "en": "Gemini is Google’s general-purpose AI assistant for questions, drafting, brainstorming, learning, and analyzing uploaded files or images. Conversations can use different Gemini models, while Connected Apps can pull context from services such as Gmail, Drive, Calendar, Photos, Maps, and YouTube Music when permitted.\n\nIt fits people whose work already lives in Google’s ecosystem, especially when a request spans chat and personal content. Basic access is available without an AI plan, but higher limits, larger context windows, and some advanced capabilities require Google AI Plus, Pro, or Ultra. Availability also varies by account type, region, age, and device.",
+        "zh": "Gemini 是 Google 的通用 AI 助手，可处理问答、写作、构思、学习，以及文件和图片分析。对话时可以切换不同模型；授权连接应用后，它还能从 Gmail、Drive、Calendar、Photos、Maps 等服务读取相关信息并执行部分操作。\n\n它更适合日常资料已经放在 Google 生态中的人，尤其是需要把对话和个人内容串起来时。未订阅也能使用基础能力，但更高额度、更长上下文和部分进阶功能属于 Google AI 付费方案；具体可用范围还受地区、年龄、设备和账号类型影响。"
+      }
+    }
+  ]
 }
