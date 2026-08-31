@@ -30,6 +30,7 @@ export type Tool = {
   status: "active" | "archived";
   verdict: Localized;
   summary: Localized;
+  description?: Localized;
 };
 
 export type SiteConfig = {

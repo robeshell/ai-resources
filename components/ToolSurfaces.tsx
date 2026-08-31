@@ -45,6 +45,9 @@ export function ToolDialogPanel({
       <div className="dialog-rule" />
       <p className="dialog-verdict">{text(tool.verdict, locale)}</p>
       <p className="dialog-summary">{text(tool.summary, locale)}</p>
+      {tool.description ? <div className="dialog-description">
+        {text(tool.description, locale).split(/\n\s*\n/).filter(Boolean).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+      </div> : null}
       <div className="dialog-tags">
         {price ? <span className={`price-tag price-${tool.pricing}`}>{price}</span> : null}
         {tool.platforms.map((platform) => (

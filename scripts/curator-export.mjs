@@ -25,6 +25,7 @@ function legacyTool(item) {
     status: item.status,
     verdict: payload.tagline,
     summary: payload.summary,
+    ...(payload.description ? { description: payload.description } : {}),
   };
 }
 
