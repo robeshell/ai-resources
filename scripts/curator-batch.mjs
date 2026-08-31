@@ -60,15 +60,20 @@ export function parseList(text) {
  *  the slug is derived from a title the Agent picks, so it is not stable enough
  *  to dedupe against. */
 async function catalogUrls() {
-  const { items = [] } = await api("/content");
   const urls = new Set();
-  for (const item of items) {
-    for (const candidate of [item.sourceUrl, item.payload?.url]) {
-      const canonical = canonicalResourceUrl(candidate);
-      if (canonical) urls.add(canonical);
+  // /content pages at 20. Reading only the first page silently un-skips
+  // everything past it — a resumed 50-item batch re-ran 32 already-ingested
+  // entries before this loop existed.
+  for (let page = 1; ; page += 1) {
+    const body = await api(`/content?page=${page}`);
+    for (const item of body.items || []) {
+      for (const candidate of [item.sourceUrl, item.payload?.url]) {
+        const canonical = canonicalResourceUrl(candidate);
+        if (canonical) urls.add(canonical);
+      }
     }
+    if (page >= (body.pages || 1)) return urls;
   }
-  return urls;
 }
 
 async function api(pathname, init) {
