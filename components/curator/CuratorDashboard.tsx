@@ -7,6 +7,7 @@ import { notifications } from "@mantine/notifications";
 import { curatorRequest, type ActivityEntry, type BuildJob, type CuratorIngestBlock, type CuratorRun } from "@/lib/curator-client";
 import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS } from "@/lib/content-blocks";
 import { useBuildJob } from "@/components/curator/useBuildJob";
+import { curatorEditorHref } from "@/lib/curator-routes";
 
 type BlockStat = { total: number; active: number; draft: number };
 type ContentCounts = {
@@ -120,7 +121,7 @@ export function CuratorDashboard() {
       rows: data.issueItems.slice(0, BUCKET_PREVIEW).map((issue) => ({
         key: `issue:${issue.id}`, tone: "warn", title: issue.title,
         detail: `${issue.issueCount} 个字段需要补齐 · ${relativeTime(issue.updatedAt)}`,
-        action: "去补齐", href: `/curator/resources/${issue.blockType}/${encodeURIComponent(issue.slug)}`,
+        action: "去补齐", href: curatorEditorHref(issue.blockType, issue.slug),
       })),
     });
   }
@@ -130,7 +131,7 @@ export function CuratorDashboard() {
       rows: pureDrafts.slice(0, BUCKET_PREVIEW).map((draft) => ({
         key: `draft:${draft.id}`, tone: "info", title: draft.title,
         detail: `${contentBlocks[draft.blockType]?.label.zh ?? draft.blockType}草稿，发布后公开可见 · ${relativeTime(draft.updatedAt)}`,
-        action: "去发布", href: `/curator/resources/${draft.blockType}/${encodeURIComponent(draft.slug)}`,
+        action: "去发布", href: curatorEditorHref(draft.blockType, draft.slug),
       })),
     });
   }

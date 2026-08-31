@@ -78,6 +78,7 @@ export type CuratorDraft = {
   platforms: CatalogItem["platforms"];
   verdict: CatalogItem["verdict"];
   summary: CatalogItem["summary"];
+  description?: CatalogItem["summary"];
   confidence: number;
   rationale: string;
   sourceLogoUrl?: string;
@@ -189,7 +190,7 @@ export function draftPayload(draft: CuratorDraft, current: Record<string, unknow
   const base = { ...current };
   const block = draft.blockType || "tool";
   if (block === "tool") {
-    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, url: draft.url, pricing: draft.pricing, platforms: draft.platforms };
+    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, ...(draft.description ? { description: draft.description } : {}), url: draft.url, pricing: draft.pricing, platforms: draft.platforms };
   }
   if (block === "prompt") {
     return { ...base, summary: draft.summary, prompt: (draft.prompt || "").trim(), variables: draft.variables || [], examples: draft.examples || [], links: draft.links?.length ? draft.links : base.links || [] };

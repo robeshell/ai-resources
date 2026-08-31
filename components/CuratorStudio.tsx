@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Button, Text, Title } from "@mantine/core";
 import { ConversationPanel } from "@/components/curator/ConversationPanel";
+import { curatorEditorHref } from "@/lib/curator-routes";
 
 export function CuratorStudio() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export function CuratorStudio() {
         key={conversationId || "new"}
         conversationId={conversationId}
         hint="丢一个链接给 Agent，它自己访问页面、对照目录、写好草稿；你看完没问题就保存落库。"
-        onSaved={(saved) => router.push(`/curator/resources/${saved.blockType}/${encodeURIComponent(saved.slug)}`)}
+        onSaved={(saved) => router.push(curatorEditorHref(saved.blockType, saved.slug))}
       />
       <Box>
         {conversationId ? (

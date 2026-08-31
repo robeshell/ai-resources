@@ -9,10 +9,11 @@ import {
 } from "@mantine/core";
 import { BLOCK_LABELS, curatorRequest, type CuratorContentItem } from "@/lib/curator-client";
 import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS, type ContentStatus, type EnabledContentBlockId } from "@/lib/content-blocks";
+import { curatorEditorHref } from "@/lib/curator-routes";
 
 type LibraryBlock = "all" | EnabledContentBlockId;
 type LibraryStatus = "all" | ContentStatus;
-type LibraryItem = CuratorContentItem & { issueCount: number };
+type LibraryItem = Omit<CuratorContentItem, "blockType"> & { blockType: EnabledContentBlockId; issueCount: number };
 type LibraryPage = { items: LibraryItem[]; total: number; page: number; pageSize: 20 | 50; pages: number };
 type Notice = { text: string; tone: "success" | "error" } | null;
 
@@ -29,7 +30,7 @@ function summaryOf(item: LibraryItem) {
 }
 
 function ContentIdentity({ item }: { item: LibraryItem }) {
-  return <Link href={`/curator/resources/${item.blockType}/${encodeURIComponent(item.slug)}`} className="curator-content-link">
+  return <Link href={curatorEditorHref(item.blockType, item.slug)} className="curator-content-link">
     <Stack gap={2}><Text fw={600} size="sm" c="dark.8">{item.title}</Text><Text size="sm" c="dimmed" lineClamp={1}>{summaryOf(item)}</Text></Stack>
   </Link>;
 }

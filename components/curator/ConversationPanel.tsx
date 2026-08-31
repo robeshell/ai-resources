@@ -23,6 +23,7 @@ import {
   type Conversation,
   type ConversationMessage,
   type CuratorDraft,
+  type CuratorIngestBlock,
   type CuratorRun,
   type CuratorRunEvent,
 } from "@/lib/curator-client";
@@ -39,7 +40,7 @@ type Props = {
     backLabel: string;
   };
   onAdopt?: (payload: Record<string, unknown>) => void;
-  onSaved?: (saved: { slug: string; blockType: string; message?: string }) => void;
+  onSaved?: (saved: { slug: string; blockType: CuratorIngestBlock; message?: string }) => void;
   hint?: string;
 };
 
@@ -55,6 +56,7 @@ type ProgressData = { phase: string; activity: string; trail: string[]; tokens: 
 
 const FIELD_LABEL: Record<string, string> = {
   summary: "摘要", body: "正文", links: "相关链接", tagline: "定位",
+  description: "短详情",
   prompt: "提示词", variables: "变量", examples: "示例", logo: "Logo",
   url: "官网链接", pricing: "定价", platforms: "平台",
 };
@@ -388,9 +390,16 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
       </Group>
       {mode === "editor" ? <Stack gap="xs">
         {changes.length ? changes.map((field) => <Box key={field} className="curator-conversation-diff">
-          <Group justify="space-between" align="center" gap="xs"><Text size="sm" fw={600}>{FIELD_LABEL[field] || field}</Text><Button size="compact-xs" variant="subtle" onClick={() => onAdopt?.({ ...currentPayload, [field]: proposed[field] })}>采用此项</Button></Group>
-          <Text size="xs" c="dimmed" lineClamp={2}>当前：{readableValue(currentPayload[field])}</Text>
-          <Text size="xs" lineClamp={4}>建议：{readableValue(proposed[field])}</Text>
+          <Group justify="space-between" align="center" gap="xs" className="curator-diff-header">
+            <Text size="sm" fw={600}>{FIELD_LABEL[field] || field}</Text>
+            <Button size="compact-xs" variant="subtle" onClick={() => onAdopt?.({ ...currentPayload, [field]: proposed[field] })}>采用此项</Button>
+          </Group>
+          <Stack gap={6}>
+            <Text className="curator-diff-label" component="div">当前内容</Text>
+            <Box className="curator-diff-value curator-diff-value-current">{readableValue(currentPayload[field])}</Box>
+            <Text className="curator-diff-label curator-diff-label-proposed" component="div">建议内容</Text>
+            <Box className="curator-diff-value curator-diff-value-proposed">{readableValue(proposed[field])}</Box>
+          </Stack>
         </Box>) : <Text size="sm" c="dimmed">{adopted ? "这份建议已经在编辑器里了，记得保存。" : "Agent 没有改变任何字段。"}</Text>}
         {changes.length ? <Group mt={4}><Button size="xs" disabled={busy} onClick={() => onAdopt?.(proposed)}>全部采用</Button><Text size="xs" c="dimmed">采用后仍需保存编辑器</Text></Group> : null}
       </Stack> : <Stack gap="xs">
