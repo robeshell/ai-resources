@@ -1,3 +1,5 @@
+import { tagVocabularyPrompt } from "./curator-tags.mjs";
+
 const INGEST_BLOCKS = ["tool", "skill", "project", "prompt"];
 
 function normalizedName(value) {
@@ -42,6 +44,9 @@ export function buildAgentPrompt({ skill, url, note, catalog, targetBlock, exist
 ${blockNote}
 整理备注：${String(note || "无").slice(0, 1000)}
 
+标签词表（tags 字段只能这样填，先在表里找，实在没有合适的才自造一个英文小写连字符 id）：
+${tagVocabularyPrompt()}
+
 当前目录（用于查重与避免重复收录；仅参考，不要照抄其中的文案）：
 ${catalog || "（空）"}${existingContent ? `
 这条内容正在被重新处理，现状如下（找出遗漏并改写，不要照抄其中的错误）：
@@ -59,7 +64,7 @@ ${existingContent.slice(0, 12000)}` : ""}
  * the provenance for these rules.
  */
 export function buildPolishPrompt({ draft }) {
-  return `你是 AI 导航的中文技术编辑。改写下面的正文，只输出 {"body":"..."}。
+  return `你是 AI 资源集的中文技术编辑。改写下面的正文，只输出 {"body":"..."}。
 
 规则：
 - 保留所有 ## 标题及顺序、链接、命令、代码、配置值和专有名词。

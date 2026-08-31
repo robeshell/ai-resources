@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { LearnChevron } from "@/components/Transitions";
 import { ToolLogo } from "@/components/ToolLogo";
-import { productPricingLabel, ui } from "@/lib/i18n";
+import { ui } from "@/lib/i18n";
+import { sortTags, tagLabel } from "@/lib/tags";
 import { text, type Locale, type Tool } from "@/lib/types";
 
 /**
@@ -24,7 +25,6 @@ export function ToolDialogPanel({
 }) {
   const t = ui(locale);
   const kind = tool.kind ?? "tool";
-  const price = productPricingLabel(locale, tool);
 
   return (
     <>
@@ -35,7 +35,7 @@ export function ToolDialogPanel({
           </span>
           <div>
             <p className="dialog-eyebrow">
-              {price ? `${t.resourceKinds[kind]} / ${price}` : t.resourceKinds[kind]}
+              {t.resourceKinds[kind]}
             </p>
             <h2 id={headingId}>{tool.name}</h2>
           </div>
@@ -49,9 +49,8 @@ export function ToolDialogPanel({
         {text(tool.description, locale).split(/\n\s*\n/).filter(Boolean).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       </div> : null}
       <div className="dialog-tags">
-        {price ? <span className={`price-tag price-${tool.pricing}`}>{price}</span> : null}
-        {tool.platforms.map((platform) => (
-          <span key={platform} className="platform-tag">{t.platform[platform]}</span>
+        {sortTags(tool.tags ?? []).map((tag) => (
+          <span key={tag} className="tool-tag">{tagLabel(tag, locale)}</span>
         ))}
       </div>
       <div className="dialog-actions">

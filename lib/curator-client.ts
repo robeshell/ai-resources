@@ -31,8 +31,8 @@ export type CatalogItem = {
   url: string;
   logo?: string;
   kind: "tool" | "skill" | "open-source";
-  pricing: "free" | "freemium" | "paid" | "api";
-  platforms: Array<"web" | "app" | "api" | "cli">;
+  /** Ids from data/tags.json; pricing and platform are tags now. */
+  tags: string[];
   status: "active" | "archived";
   verdict: { en: string; zh: string };
   summary: { en: string; zh: string };
@@ -74,8 +74,7 @@ export type CuratorDraft = {
   url: string;
   kind: CatalogItem["kind"] | "prompt";
   blockType?: CuratorIngestBlock;
-  pricing: CatalogItem["pricing"];
-  platforms: CatalogItem["platforms"];
+  tags: string[];
   verdict: CatalogItem["verdict"];
   summary: CatalogItem["summary"];
   description?: CatalogItem["summary"];
@@ -187,10 +186,12 @@ export type Conversation = {
 // 与服务端 contentPayloadFromDraft 同规则：把运行草稿折算成条目 payload，
 // 供会话结果「采用到编辑器」时做差量预览。
 export function draftPayload(draft: CuratorDraft, current: Record<string, unknown>): Record<string, unknown> {
-  const base = { ...current };
+  // tags 是条目级字段，不在 payload 里；差量预览按一个扁平记录比对，
+  // 采用时由编辑器再拆回去（见 ContentEditor 的 onAdopt）。
+  const base: Record<string, unknown> = { ...current, ...(draft.tags?.length ? { tags: draft.tags } : {}) };
   const block = draft.blockType || "tool";
   if (block === "tool") {
-    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, ...(draft.description ? { description: draft.description } : {}), url: draft.url, pricing: draft.pricing, platforms: draft.platforms };
+    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, ...(draft.description ? { description: draft.description } : {}), url: draft.url };
   }
   if (block === "prompt") {
     return { ...base, summary: draft.summary, prompt: (draft.prompt || "").trim(), variables: draft.variables || [], examples: draft.examples || [], links: draft.links?.length ? draft.links : base.links || [] };

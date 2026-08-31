@@ -1,8 +1,8 @@
-import type { Locale, Pricing, ResourceKind } from "./types";
+import type { Locale } from "./types";
 
 const copy = {
   en: {
-    siteName: "AI Nav",
+    siteName: "AI Resources",
     updatedLabel: "Last updated",
     footerNote: "Less noise. Better tabs.",
     openTool: "Open tool",
@@ -17,6 +17,8 @@ const copy = {
     kindOpenSource: "Open source",
     kindPrompt: "Prompts",
     catalogKinds: "Types",
+    filterTags: "Filter",
+    clearTags: "Clear",
     readMore: "Read",
     backToLibrary: "Back to library",
     contentBlock: {
@@ -48,21 +50,9 @@ const copy = {
       teal: "Teal",
       rose: "Rose",
     },
-    pricing: {
-      free: "Free",
-      freemium: "Free plan",
-      paid: "Paid",
-      api: "Pay as you go",
-    },
-    platform: {
-      web: "Web",
-      app: "App",
-      api: "API",
-      cli: "CLI",
-    },
   },
   zh: {
-    siteName: "AI 导航",
+    siteName: "AI 资源集",
     updatedLabel: "最近更新",
     footerNote: "少一点噪音，多一些好工具。",
     openTool: "打开工具",
@@ -77,6 +67,8 @@ const copy = {
     kindOpenSource: "开源项目",
     kindPrompt: "提示词",
     catalogKinds: "分类",
+    filterTags: "筛选",
+    clearTags: "清除",
     readMore: "阅读全文",
     backToLibrary: "返回资源库",
     contentBlock: {
@@ -108,18 +100,6 @@ const copy = {
       teal: "青绿",
       rose: "玫红",
     },
-    pricing: {
-      free: "免费",
-      freemium: "免费起步",
-      paid: "付费",
-      api: "按量计费",
-    },
-    platform: {
-      web: "网页",
-      app: "应用",
-      api: "API",
-      cli: "命令行",
-    },
   },
 } as const;
 
@@ -134,13 +114,6 @@ export function resourcesLabel(locale: Locale, count: number): string {
   return count === 1 ? "1 resource" : `${count} resources`;
 }
 
-export function productPricingLabel(
-  locale: Locale,
-  tool: { kind?: ResourceKind; pricing: Pricing },
-): string | null {
-  if ((tool.kind ?? "tool") !== "tool") return null;
-  return ui(locale).pricing[tool.pricing];
-}
 
 export function localePath(locale: Locale, path = ""): string {
   const suffix = path.startsWith("/") ? path : path ? `/${path}` : "";

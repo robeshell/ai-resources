@@ -12,12 +12,11 @@ import {
   importLegacyCatalog,
 } from "./curator-db.mjs";
 import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft, parseClaudeStructured } from "./curator-agent-output.mjs";
+import { sortTags } from "./curator-tags.mjs";
 import {
   assertContentItemShape,
   assertUrlShape,
   contentIssueCount,
-  PLATFORMS,
-  PRICING,
   validateContentPayload,
 } from "./curator-content-rules.mjs";
 import { exportContent } from "./curator-export.mjs";
@@ -1107,10 +1106,9 @@ function normalizeDraft(input = {}, finalUrl) {
   try { fallbackName = new URL(finalUrl).hostname.replace(/^www\./, ""); } catch {}
   const name = cleanText(input.name || fallbackName, 80);
   const kind = blockType === "project" ? "open-source" : blockType;
-  const pricing = PRICING.includes(input.pricing) ? input.pricing : "freemium";
-  const platforms = Array.isArray(input.platforms)
-    ? [...new Set(input.platforms.filter((item) => PLATFORMS.includes(item)))]
-    : [];
+  // Tags are the only classification axis; an Agent may propose one outside
+  // the vocabulary, so unknown ids survive here and get flagged in the editor.
+  const tags = sortTags(Array.isArray(input.tags) ? input.tags.map((tag) => slugify(String(tag))).filter(Boolean) : []);
   const links = Array.isArray(input.links)
     ? input.links.map((link) => ({
         label: cleanText(link?.label, 80),
@@ -1124,8 +1122,7 @@ function normalizeDraft(input = {}, finalUrl) {
     url: finalUrl,
     kind,
     blockType,
-    pricing,
-    platforms,
+    tags,
     verdict: {
       en: cleanText(input.verdict?.en, 72),
       zh: cleanText(input.verdict?.zh, 36),
@@ -1193,8 +1190,7 @@ function asLegacyCatalogItem(item) {
     url,
     ...(payload.logo ? { logo: payload.logo } : {}),
     kind: contentKindToLegacy(item.blockType),
-    pricing: payload.pricing || "free",
-    platforms: Array.isArray(payload.platforms) ? payload.platforms : [],
+    tags: Array.isArray(item.tags) ? sortTags(item.tags) : [],
     // Legacy clients only understand active/archived. Keep the richer state
     // alongside it until the board-specific editors land.
     status: item.status === "archived" ? "archived" : "active",
@@ -1237,8 +1233,6 @@ function contentPayloadFromDraft(draft, currentPayload = {}) {
       summary: draft.summary,
       ...(draft.description ? { description: draft.description } : {}),
       url: draft.url,
-      pricing: draft.pricing,
-      platforms: draft.platforms,
     };
   }
   if (blockType === "prompt") {
@@ -1304,8 +1298,6 @@ async function saveDraft(rawDraft, conversationId) {
           summary: draft.summary,
           ...(draft.description ? { description: draft.description } : {}),
           url: finalUrl,
-          pricing: draft.pricing,
-          platforms: draft.platforms,
         }
       : blockType === "prompt"
         ? {
@@ -1327,7 +1319,7 @@ async function saveDraft(rawDraft, conversationId) {
       slug: draft.slug,
       title: draft.name,
       status: blockType === "tool" ? "active" : "draft",
-      tags: [],
+      tags: Array.isArray(draft.tags) ? draft.tags : [],
       sourceUrl: finalUrl,
       createdAt: at,
       updatedAt: at,
@@ -1434,7 +1426,7 @@ async function saveContentItem(raw, expectedRevisionId) {
     ...raw,
     id: current?.id || String(raw.id || raw.slug),
     slug: slugify(raw.slug || raw.title),
-    tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
+    tags: sortTags(Array.isArray(raw.tags) ? raw.tags.map(String) : []),
     status: ["draft", "active", "archived"].includes(raw.status) ? raw.status : "draft",
     sourceUrl: raw.sourceUrl ? String(raw.sourceUrl) : undefined,
   };

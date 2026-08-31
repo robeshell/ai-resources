@@ -62,7 +62,7 @@ const FIELD_LABEL: Record<string, string> = {
   summary: "摘要", body: "正文", links: "相关链接", tagline: "定位",
   description: "短详情",
   prompt: "提示词", variables: "变量", examples: "示例", logo: "Logo",
-  url: "官网链接", pricing: "定价", platforms: "平台",
+  url: "官网链接", tags: "标签",
 };
 
 function readableValue(value: unknown): string {

@@ -451,7 +451,8 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
   padding: 0.2rem 0 1rem;
   border-bottom: 1px solid rgba(var(--edge), 0.08);
 }
@@ -476,6 +477,53 @@ input {
   font-family: var(--font-plex-mono), ui-monospace, monospace;
   font-size: var(--text-micro);
   letter-spacing: 0.02em;
+}
+
+/* 一行标签筛选。分组之间只用间距区分，不加标题——组名对读者没用，
+   看得懂「免费」「命令行」就够了。 */
+.library-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.75rem;
+  margin-left: auto;
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.filter-tag,
+.filter-clear {
+  padding: 0.18rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.22rem;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: var(--text-micro);
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.filter-tag:hover,
+.filter-clear:hover {
+  color: var(--ink);
+  border-color: rgba(var(--edge), 0.28);
+}
+
+.filter-tag[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.filter-clear {
+  border-style: dashed;
 }
 
 .catalog-only .content-panel {
@@ -802,38 +850,26 @@ input {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.7rem;
   padding-top: 0;
 }
 
-.price-tag,
-.platform-tag {
+/* 定价、平台、用途现在同一个标签体系，视觉上就不该再分三种。 */
+.tool-tag {
   display: inline-flex;
   align-items: center;
   min-height: 1.25rem;
   padding: 0.15rem 0.38rem;
+  border: 1px solid var(--line);
   border-radius: 0.22rem;
   font-family: var(--font-plex-mono), ui-monospace, monospace;
   font-size: var(--text-micro);
   letter-spacing: 0.02em;
   line-height: 1;
-}
-
-.price-tag {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.price-paid,
-.price-api {
-  background: color-mix(in srgb, var(--state-warn) 16%, var(--surface));
-  color: color-mix(in srgb, var(--state-warn) 70%, var(--ink));
-}
-
-.platform-tag {
-  border: 1px solid var(--line);
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .logo-frame {

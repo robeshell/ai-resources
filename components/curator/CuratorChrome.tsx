@@ -42,7 +42,7 @@ export function CuratorChrome({ children }: { children: React.ReactNode }) {
         <Container size="xl" className="curator-header-inner">
           <Group h="100%" justify="space-between" wrap="nowrap">
           <Group gap="xl" wrap="nowrap">
-          <Link href="/zh/" className="curator-brand-link" aria-label="返回 AI 导航">
+          <Link href="/zh/" className="curator-brand-link" aria-label="返回 AI 资源集">
             <Group gap="xs" wrap="nowrap"><BrandMark size={22} /><span>Curator</span></Group>
           </Link>
           <Group component="nav" aria-label="Curator" gap="xl" visibleFrom="sm">

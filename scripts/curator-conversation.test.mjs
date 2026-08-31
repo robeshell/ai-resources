@@ -12,15 +12,13 @@ function tool(id, at) {
     slug: id,
     title: id,
     status: "draft",
-    tags: [],
+    tags: ["coding", "free", "web"],
     createdAt: at,
     updatedAt: at,
     payload: {
       tagline: { zh: "测试定位", en: "Test verdict" },
       summary: { zh: "测试摘要内容", en: "Test summary content" },
       url: `https://${id}.example.com`,
-      pricing: "free",
-      platforms: ["web"],
     },
   };
 }

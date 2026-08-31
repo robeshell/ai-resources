@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createContentRepository, openContentDb } from "./curator-db.mjs";
 import { validateContentPayload } from "./curator-content-rules.mjs";
+import { sortTags } from "./curator-tags.mjs";
 import { exportContent } from "./curator-export.mjs";
 
 function tool(id, status) {
@@ -15,7 +17,7 @@ function tool(id, status) {
     slug: id,
     title: id,
     status,
-    tags: [],
+    tags: ["coding", "free", "web"],
     createdAt: at,
     updatedAt: at,
     payload: {
@@ -23,8 +25,6 @@ function tool(id, status) {
       summary: { zh: "测试摘要内容", en: "Test summary content" },
       description: { zh: "第一段短详情。\n\n第二段说明边界。", en: "A short first paragraph.\n\nA second paragraph with the boundary." },
       url: `https://${id}.example.com`,
-      pricing: "free",
-      platforms: ["web"],
     },
   };
 }
@@ -37,7 +37,7 @@ function skill(id, status, body) {
     slug: id,
     title: id,
     status,
-    tags: [],
+    tags: ["coding"],
     createdAt: at,
     updatedAt: at,
     payload: { summary: { zh: "技能摘要", en: "Skill summary" }, body, links: [] },
@@ -141,9 +141,9 @@ test("publishing enforces what the public build requires", () => {
     [{ ...complete, payload: { ...complete.payload, tagline: { zh: "", en: "en only" } } }, /中英文定位/],
     [{ ...complete, payload: { ...complete.payload, url: "not-a-url" } }, /完整的 http/],
     [{ ...complete, payload: { ...complete.payload, url: "http://127.0.0.1/x" } }, /内网或保留地址/],
-    [{ ...complete, payload: { ...complete.payload, pricing: "cheap" } }, /定价取值无效/],
-    [{ ...complete, payload: { ...complete.payload, platforms: [] } }, /平台至少选择一项/],
-    [{ ...complete, payload: { ...complete.payload, platforms: ["desktop"] } }, /平台至少选择一项/],
+    [{ ...complete, tags: ["free", "web"] }, /至少选择一个用途标签/],
+    [{ ...complete, tags: [] }, /至少选择一个用途标签/],
+    [{ ...complete, tags: ["coding", "free", "paid"] }, /定价标签只能选一个/],
     [skill("empty", "active", "  "), /已发布的长文必须填写正文/],
   ];
   for (const [item, message] of cases) assert.throws(() => validateContentPayload(item), message);
@@ -158,4 +158,21 @@ test("publishing enforces what the public build requires", () => {
     () => validateContentPayload({ ...skill("draft", "draft", ""), payload: { links: [{ label: "", url: "https://example.com" }] } }),
     /名称和地址/,
   );
+});
+
+test("the vocabulary is internally consistent and shared by both sides", () => {
+  const vocabulary = JSON.parse(readFileSync(new URL("../data/tags.json", import.meta.url), "utf8"));
+  const groups = new Set(vocabulary.groups.map((group) => group.id));
+  const seen = new Set();
+  for (const tag of vocabulary.tags) {
+    assert.ok(groups.has(tag.group), `${tag.id} 的分组 ${tag.group} 不存在`);
+    assert.match(tag.id, /^[a-z0-9]+(-[a-z0-9]+)*$/, `${tag.id} 不是合法 id`);
+    assert.ok(tag.label.zh && tag.label.en, `${tag.id} 缺少中英文名`);
+    assert.ok(!seen.has(tag.id), `${tag.id} 重复`);
+    seen.add(tag.id);
+  }
+  // Ordering is what makes a card read 用途 → 特性 → 定价 → 平台 no matter
+  // which order the tags were saved in.
+  assert.deepEqual(sortTags(["web", "free", "china", "coding"]), ["coding", "china", "free", "web"]);
+  assert.deepEqual(sortTags(["zzz-proposed", "coding"]), ["coding", "zzz-proposed"]);
 });

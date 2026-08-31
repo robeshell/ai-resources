@@ -5,6 +5,7 @@ import Link from "next/link";
 import { TextSwap, useRovingKeys, useSlidingPill } from "@/components/Transitions";
 import { ToolList } from "@/components/ToolList";
 import { resourcesLabel, ui } from "@/lib/i18n";
+import { TAG_GROUPS, tagGroup, tagLabel, usedTags } from "@/lib/tags";
 import type { PublicContentSummary } from "@/lib/public-content";
 import { text, type Locale, type Tool } from "@/lib/types";
 
@@ -32,6 +33,7 @@ export function HomeTools({
     { kind: "prompt", label: t.kindPrompt },
   ];
   const [activeKind, setActiveKind] = useState<PublicBoard>("tool");
+  const [activeTags, setActiveTags] = useState<string[]>([]);
   const { barRef: kindBarRef, pillRef: kindPillRef } = useSlidingPill(activeKind);
   useRovingKeys(kindBarRef);
 
@@ -42,18 +44,30 @@ export function HomeTools({
     return () => window.removeEventListener("popstate", restoreBoard);
   }, []);
 
+  function toggleTag(tag: string) {
+    setActiveTags((current) => current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag]);
+  }
+
   function selectKind(kind: PublicBoard) {
     setActiveKind(kind);
+    // Filters are per board: the tags that narrow tools rarely mean anything
+    // on the prompts board, and a stale filter reads as an empty section.
+    setActiveTags([]);
     const url = new URL(window.location.href);
     url.searchParams.set("kind", kind);
     url.hash = "catalog";
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
-  const visibleTools = activeKind === "tool" ? all : [];
-  const visibleContent = content.filter((item) => item.blockType === activeKind);
+  const boardTools = activeKind === "tool" ? all : [];
+  const boardContent = content.filter((item) => item.blockType === activeKind);
+  // Only offer tags this board actually has, so no filter can return nothing.
+  const offered = usedTags(activeKind === "tool" ? boardTools : boardContent);
+  const matches = (tags: string[] | undefined) => activeTags.every((tag) => (tags || []).includes(tag));
+  const visibleTools = boardTools.filter((tool) => matches(tool.tags));
+  const visibleContent = boardContent.filter((item) => matches(item.tags));
   const selectedKind = kinds.find((item) => item.kind === activeKind) ?? kinds[0];
-  const count = activeKind === "tool" ? all.length : visibleContent.length;
+  const count = activeKind === "tool" ? visibleTools.length : visibleContent.length;
 
   return (
     <section id="catalog" className="catalog-only" aria-label={t.catalogKinds}>
@@ -90,6 +104,32 @@ export function HomeTools({
                 <TextSwap value={resourcesLabel(locale, count)} />
               </span>
             </div>
+            {offered.length ? (
+              <div className="library-filters" role="group" aria-label={t.filterTags}>
+                {TAG_GROUPS.map((group) => {
+                  const groupTags = offered.filter((tag) => tagGroup(tag) === group.id);
+                  if (!groupTags.length) return null;
+                  return (
+                    <span key={group.id} className="filter-group">
+                      {groupTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          className="filter-tag"
+                          aria-pressed={activeTags.includes(tag)}
+                          onClick={() => toggleTag(tag)}
+                        >
+                          {tagLabel(tag, locale)}
+                        </button>
+                      ))}
+                    </span>
+                  );
+                })}
+                {activeTags.length ? (
+                  <button type="button" className="filter-clear" onClick={() => setActiveTags([])}>{t.clearTags}</button>
+                ) : null}
+              </div>
+            ) : null}
           </header>
           <div role="tabpanel" className="content-panel">
             {activeKind === "tool" ? <ToolList tools={visibleTools} locale={locale} showTags={false} /> : (

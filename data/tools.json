@@ -6,8 +6,8 @@
       "name": "Claude",
       "url": "https://claude.ai",
       "logo": "/logos/claude.svg",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app",
         "api"
@@ -28,8 +28,8 @@
       "name": "ChatGPT",
       "url": "https://chatgpt.com",
       "logo": "/logos/chatgpt.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app",
         "api"
@@ -50,8 +50,8 @@
       "name": "Gemini",
       "url": "https://gemini.google.com",
       "logo": "/logos/gemini.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app",
         "api"
@@ -72,8 +72,8 @@
       "name": "Grok",
       "url": "https://grok.com",
       "logo": "/logos/grok.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app",
         "api"
@@ -94,8 +94,8 @@
       "name": "Kimi",
       "url": "https://www.kimi.com",
       "logo": "/logos/kimi.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app"
       ],
@@ -115,8 +115,8 @@
       "name": "Qwen",
       "url": "https://chat.qwen.ai",
       "logo": "/logos/qwen.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "api"
       ],
@@ -136,8 +136,8 @@
       "name": "Cursor",
       "url": "https://cursor.com",
       "logo": "/logos/cursor.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "app"
       ],
       "status": "active",
@@ -156,8 +156,8 @@
       "name": "Claude Code",
       "url": "https://code.claude.com",
       "logo": "/logos/claude.svg",
-      "pricing": "paid",
-      "platforms": [
+      "tags": [
+        "paid",
         "cli"
       ],
       "status": "active",
@@ -176,8 +176,8 @@
       "name": "GitHub Copilot",
       "url": "https://github.com/features/copilot",
       "logo": "/logos/github-copilot.png",
-      "pricing": "paid",
-      "platforms": [
+      "tags": [
+        "paid",
         "app",
         "cli"
       ],
@@ -197,8 +197,8 @@
       "name": "Codex",
       "url": "https://openai.com/codex",
       "logo": "/logos/codex.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "app",
         "cli"
       ],
@@ -222,8 +222,8 @@
       "name": "Midjourney",
       "url": "https://www.midjourney.com",
       "logo": "/logos/midjourney.png",
-      "pricing": "paid",
-      "platforms": [
+      "tags": [
+        "paid",
         "web"
       ],
       "status": "active",
@@ -242,8 +242,8 @@
       "name": "FLUX",
       "url": "https://bfl.ai",
       "logo": "/logos/flux.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "api"
       ],
@@ -263,8 +263,8 @@
       "name": "Ideogram",
       "url": "https://ideogram.ai",
       "logo": "/logos/ideogram.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web"
       ],
       "status": "active",
@@ -283,8 +283,8 @@
       "name": "Recraft",
       "url": "https://www.recraft.ai",
       "logo": "/logos/recraft.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "api"
       ],
@@ -304,8 +304,8 @@
       "name": "Kling",
       "url": "https://klingai.com",
       "logo": "/logos/kling.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app"
       ],
@@ -325,8 +325,8 @@
       "name": "Runway",
       "url": "https://runwayml.com",
       "logo": "/logos/runway.png",
-      "pricing": "paid",
-      "platforms": [
+      "tags": [
+        "paid",
         "web"
       ],
       "status": "active",
@@ -345,8 +345,8 @@
       "name": "Veo",
       "url": "https://deepmind.google/models/veo/",
       "logo": "/logos/veo.png",
-      "pricing": "paid",
-      "platforms": [
+      "tags": [
+        "paid",
         "web",
         "api"
       ],
@@ -366,8 +366,8 @@
       "name": "ElevenLabs",
       "url": "https://elevenlabs.io",
       "logo": "/logos/elevenlabs.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "api"
       ],
@@ -387,8 +387,8 @@
       "name": "Perplexity",
       "url": "https://www.perplexity.ai",
       "logo": "/logos/perplexity.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "app",
         "api"
@@ -409,8 +409,8 @@
       "name": "NotebookLM",
       "url": "https://notebooklm.google.com",
       "logo": "/logos/notebooklm.png",
-      "pricing": "free",
-      "platforms": [
+      "tags": [
+        "free",
         "web"
       ],
       "status": "active",
@@ -429,8 +429,8 @@
       "name": "Elicit",
       "url": "https://elicit.com",
       "logo": "/logos/elicit.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web"
       ],
       "status": "active",
@@ -449,8 +449,8 @@
       "name": "Dify",
       "url": "https://dify.ai",
       "logo": "/logos/dify.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web",
         "api"
       ],
@@ -470,8 +470,8 @@
       "name": "n8n",
       "url": "https://n8n.io",
       "logo": "/logos/n8n.png",
-      "pricing": "freemium",
-      "platforms": [
+      "tags": [
+        "freemium",
         "web"
       ],
       "status": "active",
@@ -490,8 +490,8 @@
       "name": "Manus",
       "url": "https://manus.im",
       "logo": "/logos/manus.png",
-      "pricing": "paid",
-      "platforms": [
+      "tags": [
+        "paid",
         "web"
       ],
       "status": "active",
@@ -510,10 +510,10 @@
       "name": "OpenRouter",
       "url": "https://openrouter.ai",
       "logo": "/logos/openrouter.png",
-      "pricing": "api",
-      "platforms": [
-        "api",
-        "web"
+      "tags": [
+        "usage-based",
+        "web",
+        "api"
       ],
       "status": "active",
       "verdict": {
@@ -531,8 +531,8 @@
       "name": "LLM Model Comparison",
       "url": "https://robeshell.github.io/llm-model-comparison/",
       "logo": "/logos/llm-model-comparison.svg",
-      "pricing": "free",
-      "platforms": [
+      "tags": [
+        "free",
         "web"
       ],
       "status": "archived",
@@ -551,10 +551,10 @@
       "name": "Groq",
       "url": "https://groq.com",
       "logo": "/logos/groq.png",
-      "pricing": "api",
-      "platforms": [
-        "api",
-        "web"
+      "tags": [
+        "usage-based",
+        "web",
+        "api"
       ],
       "status": "active",
       "verdict": {
@@ -572,10 +572,10 @@
       "name": "Together AI",
       "url": "https://www.together.ai",
       "logo": "/logos/together.png",
-      "pricing": "api",
-      "platforms": [
-        "api",
-        "web"
+      "tags": [
+        "usage-based",
+        "web",
+        "api"
       ],
       "status": "active",
       "verdict": {

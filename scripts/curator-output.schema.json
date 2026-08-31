@@ -7,8 +7,7 @@
     "slug",
     "kind",
     "blockType",
-    "pricing",
-    "platforms",
+    "tags",
     "verdict",
     "summary",
     "description",
@@ -49,28 +48,11 @@
         null
       ]
     },
-    "pricing": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "enum": [
-        "free",
-        "freemium",
-        "paid",
-        "api",
-        null
-      ]
-    },
-    "platforms": {
+    "tags": {
+      "description": "标签 id，从提示词给出的词表里选。用途至少 1 个，定价最多 1 个，平台有几个填几个。词表里实在没有合适的才自造，用英文小写连字符。",
       "type": "array",
       "items": {
-        "enum": [
-          "web",
-          "app",
-          "api",
-          "cli"
-        ]
+        "type": "string"
       }
     },
     "verdict": {

@@ -56,3 +56,18 @@ test("the polish pass is body-only and cannot invent research", () => {
   // model deliberate for 20K tokens over one paragraph.
   assert.ok(prompt.length < 1600, `润色 prompt 应保持精简，当前 ${prompt.length} 字符`);
 });
+
+test("the Agent gets the real tag vocabulary, ids and judgement hints included", () => {
+  const prompt = buildAgentPrompt({
+    skill: "SKILL", url: "https://example.dev", note: "", catalog: "", targetBlock: "tool",
+  });
+  const vocabulary = JSON.parse(readFileSync(new URL("../data/tags.json", import.meta.url), "utf8"));
+  // A paraphrase drifts from the file; the prompt has to carry every id and
+  // hint, or the Agent invents synonyms for tags that already exist.
+  for (const tag of vocabulary.tags) {
+    assert.ok(prompt.includes(tag.id), `词表缺少标签 ${tag.id}`);
+    assert.ok(prompt.includes(tag.hint), `词表缺少 ${tag.id} 的判定说明`);
+  }
+  assert.match(prompt, /先在表里找/);
+  assert.match(prompt, /定价 — 互斥，取一个。/);
+});

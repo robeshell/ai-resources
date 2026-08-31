@@ -1,7 +1,6 @@
 import net from "node:net";
+import { knownTag } from "./curator-tags.mjs";
 
-export const PRICING = ["free", "freemium", "paid", "api"];
-export const PLATFORMS = ["web", "app", "api", "cli"];
 export const CONTENT_BLOCKS = ["tool", "skill", "project", "prompt", "course", "article"];
 const LONG_FORM_BLOCKS = ["skill", "project", "course", "article"];
 
@@ -67,13 +66,13 @@ export function validateContentPayload(item) {
   }
   if (item.status !== "active") return;
   assertLocalized(payload.summary, "简介");
+  // 标签是唯一的分类维度，发布后没有标签就等于进不了任何筛选。
+  const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+  if (!tags.some((tag) => knownTag(tag)?.group === "task")) throw new Error("至少选择一个用途标签");
+  if (tags.filter((tag) => knownTag(tag)?.group === "pricing").length > 1) throw new Error("定价标签只能选一个");
   if (item.blockType === "tool") {
     assertLocalized(payload.tagline, "定位");
     assertUrlShape(payload.url);
-    if (!PRICING.includes(payload.pricing)) throw new Error("定价取值无效");
-    if (!Array.isArray(payload.platforms) || !payload.platforms.length || payload.platforms.some((platform) => !PLATFORMS.includes(platform))) {
-      throw new Error("平台至少选择一项，且取值必须有效");
-    }
   }
   if (LONG_FORM_BLOCKS.includes(item.blockType) && !String(payload.body || "").trim()) {
     throw new Error("已发布的长文必须填写正文");
@@ -93,6 +92,10 @@ export function contentIssueCount(item) {
   if (!String(item.slug || "").trim()) count += 1;
   if (!String(payload.summary?.zh || "").trim() || !String(payload.summary?.en || "").trim()) count += 1;
   if (item.blockType === "tool" && (!String(payload.url || "").trim() || !String(payload.tagline?.zh || "").trim() || !String(payload.tagline?.en || "").trim())) count += 1;
+  const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+  if (!tags.some((tag) => knownTag(tag)?.group === "task")) count += 1;
+  // Agent 提的新标签不会自动进词表，留在这里等人处理。
+  if (tags.some((tag) => !knownTag(tag))) count += 1;
   if (["skill", "project"].includes(item.blockType) && !String(payload.body || "").trim()) count += 1;
   if (item.blockType === "prompt" && !String(payload.prompt || "").trim()) count += 1;
   return count;

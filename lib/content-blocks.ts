@@ -1,4 +1,4 @@
-import type { Localized, Platform, Pricing } from "./types";
+import type { Localized } from "./types";
 
 export const ENABLED_CONTENT_BLOCK_IDS = ["tool", "skill", "project", "prompt"] as const;
 
@@ -33,8 +33,6 @@ export type ToolPayload = {
   summary: Localized;
   description?: Localized;
   url: string;
-  pricing: Pricing;
-  platforms: Platform[];
 };
 
 export type ArticlePayload = {

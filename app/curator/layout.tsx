@@ -7,7 +7,7 @@ import "./curator.css";
 
 export const metadata: Metadata = {
   title: "Curator",
-  description: "Local management studio for AI Nav.",
+  description: "Local management studio for AI Resources.",
   robots: { index: false, follow: false },
 };
 

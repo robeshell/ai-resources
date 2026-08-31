@@ -4,23 +4,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Box, Button, Checkbox, Flex, Group, Menu, Modal, Paper,
+  Box, Button, Flex, Group, Menu, Modal, Paper,
   Select, SimpleGrid, Skeleton, Stack, Text, Textarea,
   TextInput, Title,
 } from "@mantine/core";
 import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/curator/StructuredFields";
 import { ConversationPanel } from "@/components/curator/ConversationPanel";
 import { MarkdownEditor } from "@/components/curator/MarkdownEditor";
+import { TagPicker } from "@/components/curator/TagPicker";
 import type { ArticlePayload, ContentBlockId, ContentStatus, PromptPayload, ToolPayload } from "@/lib/content-blocks";
 import { BLOCK_LABELS, curatorRequest, type CuratorContentItem } from "@/lib/curator-client";
 import { curatorEditorHref } from "@/lib/curator-routes";
 
 type EditableBlock = Extract<ContentBlockId, "tool" | "skill" | "project" | "prompt">;
 
-const PLATFORM_VALUES = ["web", "app", "api", "cli"] as const;
-
 function blankPayload(block: EditableBlock): CuratorContentItem["payload"] {
-  if (block === "tool") return { tagline: { zh: "", en: "" }, summary: { zh: "", en: "" }, url: "", pricing: "free", platforms: ["web"] } satisfies ToolPayload;
+  if (block === "tool") return { tagline: { zh: "", en: "" }, summary: { zh: "", en: "" }, url: "" } satisfies ToolPayload;
   if (block === "prompt") return { summary: { zh: "", en: "" }, prompt: "", variables: [], examples: [], links: [] } satisfies PromptPayload;
   return { summary: { zh: "", en: "" }, body: "", links: [] } satisfies ArticlePayload;
 }
@@ -71,14 +70,15 @@ export function ContentEditor({ block, slug }: { block: EditableBlock; slug: str
   const saveStatus = error || (busy ? "保存中" : dirty ? "修改中" : "已保存");
 
   return <div className={conversationContentId ? "curator-editor-split" : undefined}>
-    {conversationContentId ? <Box className="curator-editor-chat"><ConversationPanel contentId={conversationContentId} currentPayload={draft.payload as Record<string, unknown>} context={{ title: draft.title || `未命名${BLOCK_LABELS[block]}`, backHref: `/curator/resources/?block=${block}`, backLabel: `${BLOCK_LABELS[block]}列表` }} hint="这个条目还没有对话。说想改什么，Agent 会给出可逐项采用的修改。" onAdopt={(payload) => updatePayload(payload as CuratorContentItem["payload"])} /></Box> : null}
+    {conversationContentId ? <Box className="curator-editor-chat"><ConversationPanel contentId={conversationContentId} currentPayload={{ ...(draft.payload as Record<string, unknown>), tags: draft.tags }} context={{ title: draft.title || `未命名${BLOCK_LABELS[block]}`, backHref: `/curator/resources/?block=${block}`, backLabel: `${BLOCK_LABELS[block]}列表` }} hint="这个条目还没有对话。说想改什么，Agent 会给出可逐项采用的修改。" onAdopt={(adopted) => { const { tags, ...payload } = adopted; if (Array.isArray(tags)) updateItem("tags", tags.map(String)); updatePayload(payload as CuratorContentItem["payload"]); }} /></Box> : null}
     <Stack gap={0} className="curator-editor-main" style={{ minWidth: 0 }}>
     <Box className="curator-editor-form-scroll">
     {!conversationContentId ? <Flex justify="space-between" align="flex-end" gap="lg" wrap="wrap" className="curator-page-heading-mantine"><Box><Text component={Link} href={`/curator/resources/?block=${block}`} size="sm" c="dimmed" className="curator-back-link">← 返回{BLOCK_LABELS[block]}列表</Text><Text className="curator-eyebrow-mantine" mt="md">新建{BLOCK_LABELS[block]}</Text><Title order={1} mt={4}>{draft.title || `未命名${BLOCK_LABELS[block]}`}</Title></Box></Flex> : null}
     <Stack gap="md">
       <EditorSection title="基本信息" description="用于资源库索引和公开站识别。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="标题" value={draft.title} onChange={(event) => updateItem("title", event.currentTarget.value)} /><TextInput label="Slug" value={draft.slug} onChange={(event) => updateItem("slug", event.currentTarget.value)} /><TextInput label="来源链接" value={draft.sourceUrl || ""} onChange={(event) => updateItem("sourceUrl", event.currentTarget.value)} placeholder="https://…" /><Select label="内容状态" value={draft.status} onChange={(value) => updateItem("status", (value || "draft") as ContentStatus)} data={[{ value: "draft", label: "草稿" }, { value: "active", label: "已发布" }, { value: "archived", label: "已归档" }]} /></SimpleGrid></EditorSection>
+      <EditorSection title="标签" description="板块决定形态，标签决定别人怎么找到它。定价和平台也是标签。"><TagPicker value={draft.tags} onChange={(tags) => updateItem("tags", tags)} /></EditorSection>
       {tool ? <>
-        <EditorSection title="工具入口" description="访问方式、定价与支持平台。"><Stack gap="md"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="Logo 路径" value={tool.logo || ""} onChange={(event) => updatePayload({ ...tool, logo: event.currentTarget.value })} placeholder="/logos/…" /><TextInput label="官网链接" value={tool.url} onChange={(event) => updatePayload({ ...tool, url: event.currentTarget.value })} /><Select label="定价" value={tool.pricing} onChange={(value) => updatePayload({ ...tool, pricing: (value || "free") as ToolPayload["pricing"] })} data={[{ value: "free", label: "免费" }, { value: "freemium", label: "免费增值" }, { value: "paid", label: "付费" }, { value: "api", label: "API 计费" }]} /></SimpleGrid><Checkbox.Group label="平台" value={tool.platforms} onChange={(platforms) => updatePayload({ ...tool, platforms: platforms as ToolPayload["platforms"] })}><Group mt="xs">{PLATFORM_VALUES.map((platform) => <Checkbox key={platform} value={platform} label={platform.toUpperCase()} />)}</Group></Checkbox.Group></Stack></EditorSection>
+        <EditorSection title="工具入口" description="访问方式。定价和平台都是标签，在上面一起选。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="Logo 路径" value={tool.logo || ""} onChange={(event) => updatePayload({ ...tool, logo: event.currentTarget.value })} placeholder="/logos/…" /><TextInput label="官网链接" value={tool.url} onChange={(event) => updatePayload({ ...tool, url: event.currentTarget.value })} /></SimpleGrid></EditorSection>
         <EditorSection title="卡片文案" description="列表卡片只显示定位和摘要。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="中文定位" value={tool.tagline.zh} onChange={(event) => updateLocalized("tagline", "zh", event.currentTarget.value)} /><TextInput label="English verdict" value={tool.tagline.en} onChange={(event) => updateLocalized("tagline", "en", event.currentTarget.value)} /><Textarea label="中文简介" minRows={3} value={tool.summary.zh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} /><Textarea label="English summary" minRows={3} value={tool.summary.en} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection>
         <EditorSection title="快速查看" description="点击工具卡片后显示的补充介绍。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><Textarea label="中文短详情" description="建议两小段、120–240 字。" rows={10} resize="none" value={tool.description?.zh || ""} onChange={(event) => updateLocalized("description", "zh", event.currentTarget.value)} /><Textarea label="English details" description="Two short paragraphs." rows={10} resize="none" value={tool.description?.en || ""} onChange={(event) => updateLocalized("description", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection>
       </> : null}

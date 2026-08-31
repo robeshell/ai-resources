@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
+import { sortTags } from "./curator-tags.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_DB_FILE = path.join(ROOT, ".curator", "content.sqlite");
@@ -521,6 +522,15 @@ function blockTypeForLegacy(item, defaultBlockType) {
   return "tool";
 }
 
+/** Pricing and platforms were separate fields before the vocabulary existed;
+ *  carrying them over as tags keeps an old catalog importable. */
+function legacyTags(item) {
+  const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
+  if (item.pricing) tags.push(item.pricing === "api" ? "usage-based" : String(item.pricing));
+  for (const platform of Array.isArray(item.platforms) ? item.platforms : []) tags.push(String(platform));
+  return sortTags(tags);
+}
+
 function migrateLegacyItem(item, defaultBlockType, sortOrder = 0) {
   const blockType = blockTypeForLegacy(item, defaultBlockType);
   const summary = readLocalized(item.summary);
@@ -531,8 +541,6 @@ function migrateLegacyItem(item, defaultBlockType, sortOrder = 0) {
         tagline,
         summary,
         url: String(item.url || ""),
-        pricing: String(item.pricing || "freemium"),
-        platforms: Array.isArray(item.platforms) ? item.platforms.map(String) : [],
       }
     : {
         summary,
@@ -546,7 +554,7 @@ function migrateLegacyItem(item, defaultBlockType, sortOrder = 0) {
     slug: String(item.slug || item.id),
     title: String(item.name || item.slug || item.id),
     status: item.status === "archived" ? "archived" : blockType === "tool" ? "active" : "draft",
-    tags: [],
+    tags: legacyTags(item),
     sourceUrl: item.url ? String(item.url) : undefined,
     sortOrder,
     createdAt: at,

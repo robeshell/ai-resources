@@ -17,8 +17,8 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "AI Nav | Find something useful. Get to work.",
-    template: "%s · AI Nav",
+    default: "AI Resources | Find something useful. Get to work.",
+    template: "%s · AI Resources",
   },
   description: "Useful AI products, skills and open-source projects, sorted by what they help you do.",
 };
