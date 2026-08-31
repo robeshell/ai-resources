@@ -21,6 +21,7 @@ function tool(id, status) {
     payload: {
       tagline: { zh: "测试定位", en: "Test verdict" },
       summary: { zh: "测试摘要内容", en: "Test summary content" },
+      description: { zh: "第一段短详情。\n\n第二段说明边界。", en: "A short first paragraph.\n\nA second paragraph with the boundary." },
       url: `https://${id}.example.com`,
       pricing: "free",
       platforms: ["web"],
@@ -73,6 +74,7 @@ test("drafts never reach the public export", async () => {
     const tools = JSON.parse(await readFile(path.join(outputRoot, "data/tools.json"), "utf8"));
     const bySlug = Object.fromEntries(tools.items.map((item) => [item.slug, item.status]));
     assert.deepEqual(bySlug, { "published-tool": "active", "archived-tool": "archived" });
+    assert.equal(tools.items.find((item) => item.slug === "published-tool").description.zh, "第一段短详情。\n\n第二段说明边界。");
 
     assert.ok(await missing(path.join(outputRoot, "content/skills/draft-skill.md")));
     assert.ok(!(await missing(path.join(outputRoot, "content/skills/published-skill.md"))));

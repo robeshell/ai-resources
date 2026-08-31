@@ -11,6 +11,7 @@
     "platforms",
     "verdict",
     "summary",
+    "description",
     "confidence",
     "rationale",
     "body",
@@ -109,6 +110,27 @@
           "type": "string",
           "minLength": 8,
           "maxLength": 72
+        }
+      }
+    },
+    "description": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "en",
+        "zh"
+      ],
+      "properties": {
+        "en": {
+          "type": "string",
+          "maxLength": 900
+        },
+        "zh": {
+          "type": "string",
+          "maxLength": 480
         }
       }
     },

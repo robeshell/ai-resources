@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft, parseClaudeEnvelope } from "./curator-agent-output.mjs";
+import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft, parseClaudeEnvelope, parseClaudeStructured } from "./curator-agent-output.mjs";
 
 const DRAFT = { name: "Claude", slug: "claude", verdict: { zh: "长任务", en: "Long work" } };
 
@@ -65,6 +65,11 @@ test("the schema-validated object wins over the string copy of it", () => {
     result: `这是我整理的结果：\n\`\`\`json\n${JSON.stringify(DRAFT)}\n\`\`\``,
   });
   assert.deepEqual(parseClaudeDraft(stdout), DRAFT);
+});
+
+test("a body-only structured result can be parsed for the polish pass", () => {
+  const result = parseClaudeStructured(JSON.stringify({ structured_output: { body: "## 正文" } }), (value) => typeof value?.body === "string");
+  assert.deepEqual(result, { body: "## 正文" });
 });
 
 test("the schema handed to Claude Code carries no $schema ref", () => {

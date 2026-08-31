@@ -42,7 +42,7 @@ export function parseClaudeEnvelope(stdout) {
   }
 }
 
-export function parseClaudeDraft(stdout) {
+export function parseClaudeStructured(stdout, accepts = (result) => Boolean(result && typeof result === "object")) {
   const payload = parseClaudeEnvelope(stdout);
   if (!payload) throw new Error("Claude 没有返回 JSON");
   // `--output-format json` reports auth, model and quota failures inside an
@@ -59,8 +59,12 @@ export function parseClaudeDraft(stdout) {
     if (!match) throw new Error("Claude 没有返回 JSON");
     return JSON.parse(match[0]);
   }
-  if (result && typeof result === "object" && (result.name || result.slug || result.verdict)) return result;
+  if (accepts(result)) return result;
   throw agentDetailError("Claude Code 返回的内容不符合收录结构，可能是当前模型不支持 --json-schema 结构化输出");
+}
+
+export function parseClaudeDraft(stdout) {
+  return parseClaudeStructured(stdout, (result) => Boolean(result && typeof result === "object" && (result.name || result.slug || result.verdict)));
 }
 
 // Turn raw CLI failures into a reason the operator can act on: usage limits,

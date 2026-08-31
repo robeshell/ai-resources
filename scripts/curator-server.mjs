@@ -11,7 +11,7 @@ import {
   createContentRepository,
   importLegacyCatalog,
 } from "./curator-db.mjs";
-import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft } from "./curator-agent-output.mjs";
+import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft, parseClaudeStructured } from "./curator-agent-output.mjs";
 import {
   assertContentItemShape,
   assertUrlShape,
@@ -21,12 +21,14 @@ import {
   validateContentPayload,
 } from "./curator-content-rules.mjs";
 import { exportContent } from "./curator-export.mjs";
+import { buildAgentPrompt as composeAgentPrompt, buildPolishPrompt as composePolishPrompt, similarResources } from "./curator-agent-policy.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.CURATOR_PORT || 4317);
 const HOST = process.env.CURATOR_HOST || "127.0.0.1";
 const SITE_PORT = process.env.CURATOR_SITE_PORT || "3000";
 const SCHEMA_PATH = path.join(ROOT, "scripts/curator-output.schema.json");
+const POLISH_SCHEMA_PATH = path.join(ROOT, "scripts/curator-polish.schema.json");
 const SKILL_PATH = path.join(ROOT, "skills/curator-ingest/SKILL.md");
 const MAX_REQUEST_BYTES = 128 * 1024;
 const AGENT_TIMEOUT_MS = Number(process.env.CURATOR_AGENT_TIMEOUT_MS) || 240_000;
@@ -384,10 +386,18 @@ function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, o
 async function runCodex(prompt, model, options = {}) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ai-nav-curator-"));
   const outputPath = path.join(tempDir, "draft.json");
+  const schemaPath = options.schemaPath || SCHEMA_PATH;
   const args = [
     "exec", "--ephemeral", "--skip-git-repo-check", "--sandbox", "workspace-write",
-    "-c", "sandbox_workspace_write.network_access=true",
-    "--color", "never", "-C", tempDir, "--output-schema", SCHEMA_PATH,
+    "-c", `sandbox_workspace_write.network_access=${options.networkAccess === false ? "false" : "true"}`,
+    // The Codex half of AGENT_POLICY. Without these the policy note lies: the
+    // operator's config.toml brings in every MCP server, plugin and marketplace
+    // (one of those MCP search tools is what stalled an early run), and
+    // model_reasoning_effort falls back to whatever the operator set — which
+    // made the polish round cost ~26K tokens at medium effort.
+    "--ignore-user-config", "--ignore-rules",
+    "-c", `model_reasoning_effort="${AGENT_POLICY.effort}"`,
+    "--color", "never", "-C", tempDir, "--output-schema", schemaPath,
     "--output-last-message", outputPath, "-",
   ];
   if (model) args.splice(1, 0, "-m", model);
@@ -437,6 +447,7 @@ async function runCodex(prompt, model, options = {}) {
  */
 const AGENT_POLICY = {
   tools: ["WebFetch", "WebSearch"],
+  effort: "low",
   timeoutMs: AGENT_TIMEOUT_MS,
   mcp: false,
   customisations: false,
@@ -444,7 +455,7 @@ const AGENT_POLICY = {
 };
 
 function agentPolicyNote() {
-  return `工具策略：仅允许 ${AGENT_POLICY.tools.join("、")}；不加载 MCP、技能、插件与 CLAUDE.md；在临时目录中运行，读不到本仓库；超时 ${Math.round(AGENT_POLICY.timeoutMs / 1000)} 秒。`;
+  return `工具策略：仅允许 ${AGENT_POLICY.tools.join("、")}；低思考强度；最多 4 个网页工具调用；不加载 MCP、技能、插件与 CLAUDE.md；在临时目录中运行，读不到本仓库；超时 ${Math.round(AGENT_POLICY.timeoutMs / 1000)} 秒。`;
 }
 
 async function runClaude(prompt, model, options = {}) {
@@ -452,15 +463,18 @@ async function runClaude(prompt, model, options = {}) {
   // outside it exists for this run; --safe-mode drops CLAUDE.md, skills,
   // plugins, hooks and custom agents; --strict-mcp-config drops MCP servers.
   const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "ai-nav-ingest-"));
+  const schemaPath = options.schemaPath || SCHEMA_PATH;
+  const tools = options.tools || AGENT_POLICY.tools;
   const args = [
     // `stream-json` reports what the Agent is doing while it works; the plain
     // `json` format stays silent until the very end, which left the operator
     // watching a spinner with nothing to read.
     "--print", "--output-format", "stream-json", "--verbose",
-    "--json-schema", claudeJsonSchema(readFileSync(SCHEMA_PATH, "utf8")),
+    "--json-schema", claudeJsonSchema(readFileSync(schemaPath, "utf8")),
     "--safe-mode",
+    "--effort", AGENT_POLICY.effort,
     "--strict-mcp-config",
-    "--tools", AGENT_POLICY.tools.join(","),
+    "--tools", tools.join(","),
     "--dangerously-skip-permissions",
   ];
   if (model) args.push("--model", model);
@@ -517,7 +531,9 @@ async function runClaude(prompt, model, options = {}) {
         }
         report(status.text, { kind: status.kind, ...(lastTokens ? { tokens: lastTokens } : {}) });
       },
-      parseOutput: (stdout) => parseClaudeDraft(resultLine || stdout),
+      parseOutput: (stdout) => options.parseOutput
+        ? options.parseOutput(resultLine || stdout)
+        : parseClaudeDraft(resultLine || stdout),
       onChild: options.onChild,
       onToolOutput: options.onToolOutput,
       onAgentLog: options.onAgentLog,
@@ -541,32 +557,43 @@ function loadSkill() {
 }
 
 function buildAgentPrompt(url, note, catalog, targetBlock, existingContent = "") {
-  const blockNote = INGEST_BLOCKS.includes(targetBlock)
-    ? `目标板块已指定为 ${targetBlock}，不要更改。`
-    : "目标板块未指定：由你根据内容判断（tool / skill / project / prompt）。";
-  return `${loadSkill()}
+  return composeAgentPrompt({ skill: loadSkill(), url, note, catalog, targetBlock, existingContent });
+}
 
----- 本次任务 ----
-整理这条资源：${url}
-${blockNote}
-整理备注：${String(note || "无").slice(0, 1000)}
 
-当前目录（用于查重与避免重复收录；仅参考，不要照抄其中的文案）：
-${catalog || "（空）"}${existingContent ? `
-这条内容正在被重新处理，现状如下（找出遗漏并改写，不要照抄其中的错误）：
-${existingContent.slice(0, 12000)}` : ""}
-
-按 SKILL 规则完成整理，最终只输出一个符合 schema 的 JSON 对象。`;
+async function polishDraft(draft, selected, model, options) {
+  if (!["skill", "project"].includes(draft?.blockType) || !String(draft?.body || "").trim()) return { draft, polished: false };
+  const prompt = composePolishPrompt({ draft });
+  options.onProgress?.("第一稿完成，开始润色正文", { kind: "status" });
+  const polishOptions = {
+    ...options,
+    schemaPath: POLISH_SCHEMA_PATH,
+    networkAccess: false,
+    tools: [],
+    parseOutput: (stdout) => parseClaudeStructured(stdout, (result) => typeof result?.body === "string" && Boolean(result.body.trim())),
+  };
+  const result = selected === "claude"
+    ? await runClaude(prompt, model, polishOptions)
+    : await runCodex(prompt, model, polishOptions);
+  options.onProgress?.("正文润色完成", { kind: "status" });
+  return { draft: { ...draft, body: result.body.trim() }, polished: true };
 }
 
 async function agentDraft(url, note, tool, model, targetBlock = "tool", options = {}) {
   const prompt = buildAgentPrompt(url, note, options.catalog || "", targetBlock, options.existingContent);
   const selected = tool === "claude" ? "claude" : "codex";
   try {
-    const draft = selected === "claude"
+    const firstDraft = selected === "claude"
       ? await runClaude(prompt, model, options)
       : await runCodex(prompt, model, options);
-    return { draft, agent: { mode: selected, tool: selected, model } };
+    let result = { draft: firstDraft, polished: false };
+    try {
+      result = await polishDraft(firstDraft, selected, model, options);
+    } catch (error) {
+      const detail = describeAgentFailure(error instanceof Error ? error.message : "", selected === "claude" ? "Claude Code" : "Codex");
+      options.onProgress?.(`润色失败，保留第一稿：${detail}`, { kind: "status" });
+    }
+    return { draft: result.draft, agent: { mode: selected, tool: selected, model, polished: result.polished } };
   } catch (error) {
     if (error?.agentDetail) throw error;
     const toolLabel = selected === "claude" ? "Claude Code" : "Codex";
@@ -768,17 +795,6 @@ function emitRunEvent(run, phase, type, level, message, data) {
 
 function throwIfCancelled(run) {
   if (run.status === "cancelled") throw Object.assign(new Error("分析已取消"), { cancelled: true });
-}
-
-function similarResources(draft, catalog) {
-  let host = null;
-  try { host = new URL(draft.url).hostname.replace(/^www\./, ""); } catch {}
-  const name = String(draft.name || "").toLowerCase();
-  return catalog.filter((item) => {
-    let itemHost = null;
-    try { itemHost = new URL(item.url).hostname.replace(/^www\./, ""); } catch {}
-    return (host && itemHost === host) || (name && item.name.toLowerCase() === name);
-  }).slice(0, 5);
 }
 
 async function executeRun(run) {
@@ -1111,6 +1127,10 @@ function normalizeDraft(input = {}, finalUrl) {
       en: cleanText(input.summary?.en, 140),
       zh: cleanText(input.summary?.zh, 72),
     },
+    ...(input.description && typeof input.description === "object" ? { description: {
+      en: String(input.description.en || "").trim().slice(0, 900),
+      zh: String(input.description.zh || "").trim().slice(0, 480),
+    } } : {}),
     confidence: Math.max(0, Math.min(1, Number(input.confidence) || 0)),
     rationale: cleanText(input.rationale, 280),
     sourceLogoUrl: usableLogoUrl(input.logoUrl),
@@ -1208,6 +1228,7 @@ function contentPayloadFromDraft(draft, currentPayload = {}) {
       ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}),
       tagline: draft.verdict,
       summary: draft.summary,
+      ...(draft.description ? { description: draft.description } : {}),
       url: draft.url,
       pricing: draft.pricing,
       platforms: draft.platforms,
@@ -1274,6 +1295,7 @@ async function saveDraft(rawDraft, conversationId) {
           ...(logo ? { logo } : {}),
           tagline: draft.verdict,
           summary: draft.summary,
+          ...(draft.description ? { description: draft.description } : {}),
           url: finalUrl,
           pricing: draft.pricing,
           platforms: draft.platforms,
