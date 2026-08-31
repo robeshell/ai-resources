@@ -1,121 +1,220 @@
 {
   "note": "标签总表。板块（工具/技能/项目/提示词）决定形态，标签决定怎么找到。id 用英文做稳定键，label 存中英文，多语言只在这里维护一次。Agent 收录时先在这份表里找，实在没有合适的才提新标签；提出的新标签不会自动进表，会在编辑器里标成待归入，由人决定收编还是换成已有的。",
   "groups": [
-    { "id": "task", "label": { "zh": "用途", "en": "Use" }, "note": "主轴。每条 1-2 个。" },
-    { "id": "trait", "label": { "zh": "特性", "en": "Traits" }, "note": "用途轴表达不了、但会想按它筛的。每条 0-2 个。" },
-    { "id": "pricing", "label": { "zh": "定价", "en": "Pricing" }, "note": "互斥，取一个。" },
-    { "id": "platform", "label": { "zh": "平台", "en": "Platform" }, "note": "有几个填几个。" }
+    {
+      "id": "task",
+      "label": {
+        "zh": "用途",
+        "en": "Use"
+      },
+      "note": "主轴。每条 1-2 个。"
+    },
+    {
+      "id": "trait",
+      "label": {
+        "zh": "特性",
+        "en": "Traits"
+      },
+      "note": "用途轴表达不了、但会想按它筛的。每条 0-2 个。"
+    },
+    {
+      "id": "pricing",
+      "label": {
+        "zh": "定价",
+        "en": "Pricing"
+      },
+      "note": "互斥，取一个。"
+    },
+    {
+      "id": "platform",
+      "label": {
+        "zh": "平台",
+        "en": "Platform"
+      },
+      "note": "有几个填几个。"
+    }
   ],
   "tags": [
     {
       "id": "coding",
       "group": "task",
-      "label": { "zh": "编程", "en": "Coding" },
+      "label": {
+        "zh": "编程",
+        "en": "Coding"
+      },
       "hint": "写代码、读代码、跑工程任务。AI 编辑器、命令行编码 Agent、代码补全都算。"
     },
     {
       "id": "agent",
       "group": "task",
-      "label": { "zh": "通用 Agent", "en": "General agent" },
+      "label": {
+        "zh": "通用 Agent",
+        "en": "General agent"
+      },
       "hint": "派个目标它自己拆任务、操作电脑、交付 PPT/报表/文档这类成品。区别于「自动化」——那个要你自己搭流程。"
     },
     {
       "id": "chat",
       "group": "task",
-      "label": { "zh": "通用对话", "en": "Chat" },
+      "label": {
+        "zh": "通用对话",
+        "en": "Chat"
+      },
       "hint": "通用助手，一个输入框解决大部分日常问题。"
     },
     {
       "id": "image",
       "group": "task",
-      "label": { "zh": "图像", "en": "Image" },
+      "label": {
+        "zh": "图像",
+        "en": "Image"
+      },
       "hint": "生成或编辑图片，含矢量、排版文字、工作流节点编辑器。"
     },
     {
       "id": "video",
       "group": "task",
-      "label": { "zh": "视频", "en": "Video" },
+      "label": {
+        "zh": "视频",
+        "en": "Video"
+      },
       "hint": "生成或剪辑视频，含数字人、对口型。"
     },
     {
       "id": "automation",
       "group": "task",
-      "label": { "zh": "自动化", "en": "Automation" },
+      "label": {
+        "zh": "自动化",
+        "en": "Automation"
+      },
       "hint": "把重复步骤编排成能反复跑的流程，需要你自己搭。区别于「通用 Agent」。"
     },
     {
       "id": "infra",
       "group": "task",
-      "label": { "zh": "基础设施", "en": "Infrastructure" },
+      "label": {
+        "zh": "基础设施",
+        "en": "Infrastructure"
+      },
       "hint": "推理服务、API 网关、模型运行时、向量库、Agent 记忆与上下文这类底层件。"
     },
-
+    {
+      "id": "audio",
+      "group": "task",
+      "label": {
+        "zh": "音频",
+        "en": "Audio"
+      },
+      "hint": "生成或处理声音：音乐、配音、语音克隆、转写。"
+    },
+    {
+      "id": "research",
+      "group": "task",
+      "label": {
+        "zh": "研究",
+        "en": "Research"
+      },
+      "hint": "查资料、读文献、把一堆来源汇成一份可追溯的结论。区别于「通用对话」——它要给得出出处。"
+    },
     {
       "id": "self-host",
       "group": "trait",
-      "label": { "zh": "本地部署", "en": "Self-hosted" },
+      "label": {
+        "zh": "本地部署",
+        "en": "Self-hosted"
+      },
       "hint": "能装在自己机器或服务器上跑，不依赖对方的托管服务。"
     },
     {
       "id": "china",
       "group": "trait",
-      "label": { "zh": "国产", "en": "China" },
+      "label": {
+        "zh": "国产",
+        "en": "China"
+      },
       "hint": "中国团队做的，通常有国内可直连的入口。"
     },
-
     {
       "id": "free",
       "group": "pricing",
-      "label": { "zh": "免费", "en": "Free" },
+      "label": {
+        "zh": "免费",
+        "en": "Free"
+      },
       "hint": "不花钱就能用完整功能。"
     },
     {
       "id": "freemium",
       "group": "pricing",
-      "label": { "zh": "免费增值", "en": "Freemium" },
+      "label": {
+        "zh": "免费增值",
+        "en": "Freemium"
+      },
       "hint": "有免费额度，要用得深就得付费。"
     },
     {
       "id": "paid",
       "group": "pricing",
-      "label": { "zh": "付费", "en": "Paid" },
+      "label": {
+        "zh": "付费",
+        "en": "Paid"
+      },
       "hint": "必须订阅或买断。"
     },
     {
       "id": "usage-based",
       "group": "pricing",
-      "label": { "zh": "按量计费", "en": "Usage-based" },
+      "label": {
+        "zh": "按量计费",
+        "en": "Usage-based"
+      },
       "hint": "按调用量或 token 结算，多见于 API 服务。"
     },
-
     {
       "id": "web",
       "group": "platform",
-      "label": { "zh": "网页", "en": "Web" },
+      "label": {
+        "zh": "网页",
+        "en": "Web"
+      },
       "hint": "浏览器直接用。"
     },
     {
       "id": "app",
       "group": "platform",
-      "label": { "zh": "客户端", "en": "App" },
+      "label": {
+        "zh": "客户端",
+        "en": "App"
+      },
       "hint": "桌面或移动客户端。"
     },
     {
       "id": "cli",
       "group": "platform",
-      "label": { "zh": "命令行", "en": "CLI" },
+      "label": {
+        "zh": "命令行",
+        "en": "CLI"
+      },
       "hint": "终端里跑。命令行 Agent harness 靠「编程 + 命令行」就能筛出来。"
     },
     {
       "id": "api",
       "group": "platform",
-      "label": { "zh": "API", "en": "API" },
+      "label": {
+        "zh": "API",
+        "en": "API"
+      },
       "hint": "提供接口给程序调用。"
     }
   ],
   "deferred": [
-    { "id": "writing", "label": { "zh": "写作", "en": "Writing" }, "reason": "通用助手都归了通用对话，专门的写作工具目前一条都没有。" },
-    { "id": "audio", "label": { "zh": "音频", "en": "Audio" }, "reason": "只有 Suno 和 ElevenLabs 两条，够 5 条再开。" },
-    { "id": "research", "label": { "zh": "研究", "en": "Research" }, "reason": "Perplexity、NotebookLM、Elicit、Exa 四条，差一条。" }
+    {
+      "id": "writing",
+      "label": {
+        "zh": "写作",
+        "en": "Writing"
+      },
+      "reason": "通用助手都归了通用对话，专门的写作工具目前一条都没有。"
+    }
   ]
 }
