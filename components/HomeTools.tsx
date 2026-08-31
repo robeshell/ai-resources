@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TextSwap, useRovingKeys, useSlidingPill } from "@/components/Transitions";
 import { ToolList } from "@/components/ToolList";
@@ -9,6 +9,11 @@ import type { PublicContentSummary } from "@/lib/public-content";
 import { text, type Locale, type Tool } from "@/lib/types";
 
 type PublicBoard = "tool" | "skill" | "project" | "prompt";
+
+function boardFromLocation(): PublicBoard {
+  const kind = new URLSearchParams(window.location.search).get("kind");
+  return kind === "skill" || kind === "project" || kind === "prompt" ? kind : "tool";
+}
 
 export function HomeTools({
   all,
@@ -29,6 +34,21 @@ export function HomeTools({
   const [activeKind, setActiveKind] = useState<PublicBoard>("tool");
   const { barRef: kindBarRef, pillRef: kindPillRef } = useSlidingPill(activeKind);
   useRovingKeys(kindBarRef);
+
+  useEffect(() => {
+    const restoreBoard = () => setActiveKind(boardFromLocation());
+    restoreBoard();
+    window.addEventListener("popstate", restoreBoard);
+    return () => window.removeEventListener("popstate", restoreBoard);
+  }, []);
+
+  function selectKind(kind: PublicBoard) {
+    setActiveKind(kind);
+    const url = new URL(window.location.href);
+    url.searchParams.set("kind", kind);
+    url.hash = "catalog";
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
 
   const visibleTools = activeKind === "tool" ? all : [];
   const visibleContent = content.filter((item) => item.blockType === activeKind);
@@ -51,9 +71,7 @@ export function HomeTools({
                   role="tab"
                   aria-selected={activeKind === item.kind}
                   tabIndex={activeKind === item.kind ? 0 : -1}
-                  onClick={() => {
-                    setActiveKind(item.kind);
-                  }}
+                  onClick={() => selectKind(item.kind)}
                 >
                   <span>{item.label}</span>
                   <em>{boardCount}</em>

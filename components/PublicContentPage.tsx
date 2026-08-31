@@ -9,7 +9,7 @@ export function PublicContentPage({ item, locale }: { item: PublicContentDocumen
   const t = ui(locale);
   return (
     <article className="public-article">
-      <Link href={`/${locale}/#catalog`} className="public-article-back">← {t.backToLibrary}</Link>
+      <Link href={`/${locale}/?kind=${item.blockType}#catalog`} className="public-article-back">← {t.backToLibrary}</Link>
       <header>
         <p>{t.contentBlock[item.blockType]}</p>
         <h1>{item.title}</h1>
