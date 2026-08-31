@@ -14,16 +14,16 @@
       ],
       "status": "active",
       "verdict": {
-        "en": "Turn conversations into working artifacts.",
-        "zh": "边聊边做成品。"
+        "en": "Long work, fewer mistakes.",
+        "zh": "长任务，少出错。"
       },
       "summary": {
-        "en": "Creates documents, code, and visuals inside chat; free usage is limited.",
-        "zh": "对话中生成文档、代码与图形，免费版有用量限制。"
+        "en": "Create documents, code, and Artifacts in chat; free usage is limited.",
+        "zh": "对话中生成文档、代码与 Artifacts，免费版限量。"
       },
       "description": {
-        "en": "Claude is Anthropic’s general-purpose AI assistant. It works through conversation, while Artifacts lets you draft and revise websites, graphics, documents, code, and data visualizations beside the chat. It can also analyze uploaded text and images and bring web search results into the conversation.\n\nIt suits writing, analysis, coding, and longer projects that benefit from iteration and extended thinking. Claude runs on the web and on iOS and Android. A free plan is available, while paid tiers raise usage limits and unlock additional models, research tools, Projects, integrations, and Claude Code.",
-        "zh": "Claude 是 Anthropic 的通用 AI 助手。它以对话为主要入口，并通过 Artifacts 在聊天旁生成和迭代网站、图形、文档、代码与数据可视化；也能分析上传的文本和图片，把网页搜索结果带进对话。\n\n它适合写作、分析、编程，以及需要多轮推敲和延伸思考的长任务。Claude 可在网页、iOS 和 Android 使用。免费方案有用量限制，付费档位增加可用量，并开放更多模型、深度研究、Projects、集成和 Claude Code。"
+        "en": "Claude works through an ongoing conversation, where you can draft and revise writing, analyze uploaded text or images, generate code, visualize data, and create websites, graphics, or documents as Artifacts beside the chat.\n\nIt suits writing, analysis, and multi-step knowledge work when you want the result and discussion kept together. Claude runs on the web, iOS, and Android. A free plan is available, while paid plans raise usage limits and unlock additional models and research features.",
+        "zh": "Claude 以持续对话为工作入口，可起草和修改文字、分析上传的文本或图片、生成代码与数据图表，也能把网站、图形和文档做成聊天旁的 Artifacts，方便边讨论边迭代。\n\n它适合写作、分析和需要多轮推进的知识工作，可通过网页、iOS 与 Android 使用。免费方案能直接开始，但有用量限制；付费方案增加额度，并开放更多模型、深度研究等能力。"
       }
     },
     {
@@ -39,16 +39,16 @@
       ],
       "status": "active",
       "verdict": {
-        "en": "One tab for most things.",
-        "zh": "一个窗口就够。"
+        "en": "One chat for work and creation.",
+        "zh": "一个窗口，聊、写、画、查。"
       },
       "summary": {
-        "en": "Chat with AI, upload files, create images, or research; saved context requires an account.",
-        "zh": "对话、传文件、做图和研究；登录后可沿用聊天记录。"
+        "en": "Ask by chat; sign in to use saved context, file uploads, image creation, and deep research.",
+        "zh": "对话式处理日常任务；登录后可结合历史、文件、图像与深度研究。"
       },
       "description": {
-        "en": "ChatGPT centers everyday AI work in a conversational interface. Ask questions, develop ideas, upload files, create images, and start deeper research from the same browser workspace.\n\nIt fits mixed daily tasks where switching among specialized tools would slow you down. You can sign up for free, while paid plans are also available; logging in enables saved chats and responses tailored with that history.",
-        "zh": "ChatGPT 把常见 AI 工作集中在一个对话窗口里。你可以直接提问、梳理想法、上传文件、生成图片，也能从同一网页入口开始深度研究。\n\n它适合任务类型经常变化、又不想来回切换工具的日常工作。注册后可免费开始使用，另有付费方案；登录后才能保存聊天记录，并让回答结合这些历史信息。"
+        "en": "ChatGPT starts with a conversational input: ask a question, draft text, work through a problem, or create an image. Once signed in, it can tailor responses using saved chats and accept uploaded files as working context.\n\nIt fits broad, mixed everyday work where switching between separate specialist tools would add friction. The web interface can be tried for free, while the page also links to multiple paid plans; chat content may be reviewed and used to improve OpenAI’s models.",
+        "zh": "ChatGPT 以对话框为入口，可以问问题、起草文字、梳理思路或生成图像。登录后，它还能结合已保存的聊天调整回答，并把上传的文件作为当前任务的材料。\n\n它适合内容、分析和资料处理交织的日常工作，不必先搭建固定流程。网页端可免费注册使用，同时存在不同收费方案；页面也明确提示，对话可能被审阅并用于改进 OpenAI 的模型。"
       }
     },
     {
@@ -65,16 +65,16 @@
       ],
       "status": "active",
       "verdict": {
-        "en": "Google, in a chatbox.",
-        "zh": "住在 Google 里。"
+        "en": "Google’s assistant across its apps.",
+        "zh": "连着 Google 生态的 Gemini。"
       },
       "summary": {
-        "en": "Chat across text, files, images, and connected Google apps; advanced access requires a paid plan.",
-        "zh": "能读文字、文件和图片，也能连接 Google 应用；进阶额度需订阅。"
+        "en": "Chat across text, files, and Google apps; free access comes with usage limits.",
+        "zh": "在对话里处理文件并连接 Google 应用，免费层有额度限制。"
       },
       "description": {
-        "en": "Gemini is Google’s general-purpose AI assistant for questions, drafting, brainstorming, learning, and analyzing uploaded files or images. Conversations can use different Gemini models, while Connected Apps can pull context from services such as Gmail, Drive, Calendar, Photos, Maps, and YouTube Music when permitted.\n\nIt fits people whose work already lives in Google’s ecosystem, especially when a request spans chat and personal content. Basic access is available without an AI plan, but higher limits, larger context windows, and some advanced capabilities require Google AI Plus, Pro, or Ultra. Availability also varies by account type, region, age, and device.",
-        "zh": "Gemini 是 Google 的通用 AI 助手，可处理问答、写作、构思、学习，以及文件和图片分析。对话时可以切换不同模型；授权连接应用后，它还能从 Gmail、Drive、Calendar、Photos、Maps 等服务读取相关信息并执行部分操作。\n\n它更适合日常资料已经放在 Google 生态中的人，尤其是需要把对话和个人内容串起来时。未订阅也能使用基础能力，但更高额度、更长上下文和部分进阶功能属于 Google AI 付费方案；具体可用范围还受地区、年龄、设备和账号类型影响。"
+        "en": "Gemini handles everyday questions, writing, reasoning, and file analysis through a conversational interface. It can connect with services such as Gmail and Drive, while Deep Research builds a plan, searches multiple sources, and returns a report.\n\nIt fits people already working inside Google’s ecosystem or anyone who wants one general assistant for routine tasks. Web and mobile apps are available, but model access, context size, and feature limits depend on the user’s Google AI plan, account type, age, and region.",
+        "zh": "Gemini 用对话处理日常问答、写作、推理和文件分析，也能连接 Gmail、Drive 等 Google 服务。遇到资料型任务时，Deep Research 会先拟定研究计划，再检索多个来源并整理成报告。\n\n它更适合已经在 Google 生态里工作的人，也能作为覆盖多数日常任务的通用助手。网页端和移动端均可使用，但模型、上下文长度和部分功能的额度取决于 Google AI 套餐，账号类型、年龄与地区也会影响可用范围。"
       }
     }
   ]

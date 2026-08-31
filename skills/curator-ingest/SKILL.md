@@ -62,14 +62,17 @@
 - 不确定的定价和平台标签不要编，也不要仅为补齐它们继续搜索；宁可少一个标签。
 - rationale：一句中文说明分类与文案的理由。
 
-口吻示例：
-- Taste Skill / 把前端品味写成技能。 / Frontend taste, as a skill.
-- Claude / 长任务，少出错。 / Long work, few mistakes.
-- ChatGPT / 一个窗口就够。 / One tab for most things.
-- Cursor / AI 原生代码编辑器。 / The editor is the product.
-- NotebookLM / 基于你给的资料思考。 / Grounded in your notes.
-- Perplexity / 带着出处的搜索。 / Search with sources.
-- Codex / 终端里的编程 Agent。 / Coding agent in your terminal.
+口吻示例。这几个产品都不在本站收录范围内，给你看的是句子的形状，不是答案——
+拿到的任务如果正好是下面某一类产品，也不要往这些句子上靠：
+
+- Figma / 设计稿能被开发直接打开。 / Design files developers can open.
+- Postman / 调接口不用先写脚本。 / Poke an API without writing a script.
+- Wireshark / 网线上跑的每个字节都摊开给你看。 / Every byte on the wire, laid out.
+
+同样这几个产品的反面写法，对照着看：
+
+- 差：Figma / 专业的协同设计平台。——套在 Sketch、Canva、Adobe XD 上都成立。
+- 差：Postman / 强大的 API 开发工具。——只有形容词，没有信息。
 
 ## 各板块产出
 

@@ -82,5 +82,14 @@ test("the ingest rules keep the Agent out of this site's own published copy", ()
   // Verdicts must differentiate, not define a category, and the check has to be
   // a test the model applies — naming exemplars just gets them pastiched back.
   assert.match(skill, /把这句话原样套到同类的另外两个产品上/);
+  // The tone examples must not name a product that could be ingested — the old
+  // set listed seven, all seven were on the ingest list, and the Agent copied
+  // their verdicts back verbatim instead of writing its own. Scope the check to
+  // the examples block: naming Codex in a definition elsewhere is fine, handing
+  // the Agent a finished verdict for it is not.
+  const examples = skill.slice(skill.indexOf("口吻示例"), skill.indexOf("## 各板块产出"));
+  for (const answered of ["Claude", "ChatGPT", "Gemini", "Cursor", "NotebookLM", "Perplexity", "Codex", "Taste"]) {
+    assert.ok(!examples.includes(answered), `口吻示例不能给出 ${answered} 的现成答案`);
+  }
   assert.match(skill, /用途看这个产品\*\*主要是干什么的\*\*/);
 });
