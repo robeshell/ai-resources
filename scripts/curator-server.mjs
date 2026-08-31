@@ -300,7 +300,7 @@ function sanitizeToolOutput(value, maxChars = 1200, maxLines = 30) {
   return text.length > maxChars ? `…${text.slice(-maxChars)}` : text;
 }
 
-function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, onToolOutput, onAgentLog, onStdoutLine }) {
+function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, onToolOutput, onAgentLog, onStdoutLine, stallHint }) {
   return new Promise(async (resolve, reject) => {
     const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"], cwd });
     onChild?.(child);
@@ -356,7 +356,13 @@ function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, o
         stderr: sanitizeToolOutput(stderr),
       });
       try {
-        if (timedOut) throw new Error(`${command} 超过 ${Math.round(AGENT_TIMEOUT_MS / 1000)} 秒没有完成，已停止`);
+        if (timedOut) {
+          // Naming the last thing it did turns a blind timeout into a diagnosis:
+          // "still thinking after four minutes" reads very differently from
+          // "stopped right after reading the page".
+          const hint = stallHint?.();
+          throw new Error(`${command} 超过 ${Math.round(AGENT_TIMEOUT_MS / 1000)} 秒没有完成，已停止${hint ? `（${hint}）` : ""}`);
+        }
         // Parse before judging the exit code: a CLI that reports its failure in
         // a structured envelope says far more than its exit status does. Taking
         // stderr first meant a single `[claude-code:…]` diagnostic line beat the
@@ -365,7 +371,9 @@ function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, o
         if (code !== 0) throw new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`);
         resolve(parsed);
       } catch (error) {
-        if (error?.agentDetail) return reject(error);
+        // A timeout already carries the only explanation there is; the
+        // stderr/stdout fallback below would replace it with a diagnostic line.
+        if (timedOut || error?.agentDetail) return reject(error);
         if (code !== 0) return reject(new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`));
         reject(error);
       }
@@ -477,6 +485,9 @@ async function runClaude(prompt, model, options = {}) {
       command: process.env.CURATOR_CLAUDE_BIN || "claude",
       args,
       cwd: workspace,
+      stallHint: () => (lastMessage
+        ? `最后进度：${lastMessage}${lastTokens ? ` · 思考 ${lastTokens} tokens` : ""}`
+        : "Agent 启动后没有任何进展"),
       // Through stdin, like codex: `--tools <tools...>` is variadic, so a
       // trailing positional prompt gets swallowed as another tool name and the
       // CLI exits with "Input must be provided".
