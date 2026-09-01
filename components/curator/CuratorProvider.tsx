@@ -2,6 +2,7 @@
 
 import { MantineProvider, createTheme } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+import { BuildJobProvider } from "@/components/curator/useBuildJob";
 
 const curatorTheme = createTheme({
   primaryColor: "curator",
@@ -47,8 +48,8 @@ const curatorTheme = createTheme({
 export function CuratorProvider({ children }: { children: React.ReactNode }) {
   return (
     <MantineProvider theme={curatorTheme} forceColorScheme="light">
-      <Notifications position="top-right" limit={3} />
-      {children}
+      <Notifications position="top-right" limit={3} autoClose={3600} />
+      <BuildJobProvider>{children}</BuildJobProvider>
     </MantineProvider>
   );
 }

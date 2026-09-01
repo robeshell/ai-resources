@@ -13,6 +13,7 @@ import {
   type ThreadMessageLike,
 } from "@assistant-ui/react";
 import { Alert, Badge, Box, Button, Group, Loader, Select, Stack, Text, Title } from "@mantine/core";
+import { MarkdownBody } from "@/components/MarkdownBody";
 import {
   curatorEventUrl,
   curatorRequest,
@@ -33,6 +34,7 @@ type Props = {
   /** Reopen a specific unbound conversation (a failed ingest resumed from the
    *  dashboard). Ignored when `contentId` is set — that one owns its own. */
   conversationId?: string;
+  ingestBlock?: CuratorIngestBlock;
   currentPayload?: Record<string, unknown>;
   context?: {
     title: string;
@@ -56,7 +58,16 @@ type DraftResultData = {
   polished?: boolean;
 };
 
-type ProgressData = { phase: string; activity: string; trail: string[]; tokens: number; elapsed: string; logs: string[] };
+type ProgressData = {
+  phase: string;
+  activity: string;
+  trail: string[];
+  tokens: number;
+  elapsed: string;
+  reasoning: string;
+  streamedText: string;
+  tools: string[];
+};
 
 const FIELD_LABEL: Record<string, string> = {
   summary: "摘要", body: "正文", links: "相关链接", tagline: "定位",
@@ -83,6 +94,10 @@ function TextPart({ text }: { text: string }) {
   return <Text size="sm" lh={1.65} style={{ whiteSpace: "pre-wrap" }}>{text}</Text>;
 }
 
+function AssistantTextPart({ text }: { text: string }) {
+  return <MarkdownBody source={text} />;
+}
+
 function UserMessage() {
   return <MessagePrimitive.Root className="curator-msg curator-msg-user">
     <MessagePrimitive.Parts components={{ Text: TextPart }} />
@@ -95,7 +110,7 @@ function AssistantMessage({ DraftResult, AgentProgress }: {
 }) {
   return <MessagePrimitive.Root className="curator-msg curator-msg-assistant">
     <MessagePrimitive.Parts components={{
-      Text: TextPart,
+      Text: AssistantTextPart,
       data: { by_name: { "draft-result": DraftResult, "agent-progress": AgentProgress } },
     }} />
   </MessagePrimitive.Root>;
@@ -140,7 +155,7 @@ function messageText(message: AppendMessage) {
  *  available Agent. */
 const AGENT_CHOICE_KEY = "curator.agent-choice";
 
-function readAgentChoice(): { tool?: string; model?: string } {
+function readAgentChoice(): { model?: string } {
   try {
     return JSON.parse(window.localStorage.getItem(AGENT_CHOICE_KEY) || "{}");
   } catch {
@@ -148,9 +163,9 @@ function readAgentChoice(): { tool?: string; model?: string } {
   }
 }
 
-function writeAgentChoice(tool: AgentTool, model: string) {
+function writeAgentChoice(model: string) {
   try {
-    window.localStorage.setItem(AGENT_CHOICE_KEY, JSON.stringify({ tool, model }));
+    window.localStorage.setItem(AGENT_CHOICE_KEY, JSON.stringify({ model }));
   } catch {
     // Private windows and blocked site data just lose the preference.
   }
@@ -159,29 +174,29 @@ function writeAgentChoice(tool: AgentTool, model: string) {
 /** Declared at module scope on purpose: a component created inside the render
  *  is a new type on every render, so React remounts the whole progress block —
  *  which replayed its enter animation every time the timer ticked. */
-const AgentProgress: DataMessagePartComponent<ProgressData> = ({ data }) => <Stack gap="xs" className="curator-msg-run">
-  <Group gap="sm" wrap="nowrap">
-    <Loader size="xs" color="curator" />
-    <Text fw={600} size="sm">{data.phase}</Text>
-    {/* The counter changes every second; announcing it would drown the status. */}
+const AgentProgress: DataMessagePartComponent<ProgressData> = ({ data }) => <div className="curator-agent-live">
+  <Group gap="xs" wrap="nowrap" className="curator-agent-live-status">
+    <Loader size={14} color="curator" />
+    <Text size="sm" fw={500}>{data.tools.at(-1) || "思考中"}</Text>
     <Text size="xs" c="dimmed" className="curator-number" aria-hidden="true">
       {data.elapsed}{data.tokens ? ` · ${data.tokens} tokens` : ""}
     </Text>
   </Group>
-  <Stack gap={2} className="curator-agent-trail">
-    {data.trail.slice(0, -1).map((line: string, index: number) => <Text key={`${index}-${line}`} size="xs" c="dimmed" lineClamp={1}>{line}</Text>)}
-    {/* Keyed by its text so a genuinely new step fades in once, and a re-render
-        with the same step does not. */}
-    <Text key={data.activity} size="xs" lineClamp={2} role="status" aria-live="polite">{data.activity}</Text>
-  </Stack>
-  <details className="curator-agent-details"><summary>技术信息{data.logs.length ? `（${data.logs.length}）` : ""}</summary><pre className="curator-agent-stream">{data.logs.length ? data.logs.join("\n") : "等待 Agent 输出…"}</pre></details>
-</Stack>;
+  {data.reasoning ? <details className="curator-agent-thoughts" open={!data.streamedText}>
+    <summary>查看思考过程</summary>
+    <Text component="div" size="xs" c="dimmed" className="curator-agent-thought-text">{data.reasoning}</Text>
+  </details> : null}
+  {data.tools.length || data.trail.length ? <div className="curator-agent-actions" aria-label="处理过程">
+    {[...data.trail, ...data.tools].slice(-4).map((line, index) => <Text key={`${index}-${line}`} size="xs" c="dimmed">{line}</Text>)}
+  </div> : null}
+  {data.streamedText ? <div className="curator-agent-live-text" role="status" aria-live="polite"><MarkdownBody source={data.streamedText} /></div> : null}
+</div>;
 
-export function ConversationPanel({ contentId, conversationId, currentPayload = {}, context, onAdopt, onSaved, hint }: Props) {
+export function ConversationPanel({ contentId, conversationId, ingestBlock, currentPayload = {}, context, onAdopt, onSaved, hint }: Props) {
   const mode = contentId ? "editor" : "standalone";
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [agents, setAgents] = useState<AgentInfo[]>([]);
-  const [tool, setTool] = useState<AgentTool>("codex");
+  const tool: AgentTool = "pi";
   const [model, setModel] = useState("");
   const [activeRun, setActiveRun] = useState<CuratorRun | null>(null);
   const [runEvents, setRunEvents] = useState<CuratorRunEvent[]>([]);
@@ -192,7 +207,9 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
 
   const running = Boolean(activeRun && ["queued", "running"].includes(activeRun.status));
   const latest = runEvents[runEvents.length - 1] ?? null;
-  const agentLog = runEvents.filter((event) => event.type === "agent.log" || event.type === "tool.output").map((event) => event.message);
+  const streamedText = runEvents.filter((event) => event.type === "agent.log" && event.data?.stream === "text").map((event) => event.message).join("");
+  const reasoning = runEvents.filter((event) => event.type === "agent.log" && event.data?.stream === "reasoning").map((event) => event.message).join("");
+  const toolActivity = runEvents.filter((event) => event.type === "phase.progress" && event.data?.tool).map((event) => event.message);
   // What the Agent is doing right now, kept separate from the technical log so
   // waiting has something readable in it.
   const progressEvents = runEvents.filter((event) => event.type === "phase.progress");
@@ -200,17 +217,18 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
   // out of the trail stops the same step from being rewritten over and over.
   const trail = progressEvents.filter((event) => event.data?.kind !== "tokens").slice(-3).map((event) => event.message);
   const tokens = Number([...progressEvents].reverse().find((event) => event.data?.tokens)?.data?.tokens ?? 0);
-  const agentOptions = agents.map((item) => ({ value: item.id, label: `${item.label}${item.available ? "" : "（不可用）"}`, disabled: !item.available }));
-  // Grouped so a long gateway catalogue stays readable next to the handful of
-  // aliases the operator actually configured.
+  // The picker exposes only concrete gateway models. "默认模型" follows the
+  // current CC Switch selection, whose alias resolution stays server-side.
   const modelOptions = useMemo(() => {
+    const currentAgent = agents.find((agent) => agent.id === tool);
     const groups: Array<{ group: string; items: Array<{ value: string; label: string }> }> = [];
-    for (const item of agents.find((agent) => agent.id === tool)?.models || []) {
+    for (const item of currentAgent?.models || []) {
+      if (item.id === currentAgent?.defaultModelLabel) continue;
       const name = item.group || "模型";
       const bucket = groups.find((entry) => entry.group === name) || (groups.push({ group: name, items: [] }), groups[groups.length - 1]);
       bucket.items.push({ value: item.id, label: item.label });
     }
-    return [{ group: "默认", items: [{ value: "__default__", label: "默认模型" }] }, ...groups];
+    return [{ group: "默认", items: [{ value: "__default__", label: currentAgent?.defaultModelLabel || "默认模型" }] }, ...groups];
   }, [agents, tool]);
 
   // Only ticks while a run is open, so an idle panel does not re-render.
@@ -225,16 +243,13 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
       const tools = payload.tools || [];
       setAgents(tools);
       const saved = readAgentChoice();
-      // Restore the saved Agent when it is still installed; only fall back to
-      // the first available one when there is nothing usable to restore.
-      const chosen = tools.find((item) => item.id === saved.tool && item.available) || tools.find((item) => item.available);
+      const chosen = tools.find((item) => item.id === "pi" && item.available);
       if (!chosen) return;
-      setTool(chosen.id);
-      const savedModel = chosen.id === saved.tool && saved.model !== undefined
+      const savedModel = saved.model !== undefined
         && (saved.model === "" || chosen.models.some((item) => item.id === saved.model))
         ? saved.model
         : undefined;
-      setModel(savedModel ?? (chosen.defaultModel || chosen.models[0]?.id || ""));
+      setModel(savedModel ?? "");
     }).catch(() => undefined);
   }, []);
 
@@ -268,25 +283,32 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
     if (!activeRunId || !running) return;
     const runId = activeRunId;
     const source = new EventSource(curatorEventUrl(runId));
+    let disposed = false;
+    const refreshRun = async () => {
+      const current = await curatorRequest<CuratorRun>(`/runs/${runId}`);
+      if (disposed) return current;
+      setActiveRun(current);
+      if (!["queued", "running"].includes(current.status)) {
+        const conversationId = current.input?.conversationId;
+        if (conversationId) setConversation(await curatorRequest<Conversation>(`/conversations/${encodeURIComponent(conversationId)}`));
+        source.close();
+      }
+      return current;
+    };
     source.onmessage = (event) => {
       const next = JSON.parse(event.data) as CuratorRunEvent;
       setRunEvents((current) => current.some((entry) => entry.sequence === next.sequence) ? current : [...current, next]);
       if (["run.completed", "run.failed", "run.cancelled"].includes(next.type)) {
-        void curatorRequest<CuratorRun>(`/runs/${runId}`).then(async (current) => {
-          setActiveRun(current);
-          const conversationId = current.input?.conversationId;
-          if (conversationId) setConversation(await curatorRequest<Conversation>(`/conversations/${encodeURIComponent(conversationId)}`));
-        }).catch(() => undefined);
-        source.close();
+        void refreshRun().catch(() => undefined);
       }
     };
     source.onerror = () => {
-      void curatorRequest<CuratorRun>(`/runs/${runId}`).then((current) => {
-        setActiveRun(current);
-        if (!["queued", "running"].includes(current.status)) source.close();
-      }).catch(() => undefined);
+      void refreshRun().catch(() => undefined);
     };
-    return () => source.close();
+    // SSE is primary; polling only closes the small race where a fast Pi reply
+    // completes before the browser has fully attached its EventSource handlers.
+    const poll = window.setInterval(() => { void refreshRun().catch(() => undefined); }, 1200);
+    return () => { disposed = true; window.clearInterval(poll); source.close(); };
   }, [activeRunId, running]);
 
   async function send(append: AppendMessage) {
@@ -302,7 +324,7 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
         setConversation(created); conversationId = created.id;
       }
       const payload = await curatorRequest<{ messages: ConversationMessage[]; run: CuratorRun }>(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, tool, model }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, model, ...(ingestBlock ? { block: ingestBlock } : {}) }),
       });
       setConversation((current) => current ? { ...current, messages: [...current.messages, ...payload.messages] } : current);
       setActiveRun(payload.run);
@@ -331,15 +353,16 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
       messages.push({
         id: `running-${activeRun.id}`, role: "assistant",
         content: [{ type: "data-agent-progress", data: {
-          phase: latest ? PHASE_LABEL[latest.phase] ?? latest.phase : "正在启动",
-          activity: trail[trail.length - 1] || "正在启动…",
-          trail, tokens, elapsed: elapsedLabel(activeRun.createdAt, now), logs: agentLog,
+          phase: latest ? PHASE_LABEL[latest.phase] ?? latest.phase : "思考中",
+          activity: trail[trail.length - 1] || "思考中",
+          trail, tokens, elapsed: elapsedLabel(activeRun.createdAt, now),
+          reasoning, streamedText, tools: toolActivity,
         } }],
         status: { type: "running" }, createdAt: new Date(activeRun.createdAt),
       });
     }
     return messages;
-  }, [activeRun, agentLog, conversation?.messages, latest, now, running, tokens, trail]);
+  }, [activeRun, conversation?.messages, latest, now, reasoning, running, streamedText, tokens, toolActivity, trail]);
 
   const runtime = useExternalStoreRuntime({
     messages: externalMessages,
@@ -369,13 +392,13 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
     setBusy(true); setError(""); setRunEvents([]);
     try {
       const next = await curatorRequest<CuratorRun>(`/runs/${encodeURIComponent(runId)}/retry`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tool, model }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model }),
       });
       if (next.input?.conversationId) setConversation(await curatorRequest<Conversation>(`/conversations/${encodeURIComponent(next.input.conversationId)}`));
       setActiveRun(next);
     } catch (caught) { setError(caught instanceof Error ? caught.message : "重试失败"); }
     finally { setBusy(false); }
-  }, [model, tool]);
+  }, [model]);
 
   const DraftResult = useMemo<DataMessagePartComponent<DraftResultData>>(() => function DraftResult({ data }) {
     if (data.status === "failed" || data.status === "cancelled") {
@@ -392,6 +415,7 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
     const proposed = draftPayload(data.draft, currentPayload);
     const fields = Object.keys(proposed);
     const changes = fields.filter((field) => JSON.stringify(currentPayload[field]) !== JSON.stringify(proposed[field]));
+    const changedLabels = changes.map((field) => FIELD_LABEL[field] || field);
     // The diff is live against the editor, so adopting empties it. That is not
     // the same as the Agent proposing nothing — say which one it is.
     const adopted = !changes.length && fields.some((field) => proposed[field] !== undefined && proposed[field] !== "");
@@ -408,19 +432,33 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
         </Badge>
       </Group>
       {mode === "editor" ? <Stack gap="xs">
-        {changes.length ? changes.map((field) => <Box key={field} className="curator-conversation-diff">
-          <Group justify="space-between" align="center" gap="xs" className="curator-diff-header">
-            <Text size="sm" fw={600}>{FIELD_LABEL[field] || field}</Text>
-            <Button size="compact-xs" variant="subtle" onClick={() => onAdopt?.({ ...currentPayload, [field]: proposed[field] })}>采用此项</Button>
-          </Group>
-          <Stack gap={6}>
-            <Text className="curator-diff-label" component="div">当前内容</Text>
-            <Box className="curator-diff-value curator-diff-value-current">{readableValue(currentPayload[field])}</Box>
-            <Text className="curator-diff-label curator-diff-label-proposed" component="div">建议内容</Text>
-            <Box className="curator-diff-value curator-diff-value-proposed">{readableValue(proposed[field])}</Box>
-          </Stack>
-        </Box>) : <Text size="sm" c="dimmed">{adopted ? "这份建议已经在编辑器里了，记得保存。" : "Agent 没有改变任何字段。"}</Text>}
-        {changes.length ? <Group mt={4}><Button size="xs" disabled={busy} onClick={() => onAdopt?.(proposed)}>全部采用</Button><Text size="xs" c="dimmed">采用后仍需保存编辑器</Text></Group> : null}
+        {changes.length ? <>
+          <Text size="xs" c="dimmed">
+            {changedLabels.slice(0, 3).join("、")}{changedLabels.length > 3 ? `等 ${changedLabels.length} 个字段` : `共 ${changedLabels.length} 个字段`}有修改
+          </Text>
+          <div className="curator-suggestion-attachment">
+            {changes.map((field) => <details key={field} className="curator-diff-row">
+              <summary className="curator-diff-summary">
+                <Text component="span" size="sm" fw={600}>{FIELD_LABEL[field] || field}</Text>
+                <Text component="span" size="xs" c="dimmed" className="curator-diff-preview">
+                  {readableValue(proposed[field]).replace(/\s+/g, " ")}
+                </Text>
+              </summary>
+              <div className="curator-diff-body">
+                <Stack gap={6}>
+                  <Text className="curator-diff-label" component="div">当前内容</Text>
+                  <Box className="curator-diff-value curator-diff-value-current">{readableValue(currentPayload[field])}</Box>
+                  <Text className="curator-diff-label curator-diff-label-proposed" component="div">建议内容</Text>
+                  <Box className="curator-diff-value curator-diff-value-proposed">{readableValue(proposed[field])}</Box>
+                  <Group justify="flex-end" mt={2}>
+                    <Button size="compact-xs" variant="subtle" onClick={() => onAdopt?.({ [field]: proposed[field] })}>采用此项</Button>
+                  </Group>
+                </Stack>
+              </div>
+            </details>)}
+          </div>
+        </> : <Text size="sm" c="dimmed">{adopted ? "这份建议已经在编辑器里了，记得保存。" : "Agent 没有改变任何字段。"}</Text>}
+        {changes.length ? <Group mt={4}><Button size="xs" disabled={busy} onClick={() => onAdopt?.(Object.fromEntries(changes.map((field) => [field, proposed[field]])))}>全部采用</Button><Text size="xs" c="dimmed">采用后仍需保存编辑器</Text></Group> : null}
       </Stack> : <Stack gap="xs">
         <Text size="sm"><Text span fw={600}>名称：</Text>{data.draft.name}</Text>
         <Text size="sm"><Text span fw={600}>摘要：</Text>{data.draft.summary?.zh || data.draft.summary?.en}</Text>
@@ -447,10 +485,21 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
       <div className="curator-conversation-controls">
         {error ? <Alert color="red" title="出错了" role="alert" mb="xs">{error}</Alert> : null}
         <ComposerPrimitive.Root className="curator-composer">
-          <ComposerPrimitive.Input className="curator-composer-input" placeholder="丢一个链接，或直接说要改什么…" aria-label="发给 Agent 的消息" submitMode="enter" />
+          <ComposerPrimitive.Input className="curator-composer-input" placeholder="丢一个链接，或直接说要改什么…" aria-label="发送消息" submitMode="enter" />
           <Group align="center" gap="sm" wrap="nowrap" mt="xs">
-            <Select aria-label="Agent" w={132} size="xs" value={tool} onChange={(value) => { const next = (value || tool) as AgentTool; const info = agents.find((item) => item.id === next); const nextModel = info?.defaultModel || info?.models[0]?.id || ""; setTool(next); setModel(nextModel); writeAgentChoice(next, nextModel); }} data={agentOptions} />
-            <Select aria-label="模型" w={152} size="xs" comboboxProps={{ width: 260, position: "bottom-start" }} value={model || "__default__"} onChange={(value) => { const next = value === "__default__" || !value ? "" : value; setModel(next); writeAgentChoice(tool, next); }} data={modelOptions} />
+            <Select
+              aria-label="模型"
+              w={220}
+              size="xs"
+              comboboxProps={{ width: 300, position: "bottom-start" }}
+              value={model || "__default__"}
+              onChange={(value) => { const next = value === "__default__" || !value ? "" : value; setModel(next); writeAgentChoice(next); }}
+              data={modelOptions}
+              renderOption={({ option }) => <Group gap="xs" wrap="nowrap" justify="space-between" w="100%">
+                <Text size="sm" truncate>{option.label}</Text>
+                {option.value === "__default__" ? <Badge size="xs" variant="light" color="curator" radius="sm">默认</Badge> : null}
+              </Group>}
+            />
             <Box style={{ flex: 1 }} />
             {running ? <ComposerPrimitive.Cancel asChild><Button size="xs" variant="default" loading={busy}>停止</Button></ComposerPrimitive.Cancel> : <ComposerPrimitive.Send asChild><Button size="xs" loading={busy}>发送</Button></ComposerPrimitive.Send>}
           </Group>

@@ -3,14 +3,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { ToolDialog } from "@/components/ToolDialog";
 import { ToolLogo } from "@/components/ToolLogo";
-import { CATEGORY_TAGS, categoryOf } from "@/lib/tags";
+import { CATEGORIES, categoryOf } from "@/lib/tags";
 import type { Locale, Tool } from "@/lib/types";
 
 export function ToolList({ tools, locale }: { tools: Tool[]; locale: Locale; section?: number }) {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const closeDialog = useCallback(() => setSelectedTool(null), []);
   const groups = useMemo(() => {
-    const known = CATEGORY_TAGS.map((category) => ({
+    const known = CATEGORIES.map((category) => ({
       id: category.id,
       label: category.label[locale],
       tools: tools.filter((tool) => categoryOf(tool) === category.id),

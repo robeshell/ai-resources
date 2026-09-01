@@ -20,7 +20,7 @@ flowchart LR
     UI["管理台 Mantine :3000/curator"]
     SRV["curator-server.mjs :4317（仅 127.0.0.1）"]
     DB[(".curator/content.sqlite")]
-    AGENT["本机 Codex / Claude Code CLI"]
+    AGENT["内置 Pi Agent"]
     UI -->|fetch + SSE| SRV
     SRV --> DB
     SRV --> AGENT
@@ -50,7 +50,7 @@ flowchart LR
 | 方法与路径 | 用途 |
 |------|------|
 | `GET /health` | 服务状态、本机 Agent 可用性、构建任务 |
-| `GET /agents` | Codex / Claude Code 可用性与模型列表 |
+| `GET /agents` | Pi Agent 可用性与网关模型列表 |
 | `GET /build` `POST /build` | 查询 / 启动构建校验（`next build`，日志轮询） |
 | `GET /content` | 内容分页列表（板块/状态/检索/排序/`issues=true` 问题过滤），附全量 `counts` |
 | `PUT /content` `PUT /content/batch` | 保存单条（带 revision 乐观锁）/ 批量发布或归档 |
@@ -65,7 +65,7 @@ flowchart LR
 | `GET /activity` | 最近写入记录（保留 120 条） |
 | `GET /site` `PUT /site` | `data/site.json` 读取 / 更新 |
 
-AI 收录管线：整条整理交给本机 Agent——服务器把 `skills/curator-ingest/SKILL.md`（编辑口径与边界）+ 目标 URL + 目录快照交给 Codex / Claude Code，由 Agent 自行访问页面、提取信息、对照目录并产出符合 schema 的 JSON 草稿；服务器负责任务队列、SSE 进度、schema 校验、同域查重、Logo 下载固化与导出。Agent 失败即失败（显示原因），没有备用草稿。
+AI 收录管线：服务器把 `skills/curator-ingest/SKILL.md`（编辑口径与边界）+ 目标 URL + 目录快照交给内置 Pi Agent。Pi 通过受控的 `web_fetch` / `web_search` 工具取证，并用 `submit_draft` 提交符合 schema 的唯一草稿；服务器负责任务队列、SSE 进度、字段校验、同域查重、Logo 固化与导出。Agent 失败即失败（显示原因），没有备用草稿。
 
 ## 环境变量
 
@@ -74,7 +74,7 @@ AI 收录管线：整条整理交给本机 Agent——服务器把 `skills/curat
 | `CURATOR_PORT` | `4317` | 服务端口 |
 | `CURATOR_SITE_PORT` | `3000` | 公开站 dev 端口（决定 CORS 白名单与"打开公开站"链接） |
 | `CURATOR_CONTENT_DB` | `.curator/content.sqlite` | 数据库路径 |
-| `CURATOR_CODEX_BIN` / `CURATOR_CLAUDE_BIN` | `codex` / `claude` | Agent CLI 路径 |
+| `.curator/pi-config.json` | Curator「系统」页 | 当前项目专用的 Pi Agent 网关、密钥与默认模型；忽略提交，文件权限为 `0600` |
 | `CURATOR_ALLOWED_ORIGIN` | 本站来源 | 追加允许的 CORS 来源 |
 | `NEXT_PUBLIC_CURATOR_API_URL` | `http://127.0.0.1:4317` | 前端访问的服务地址 |
 | `PAGES_BASE_PATH` | 未设置 | CI 注入的 GitHub Pages `basePath`（本地不设） |

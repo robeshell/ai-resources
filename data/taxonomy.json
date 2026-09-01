@@ -1,43 +1,8 @@
 {
-  "note": "分类与标签词表。板块（工具/技能/项目/提示词）决定内容形态，category 是板块内的二级分类，tags 是卡片自身的属性。id 用英文做稳定键，label 存中英文。Agent 必须选择一个已有分类；属性标签实在没有合适的才可提新标签。",
-  "groups": [
-    {
-      "id": "category",
-      "label": {
-        "zh": "二级分类",
-        "en": "Category"
-      },
-      "note": "板块内的主导航。每条必须且只能选一个。"
-    },
-    {
-      "id": "trait",
-      "label": {
-        "zh": "特性",
-        "en": "Traits"
-      },
-      "note": "用途轴表达不了、但会想按它筛的。每条 0-2 个。"
-    },
-    {
-      "id": "pricing",
-      "label": {
-        "zh": "定价",
-        "en": "Pricing"
-      },
-      "note": "互斥，取一个。"
-    },
-    {
-      "id": "platform",
-      "label": {
-        "zh": "平台",
-        "en": "Platform"
-      },
-      "note": "有几个填几个。"
-    }
-  ],
-  "tags": [
+  "note": "分类与标签词表。categories 是板块内固定的二级分类；tags 是平级、独立多选的属性标签。二者使用不同字段，不共享类型。",
+  "categories": [
     {
       "id": "coding",
-      "group": "category",
       "label": {
         "zh": "编程",
         "en": "Coding"
@@ -46,7 +11,6 @@
     },
     {
       "id": "agent",
-      "group": "category",
       "label": {
         "zh": "通用 Agent",
         "en": "General agent"
@@ -55,7 +19,6 @@
     },
     {
       "id": "chat",
-      "group": "category",
       "label": {
         "zh": "通用对话",
         "en": "Chat"
@@ -64,7 +27,6 @@
     },
     {
       "id": "image",
-      "group": "category",
       "label": {
         "zh": "图像",
         "en": "Image"
@@ -73,7 +35,6 @@
     },
     {
       "id": "video",
-      "group": "category",
       "label": {
         "zh": "视频",
         "en": "Video"
@@ -82,7 +43,6 @@
     },
     {
       "id": "automation",
-      "group": "category",
       "label": {
         "zh": "自动化",
         "en": "Automation"
@@ -91,7 +51,6 @@
     },
     {
       "id": "infra",
-      "group": "category",
       "label": {
         "zh": "基础设施",
         "en": "Infrastructure"
@@ -100,7 +59,6 @@
     },
     {
       "id": "audio",
-      "group": "category",
       "label": {
         "zh": "音频",
         "en": "Audio"
@@ -109,16 +67,16 @@
     },
     {
       "id": "research",
-      "group": "category",
       "label": {
         "zh": "研究",
         "en": "Research"
       },
       "hint": "产品本身就是为查资料而做的：给结论要给得出出处。通用助手里的「深度研究」模式不算，那还是通用对话。"
-    },
+    }
+  ],
+  "tags": [
     {
       "id": "self-host",
-      "group": "trait",
       "label": {
         "zh": "本地部署",
         "en": "Self-hosted"
@@ -127,7 +85,6 @@
     },
     {
       "id": "china",
-      "group": "trait",
       "label": {
         "zh": "国产",
         "en": "China"
@@ -136,7 +93,6 @@
     },
     {
       "id": "free",
-      "group": "pricing",
       "label": {
         "zh": "免费",
         "en": "Free"
@@ -145,7 +101,6 @@
     },
     {
       "id": "freemium",
-      "group": "pricing",
       "label": {
         "zh": "免费增值",
         "en": "Freemium"
@@ -154,7 +109,6 @@
     },
     {
       "id": "paid",
-      "group": "pricing",
       "label": {
         "zh": "付费",
         "en": "Paid"
@@ -163,7 +117,6 @@
     },
     {
       "id": "usage-based",
-      "group": "pricing",
       "label": {
         "zh": "按量计费",
         "en": "Usage-based"
@@ -172,7 +125,6 @@
     },
     {
       "id": "web",
-      "group": "platform",
       "label": {
         "zh": "网页",
         "en": "Web"
@@ -181,7 +133,6 @@
     },
     {
       "id": "app",
-      "group": "platform",
       "label": {
         "zh": "客户端",
         "en": "App"
@@ -190,7 +141,6 @@
     },
     {
       "id": "cli",
-      "group": "platform",
       "label": {
         "zh": "命令行",
         "en": "CLI"
@@ -199,7 +149,6 @@
     },
     {
       "id": "api",
-      "group": "platform",
       "label": {
         "zh": "API",
         "en": "API"

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Accordion, Alert, Badge, Box, Button, Flex, Group, Paper, SimpleGrid, Skeleton, Stack, Text, Title } from "@mantine/core";
+import { Accordion, Alert, Badge, Box, Button, Group, Paper, SimpleGrid, Skeleton, Stack, Text, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { CuratorPageHeader } from "@/components/curator/CuratorPageHeader";
 import { curatorRequest, type ActivityEntry, type BuildJob, type CuratorIngestBlock, type CuratorRun } from "@/lib/curator-client";
 import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS } from "@/lib/content-blocks";
 import { useBuildJob } from "@/components/curator/useBuildJob";
@@ -161,20 +162,13 @@ export function CuratorDashboard() {
   const counts = data?.counts;
 
   return <Stack gap="xl" className="curator-dashboard">
-    <Flex justify="space-between" align="flex-end" gap="lg" wrap="wrap" className="curator-page-heading-mantine curator-dashboard-hero">
-      <Box>
-        <Text className="curator-eyebrow-mantine">Curator / 工作台</Text>
-        <Title order={1} mt={4}>今天要处理的内容</Title>
-        <Text className="curator-dashboard-intro" mt="xs">从收录、校验到发布，把资源库今天需要推进的事情放在一起。</Text>
-      </Box>
-      <Group gap="sm" wrap="wrap" className="curator-dashboard-actions">
+    <CuratorPageHeader title="工作台" description="查看待办、内容状态与最近处理记录。" className="curator-dashboard-hero" actions={<Group gap="xs" wrap="wrap" className="curator-dashboard-actions">
         <Button component={Link} href="/curator/ingest/">收录新资源</Button>
         <Button variant="default" disabled={buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>
           {build.status === "running" ? "校验中…" : "构建校验"}
         </Button>
         <Button component="a" href={build.publicUrl || "http://localhost:3000/zh/"} target="_blank" variant="subtle">打开公开站</Button>
-      </Group>
-    </Flex>
+      </Group>} />
 
     {error ? <Alert color="red" title="工作台读取失败" role="alert">{error}</Alert> : null}
 

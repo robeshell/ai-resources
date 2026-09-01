@@ -57,15 +57,25 @@ export type BuildJob = {
   publicUrl?: string;
 };
 
-export type AgentTool = "codex" | "claude";
+export type AgentTool = "pi";
 
 export type AgentInfo = {
   id: AgentTool;
   label: string;
   available: boolean;
-  defaultModel: string;
-  /** `group` sorts the picker into 本地别名 / 网关模型 / 服务商目录. */
+  defaultModelLabel?: string;
+  /** `group` keeps a large gateway catalogue readable. */
   models: Array<{ id: string; label: string; group?: string }>;
+};
+
+export type PiProjectConfig = {
+  configured: boolean;
+  baseUrl: string;
+  defaultModel: string;
+  contextWindow: number;
+  maxTokens: number;
+  hasApiKey: boolean;
+  apiKeyHint: string;
 };
 
 export type CuratorDraft = {
@@ -95,7 +105,7 @@ export type CuratorRunPhase = "prepare" | "run" | "complete";
  *  旧键（fetch/extract/…）用于回放历史运行的事件。 */
 export const PHASE_LABEL: Record<CuratorRunPhase | "fetch" | "extract" | "compare" | "generate" | "validate" | "asset", string> = {
   prepare: "准备",
-  run: "Agent 整理中",
+  run: "思考中",
   complete: "完成",
   fetch: "读取页面",
   extract: "提取信息",
@@ -117,7 +127,6 @@ export type CuratorRunEvent = {
     | "evidence.added"
     | "draft.patch"
     | "warning.added"
-    | "tool.output"
     | "phase.completed"
     | "run.failed"
     | "run.cancelled"
@@ -133,10 +142,10 @@ export type CuratorRun = {
   phase: CuratorRunPhase;
   createdAt: string;
   updatedAt: string;
-  input?: { url: string; note: string; block?: "auto" | CuratorIngestBlock; mode?: "ingest" | "reprocess"; contentId?: string; conversationId?: string; tool?: AgentTool; model?: string };
+  input?: { url: string; note: string; block?: "auto" | CuratorIngestBlock; mode?: "ingest" | "conversation" | "reprocess"; contentId?: string; conversationId?: string; model?: string };
   draft?: CuratorDraft;
   source?: { title: string; description: string; finalUrl: string; logoUrl?: string };
-  agent?: { mode: "codex" | "claude" | "rules"; tool?: AgentTool; model?: string; message?: string };
+  agent?: { mode: "embedded" | "rules"; tool?: AgentTool; model?: string; message?: string };
   error?: string;
   eventCount: number;
   candidateId?: number;
@@ -214,32 +223,6 @@ export type SaveResult = {
   message: string;
   publicUrl?: string;
 };
-
-// Mirror of the server's describeAgentFailure: replays old tool.output
-// events (whose stored message is the raw "退出码 N") as the real reason.
-export function describeAgentFailure(message: string, toolLabel: string): string {
-  const text = String(message || "");
-  const reset = text.match(/try again at (\d{1,2}:\d{2}\s*[AP]M)/i);
-  if (/usage limit|hit your usage/i.test(text)) return `${toolLabel} 额度已用尽${reset ? `，${reset[1]} 后重置` : ""}`;
-  if (/not logged in|unauthorized|invalid api key/i.test(text)) return `${toolLabel} 未登录或凭证失效`;
-  if (/ENOENT|command not found/i.test(text)) return `${toolLabel} 命令不存在或不在 PATH`;
-  // Mirror of the server rule: show what the tool said, never a canned phrase.
-  const lines = text.split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line
-      && !/^\d{4}-\d{2}-\d{2}T/.test(line)
-      && !/codex_models_manager/.test(line)
-      && !line.startsWith("[claude-code:"));
-  const detail = lines.find((line) => /^error/i.test(line)) || lines[0] || "";
-  return detail ? detail.slice(0, 160) : `${toolLabel} 没有输出任何内容`;
-}
-
-export function agentEventMessage(event: { type: string; message: string; data?: Record<string, unknown> }): string {
-  if (event.type !== "tool.output") return event.message;
-  const data = (event.data || {}) as { command?: string; stdout?: string; stderr?: string };
-  const toolLabel = data.command === "claude" ? "Claude Code" : "Codex";
-  return describeAgentFailure(data.stderr || data.stdout || event.message, toolLabel);
-}
 
 export function curatorEventUrl(runId: string): string {
   return `${CURATOR_API}/runs/${encodeURIComponent(runId)}/events`;

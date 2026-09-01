@@ -28,11 +28,13 @@ export function MarkdownEditor({
   onChange,
   label = "Markdown",
   minHeight = "26rem",
+  error,
 }: {
   value: string;
   onChange: (next: string) => void;
   label?: string;
   minHeight?: string;
+  error?: string;
 }) {
   const [view, setView] = useState<"edit" | "preview" | "split">("edit");
   const extensions = useMemo(
@@ -41,7 +43,7 @@ export function MarkdownEditor({
   );
 
   const editor = (
-    <Box className="curator-markdown-editor" style={{ minHeight }}>
+    <Box className="curator-markdown-editor" style={{ minHeight }} aria-invalid={error ? true : undefined}>
       <CodeMirror
         value={value}
         onChange={onChange}
@@ -74,6 +76,7 @@ export function MarkdownEditor({
     {view === "split"
       ? <div className="curator-markdown-split">{editor}{preview}</div>
       : view === "preview" ? preview : editor}
+    {error ? <Text c="red" size="xs" mt={6} role="alert" tabIndex={-1} data-validation-error="true">{error}</Text> : null}
     <Text size="xs" c="dimmed" mt={6}>预览用的是公开站同一套渲染器，所见即线上效果。</Text>
   </Box>;
 }

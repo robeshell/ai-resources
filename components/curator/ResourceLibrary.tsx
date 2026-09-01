@@ -5,18 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert, Badge, Box, Button, Checkbox, Flex, Group, Pagination, Paper, Select,
-  SimpleGrid, Skeleton, Stack, Table, Tabs, Text, TextInput, Title,
+  SimpleGrid, Skeleton, Stack, Table, Tabs, Text, TextInput,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { BLOCK_LABELS, curatorRequest, type CuratorContentItem } from "@/lib/curator-client";
 import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS, type ContentStatus, type EnabledContentBlockId } from "@/lib/content-blocks";
 import { curatorEditorHref } from "@/lib/curator-routes";
+import { CuratorPageHeader } from "@/components/curator/CuratorPageHeader";
 
 type LibraryBlock = "all" | EnabledContentBlockId;
 type LibraryStatus = "all" | ContentStatus;
 type LibraryItem = Omit<CuratorContentItem, "blockType"> & { blockType: EnabledContentBlockId; issueCount: number };
 type LibraryPage = { items: LibraryItem[]; total: number; page: number; pageSize: 20 | 50; pages: number };
-type Notice = { text: string; tone: "success" | "error" } | null;
-
 const BLOCKS: Array<{ value: LibraryBlock; label: string }> = [
   { value: "all", label: "全部内容" },
   ...ENABLED_CONTENT_BLOCK_IDS.map((value) => ({ value, label: contentBlocks[value].label.zh })),
@@ -50,7 +50,7 @@ export function ResourceLibrary() {
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<Notice>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const updateParams = useCallback((changes: Record<string, string | number | boolean | null>) => {
     const next = new URLSearchParams(searchParams.toString());
@@ -62,7 +62,7 @@ export function ResourceLibrary() {
   }, [router, searchParams]);
 
   const load = useCallback(async () => {
-    setLoading(true); setNotice(null);
+    setLoading(true); setError(null);
     try {
       const params = new URLSearchParams({ block, status, sort, page: String(page), pageSize: String(pageSize) });
       if (query) params.set("query", query);
@@ -70,7 +70,7 @@ export function ResourceLibrary() {
       const payload = await curatorRequest<LibraryPage>(`/content?${params.toString()}`);
       setResult(payload); setSelected([]);
       if (payload.page !== page) updateParams({ page: payload.page });
-    } catch (caught) { setNotice({ text: caught instanceof Error ? caught.message : "资源库读取失败", tone: "error" }); }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "资源库读取失败"); }
     finally { setLoading(false); }
   }, [block, issues, page, pageSize, query, sort, status, updateParams]);
 
@@ -92,19 +92,16 @@ export function ResourceLibrary() {
   function toggleOne(id: string, checked: boolean) { setSelected((current) => checked ? [...current, id] : current.filter((item) => item !== id)); }
   async function batch(nextStatus: "active" | "archived") {
     if (!selected.length) return;
-    setBusy(true); setNotice(null);
+    setBusy(true); setError(null);
     try {
       const response = await curatorRequest<{ message: string }>("/content/batch", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: selected, status: nextStatus }) });
-      setNotice({ text: response.message, tone: "success" }); await load();
-    } catch (caught) { setNotice({ text: caught instanceof Error ? caught.message : "批量操作失败", tone: "error" }); }
+      notifications.show({ message: response.message, color: "curator" }); await load();
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "批量操作失败"); }
     finally { setBusy(false); }
   }
 
   return <Stack gap="xl">
-    <Flex justify="space-between" align="flex-end" gap="xl" wrap="wrap" className="curator-page-heading-mantine">
-      <Box><Text className="curator-eyebrow-mantine">内容管理</Text><Title order={1} mt={4}>资源库</Title><Text c="dimmed" mt="xs" maw={620}>按内容板块管理工具卡片与长内容。列表负责查找，编辑在独立页面完成。</Text></Box>
-      <Button component={Link} href={`/curator/ingest/?block=${createBlock}`} size="md">新建{BLOCK_LABELS[createBlock]}</Button>
-    </Flex>
+    <CuratorPageHeader title="资源库" description="查找、筛选和发布内容。" actions={<Button component={Link} href={`/curator/ingest/?block=${createBlock}`}>新建{BLOCK_LABELS[createBlock]}</Button>} />
 
     <Tabs value={block} onChange={(value) => updateParams({ block: value || "all", page: 1 })} variant="pills" keepMounted={false}>
       <Tabs.List className="curator-block-tabs">{BLOCKS.map((item) => <Tabs.Tab value={item.value} key={item.value}>{item.label}</Tabs.Tab>)}</Tabs.List>
@@ -120,7 +117,7 @@ export function ResourceLibrary() {
       </SimpleGrid>
     </Paper>
 
-    {notice ? <Alert color={notice.tone === "error" ? "red" : "curator"} title={notice.tone === "error" ? "操作失败" : "操作完成"} role={notice.tone === "error" ? "alert" : "status"}>{notice.text}</Alert> : null}
+    {error ? <Alert color="red" title="操作失败" role="alert" withCloseButton onClose={() => setError(null)}>{error}</Alert> : null}
 
     <Paper withBorder p={0} className="curator-library-table-shell">
       <Group justify="space-between" p="md" mih={58}>

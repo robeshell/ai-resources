@@ -1,8 +1,7 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promises as fs, readFileSync } from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -11,7 +10,6 @@ import {
   createContentRepository,
   importLegacyCatalog,
 } from "./curator-db.mjs";
-import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft, parseClaudeStructured } from "./curator-agent-output.mjs";
 import { attributeTags, categoryOf, sortTags } from "./curator-tags.mjs";
 import {
   assertContentItemShape,
@@ -21,6 +19,7 @@ import {
 } from "./curator-content-rules.mjs";
 import { exportContent } from "./curator-export.mjs";
 import { buildAgentPrompt as composeAgentPrompt, buildPolishPrompt as composePolishPrompt, similarResources } from "./curator-agent-policy.mjs";
+import { deletePiProjectConfig, loadPiGatewayConfig, publicPiProjectConfig, readPiProjectConfig, runCuratorConversation, runCuratorDraft, writePiProjectConfig } from "./curator-pi-agent.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.CURATOR_PORT || 4317);
@@ -29,8 +28,9 @@ const SITE_PORT = process.env.CURATOR_SITE_PORT || "3000";
 const SCHEMA_PATH = path.join(ROOT, "scripts/curator-output.schema.json");
 const POLISH_SCHEMA_PATH = path.join(ROOT, "scripts/curator-polish.schema.json");
 const SKILL_PATH = path.join(ROOT, "skills/curator-ingest/SKILL.md");
+const DRAFT_SCHEMA = JSON.parse(readFileSync(SCHEMA_PATH, "utf8"));
+const POLISH_SCHEMA = JSON.parse(readFileSync(POLISH_SCHEMA_PATH, "utf8"));
 const MAX_REQUEST_BYTES = 128 * 1024;
-const AGENT_TIMEOUT_MS = Number(process.env.CURATOR_AGENT_TIMEOUT_MS) || 240_000;
 const MAX_LOGO_BYTES = 512 * 1024;
 const LOGO_TYPES = {
   "image/png": "png",
@@ -59,7 +59,6 @@ const RUN_KEEP_COUNT = 30;
 const RUN_KEEP_DAYS = 14;
 const ACTIVITY_KEEP = 120;
 const NEXT_BIN = path.join(ROOT, "node_modules/next/dist/bin/next");
-const HOME = process.env.HOME || os.homedir();
 // Some sites only filter on the UA string; a browser UA passes those. Sites
 // with real bot detection (Cloudflare TLS fingerprinting) still 403, which the
 // reprocess fallback handles.
@@ -126,11 +125,6 @@ function slugify(value) {
     .slice(0, 64) || "new-resource";
 }
 
-function commandExists(bin) {
-  const result = spawnSync("which", [bin], { encoding: "utf8" });
-  return result.status === 0 && Boolean(result.stdout.trim());
-}
-
 function addModel(models, id, label, group) {
   const value = String(id || "").trim();
   if (!value) return;
@@ -138,100 +132,19 @@ function addModel(models, id, label, group) {
   models.push({ id: value, label: String(label || value).trim() || value, ...(group ? { group } : {}) });
 }
 
-function addCatalogModels(models, items, group) {
-  for (const item of items || []) {
-    if (item.visibility && item.visibility !== "list") continue;
-    addModel(
-      models,
-      item.slug || item.model || item.id,
-      item.display_name || item.displayName || item.slug || item.model,
-      group,
-    );
-  }
+function gatewayError(status, detail, apiKey) {
+  const safe = String(detail || "").replaceAll(apiKey, "[REDACTED]").slice(0, 500);
+  return new Error(`网关请求失败（HTTP ${status}）${safe ? `：${safe}` : ""}`);
 }
 
-function readCcSwitchCurrentCodexCatalog() {
-  const result = spawnSync(
-    "sqlite3",
-    [
-      path.join(HOME, ".cc-switch/cc-switch.db"),
-      "SELECT json_extract(settings_config, '$.modelCatalog.models') FROM providers WHERE app_type = 'codex' AND is_current = 1 LIMIT 1",
-    ],
-    { encoding: "utf8", timeout: 2000 },
-  );
-  if (result.status !== 0) return [];
-  const raw = result.stdout.trim();
-  if (!raw || raw === "null") return [];
-  try {
-    const items = JSON.parse(raw);
-    return Array.isArray(items) ? items : [];
-  } catch {
-    return [];
-  }
-}
-
-async function readJsonFile(file) {
-  try {
-    return JSON.parse(await fs.readFile(file, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-async function listCodexModels() {
+async function listGatewayModels({ strict = false, config } = {}) {
   const models = [];
-  let configText = "";
-  try {
-    configText = await fs.readFile(path.join(HOME, ".codex/config.toml"), "utf8");
-  } catch {
-    /* no local Codex config */
-  }
-  const providerCatalog = readCcSwitchCurrentCodexCatalog();
-  if (providerCatalog.length) {
-    addCatalogModels(models, providerCatalog, "服务商目录");
-  } else {
-    const catalogName = configText.match(/^\s*model_catalog_json\s*=\s*"([^"]+)"/m)?.[1];
-    const catalogFile = catalogName
-      ? path.join(HOME, ".codex", path.basename(catalogName))
-      : path.join(HOME, ".codex/models_cache.json");
-    addCatalogModels(models, (await readJsonFile(catalogFile))?.models, "服务商目录");
-  }
-  // The configured model leads the list — listAgents takes the first entry as
-  // the default — but the catalog is read first so it keeps its display name.
-  const configured = configText.match(/^model\s*=\s*"([^"]+)"/m)?.[1];
-  addModel(models, configured, configured, "服务商目录");
-  const index = models.findIndex((item) => item.id === configured);
-  if (index > 0) models.unshift(...models.splice(index, 1));
-  return models;
-}
-
-async function listClaudeModels() {
-  const settings = await readJsonFile(path.join(HOME, ".claude/settings.json")) || {};
-  const env = { ...process.env, ...(settings.env || {}) };
-  const models = [];
-  const aliases = [
-    ["opus", env.ANTHROPIC_DEFAULT_OPUS_MODEL],
-    ["sonnet", env.ANTHROPIC_DEFAULT_SONNET_MODEL],
-    ["haiku", env.ANTHROPIC_DEFAULT_HAIKU_MODEL],
-    ["fable", env.ANTHROPIC_DEFAULT_FABLE_MODEL],
-  ];
-  // An alias and the model it points at are one choice, not two. Keep the
-  // alias as the id so it keeps following the provider selected in cc-switch,
-  // and name the target in the label so the row is unambiguous.
-  const resolvedByAlias = new Set();
-  for (const [alias, resolved] of aliases) {
-    const target = String(resolved || "").trim();
-    addModel(models, alias, target ? `${alias} · ${target}` : alias, "本地别名");
-    if (target) resolvedByAlias.add(target);
-  }
-  for (const extra of [settings.model, env.ANTHROPIC_MODEL]) {
-    if (!resolvedByAlias.has(String(extra || "").trim())) addModel(models, extra, extra, "本地别名");
-  }
-  const base = String(env.ANTHROPIC_BASE_URL || "").replace(/\/+$/, "");
-  const key = env.ANTHROPIC_AUTH_TOKEN || env.ANTHROPIC_API_KEY || "";
-  if (base && key) {
+  const piConfig = await loadPiGatewayConfig(config ? { config } : {}).catch(() => null);
+  if (piConfig) {
     try {
-      const response = await fetch(`${base}/v1/models`, {
+      const base = piConfig.model.baseUrl;
+      const key = piConfig.apiKey;
+      const response = await fetch(`${base}${base.endsWith("/v1") ? "" : "/v1"}/models`, {
         signal: AbortSignal.timeout(8000),
         headers: {
           "x-api-key": key,
@@ -244,35 +157,60 @@ async function listClaudeModels() {
         const list = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.models) ? payload.models : [];
         for (const item of list) {
           const id = String(item.id || item.name || item.slug || "").trim();
-          // Skip what an alias already covers so the same model is not offered
-          // twice under two names.
-          if (!id || resolvedByAlias.has(id)) continue;
+          if (!id) continue;
           addModel(models, id, item.display_name || item.name || id, "网关模型");
         }
+      } else if (strict) {
+        throw gatewayError(response.status, await response.text(), key);
       }
-    } catch {
-      /* local model directory is optional */
+    } catch (error) {
+      if (strict) throw error;
     }
+  } else if (strict) {
+    throw new Error("请先保存 Pi Agent 配置");
   }
-  return { models, defaultModel: settings.model || env.ANTHROPIC_MODEL || models[0]?.id || "" };
+  return models;
+}
+
+async function testGatewayConnection(config) {
+  const piConfig = await loadPiGatewayConfig(config ? { config } : {});
+  const base = piConfig.model.baseUrl;
+  const key = piConfig.apiKey;
+  const response = await fetch(`${base}${base.endsWith("/v1") ? "" : "/v1"}/messages`, {
+    method: "POST",
+    signal: AbortSignal.timeout(15000),
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": key,
+      Authorization: `Bearer ${key}`,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({ model: piConfig.model.id, max_tokens: 1, messages: [{ role: "user", content: "Reply with OK." }] }),
+  });
+  if (!response.ok) throw gatewayError(response.status, await response.text(), key);
+  await response.arrayBuffer();
+  return piConfig.model.id;
+}
+
+async function mergedPiConfig(input = {}) {
+  const current = await readPiProjectConfig();
+  return {
+    ...current,
+    ...input,
+    apiKey: String(input.apiKey || "").trim() || current.apiKey,
+  };
 }
 
 async function listAgents() {
-  const [codexModels, claude] = await Promise.all([listCodexModels(), listClaudeModels()]);
+  const models = await listGatewayModels();
+  const piConfig = await loadPiGatewayConfig().catch(() => null);
   const tools = [
     {
-      id: "codex",
-      label: "Codex",
-      available: commandExists(process.env.CURATOR_CODEX_BIN || "codex"),
-      defaultModel: codexModels[0]?.id || "",
-      models: codexModels,
-    },
-    {
-      id: "claude",
-      label: "Claude Code",
-      available: commandExists(process.env.CURATOR_CLAUDE_BIN || "claude"),
-      defaultModel: claude.defaultModel,
-      models: claude.models,
+      id: "pi",
+      label: "Pi Agent",
+      available: Boolean(piConfig),
+      defaultModelLabel: piConfig?.model.id || "",
+      models,
     },
   ];
   return {
@@ -281,265 +219,13 @@ async function listAgents() {
   };
 }
 
-const SECRET_PATTERNS = [
-  /\b(sk|rk|pk)-[A-Za-z0-9_-]{12,}/g,
-  /\bgh[pousr]_[A-Za-z0-9]{20,}/g,
-  /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{12,}/gi,
-  /\b[A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL)[A-Z0-9_]*\s*[=:]\s*\S+/g,
-];
-
-// Agent stdout/stderr is technical information, not product copy: strip
-// credentials and local paths, drop ANSI noise, keep only the tail.
-function sanitizeToolOutput(value, maxChars = 1200, maxLines = 30) {
-  let text = String(value || "")
-    .replace(/\u001b\[[0-9;]*[A-Za-z]/g, "")
-    .replace(/\r/g, "");
-  for (const pattern of SECRET_PATTERNS) text = text.replace(pattern, "[已隐藏]");
-  if (HOME) text = text.split(HOME).join("~");
-  const lines = text.split("\n").filter((line) => line.trim()).slice(-maxLines);
-  text = lines.join("\n").trim();
-  return text.length > maxChars ? `…${text.slice(-maxChars)}` : text;
-}
-
-function runProcess({ command, args, prompt, cwd = ROOT, parseOutput, onChild, onToolOutput, onAgentLog, onStdoutLine, stallHint }) {
-  return new Promise(async (resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"], cwd });
-    onChild?.(child);
-    let stdout = "";
-    let stderr = "";
-    let pendingOut = "";
-    let pendingErr = "";
-    // 按行清洗后实时转发 Agent 输出（ANSI/密钥脱敏沿用 sanitizeToolOutput）。
-    const forward = (stream, text) => {
-      if (!onAgentLog) return;
-      const batch = text.split("\n").slice(0, -1).map((line) => line.trimEnd()).filter((line) => line.trim()).join("\n");
-      if (batch) onAgentLog(sanitizeToolOutput(batch, 4000, 200), stream);
-    };
-    child.stdout.on("data", (chunk) => {
-      const text = chunk.toString();
-      stdout = `${stdout}${text}`.slice(-20000);
-      pendingOut += text;
-      const newline = pendingOut.lastIndexOf("\n");
-      if (newline < 0) return;
-      const complete = pendingOut.slice(0, newline + 1);
-      pendingOut = pendingOut.slice(newline + 1);
-      // A structured stream is read line by line instead of being dumped into
-      // the technical log, which would be thousands of unreadable JSON lines.
-      if (onStdoutLine) for (const line of complete.split("\n")) { if (line.trim()) onStdoutLine(line); }
-      else forward("stdout", complete);
-    });
-    child.stderr.on("data", (chunk) => {
-      const text = chunk.toString();
-      stderr = `${stderr}${text}`.slice(-8000);
-      pendingErr += text;
-      const newline = pendingErr.lastIndexOf("\n");
-      if (newline >= 0) { forward("stderr", pendingErr.slice(0, newline + 1)); pendingErr = pendingErr.slice(newline + 1); }
-    });
-    if (prompt !== undefined) child.stdin.end(prompt);
-    else child.stdin.end();
-    // Fetching a page and writing a full draft regularly runs past two minutes
-    // on a slower model, and a kill at that point looked like a silent failure.
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-    }, AGENT_TIMEOUT_MS);
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.on("exit", async (code) => {
-      clearTimeout(timer);
-      onToolOutput?.({
-        command,
-        exitCode: code,
-        stdout: sanitizeToolOutput(stdout),
-        stderr: sanitizeToolOutput(stderr),
-      });
-      try {
-        if (timedOut) {
-          // Naming the last thing it did turns a blind timeout into a diagnosis:
-          // "still thinking after four minutes" reads very differently from
-          // "stopped right after reading the page".
-          const hint = stallHint?.();
-          throw new Error(`${command} 超过 ${Math.round(AGENT_TIMEOUT_MS / 1000)} 秒没有完成，已停止${hint ? `（${hint}）` : ""}`);
-        }
-        // Parse before judging the exit code: a CLI that reports its failure in
-        // a structured envelope says far more than its exit status does. Taking
-        // stderr first meant a single `[claude-code:…]` diagnostic line beat the
-        // real "API Error: 400 …" sitting in stdout.
-        const parsed = await parseOutput(stdout);
-        if (code !== 0) throw new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`);
-        resolve(parsed);
-      } catch (error) {
-        // A timeout already carries the only explanation there is; the
-        // stderr/stdout fallback below would replace it with a diagnostic line.
-        if (timedOut || error?.agentDetail) return reject(error);
-        if (code !== 0) return reject(new Error(stderr.trim() || stdout.trim() || `${command} exited with ${code}`));
-        reject(error);
-      }
-    });
-  });
-}
-
-async function runCodex(prompt, model, options = {}) {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ai-nav-curator-"));
-  const outputPath = path.join(tempDir, "draft.json");
-  const schemaPath = options.schemaPath || SCHEMA_PATH;
-  const args = [
-    "exec", "--ephemeral", "--skip-git-repo-check", "--sandbox", "workspace-write",
-    "-c", `sandbox_workspace_write.network_access=${options.networkAccess === false ? "false" : "true"}`,
-    // The Codex half of AGENT_POLICY. Without these the policy note lies: the
-    // operator's config.toml brings in every MCP server, plugin and marketplace
-    // (one of those MCP search tools is what stalled an early run), and
-    // model_reasoning_effort falls back to whatever the operator set — which
-    // made the polish round cost ~26K tokens at medium effort.
-    "--ignore-user-config", "--ignore-rules",
-    "-c", `model_reasoning_effort="${AGENT_POLICY.effort}"`,
-    "--color", "never", "-C", tempDir, "--output-schema", schemaPath,
-    "--output-last-message", outputPath, "-",
-  ];
-  if (model) args.splice(1, 0, "-m", model);
-  try {
-    return await runProcess({
-      command: process.env.CURATOR_CODEX_BIN || "codex",
-      args,
-      cwd: tempDir,
-      prompt,
-      parseOutput: async () => JSON.parse(await fs.readFile(outputPath, "utf8")),
-      onChild: options.onChild,
-      onToolOutput: options.onToolOutput,
-      // Codex already narrates its work on stdout, so its latest readable line
-      // doubles as the progress line the ingest view shows.
-      onAgentLog: (text, stream) => {
-        options.onAgentLog?.(text, stream);
-        if (stream !== "stdout") return;
-        const latest = codexProgressLine(text);
-        if (latest) options.onProgress?.(latest, { kind: "status" });
-      },
-    });
-  } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
-  }
-}
-
-/**
- * The ingest Agent's whole policy, in one place. It used to be spread across a
- * denylist, an inherited working directory, a default MCP config and an
- * unstated permission mode, which made it impossible to answer "what can this
- * thing actually do?" — and a denylist leaked exactly once it mattered (a
- * blocked WebSearch simply became an MCP search tool).
- *
- * The task is: read one page, maybe check a fact, write a JSON draft. So:
- *
- * - Tools are an ALLOWLIST of the two network tools the task needs. Anything
- *   not named here — Bash, Read, Glob, Grep, Edit, Write, sub-agents — does not
- *   exist for this run, and a new built-in tool cannot silently appear.
- * - No MCP servers, no CLAUDE.md, no skills, plugins or hooks. The run must not
- *   change behaviour because the operator installed something yesterday.
- * - It runs in an empty temporary directory, not in this repository. Even if a
- *   file tool were somehow reachable, there is nothing here to read: not the
- *   content database, not data/, not .env.local.
- * - Permission prompts are bypassed because nothing is interactive. That is
- *   only acceptable because of the two rules above: the blast radius is two
- *   read-only network calls.
- */
 const AGENT_POLICY = {
-  tools: ["WebFetch", "WebSearch"],
-  effort: "low",
-  timeoutMs: AGENT_TIMEOUT_MS,
-  mcp: false,
-  customisations: false,
-  workspace: "临时目录",
+  tools: ["web_fetch", "web_search", "submit_draft"],
+  maxNetworkUses: 4,
 };
 
 function agentPolicyNote() {
-  return `工具策略：仅允许 ${AGENT_POLICY.tools.join("、")}；低思考强度；最多 4 个网页工具调用；不加载 MCP、技能、插件与 CLAUDE.md；在临时目录中运行，读不到本仓库；超时 ${Math.round(AGENT_POLICY.timeoutMs / 1000)} 秒。`;
-}
-
-async function runClaude(prompt, model, options = {}) {
-  // See AGENT_POLICY. `--tools` is an allowlist of built-in tools, so nothing
-  // outside it exists for this run; --safe-mode drops CLAUDE.md, skills,
-  // plugins, hooks and custom agents; --strict-mcp-config drops MCP servers.
-  const workspace = await fs.mkdtemp(path.join(os.tmpdir(), "ai-nav-ingest-"));
-  const schemaPath = options.schemaPath || SCHEMA_PATH;
-  const tools = options.tools || AGENT_POLICY.tools;
-  const args = [
-    // `stream-json` reports what the Agent is doing while it works; the plain
-    // `json` format stays silent until the very end, which left the operator
-    // watching a spinner with nothing to read.
-    "--print", "--output-format", "stream-json", "--verbose",
-    "--json-schema", claudeJsonSchema(readFileSync(schemaPath, "utf8")),
-    "--safe-mode",
-    "--effort", AGENT_POLICY.effort,
-    "--strict-mcp-config",
-    "--tools", tools.join(","),
-    "--dangerously-skip-permissions",
-  ];
-  if (model) args.push("--model", model);
-
-  // The stream ends with the same result envelope the `json` format returns.
-  // Keep it aside: the raw stdout buffer is capped and the envelope can be
-  // pushed out of it by a long run.
-  let resultLine = "";
-  let lastTokenReport = 0;
-  let lastTokens = 0;
-  let lastMessage = "";
-  const report = (message, data) => {
-    // The stream repeats itself (a task summary and its tool call describe the
-    // same step); one line per actual step is what makes it readable.
-    if (!message || message === lastMessage) return;
-    lastMessage = message;
-    options.onProgress?.(message, data);
-  };
-
-  try {
-    return await runProcess({
-      command: process.env.CURATOR_CLAUDE_BIN || "claude",
-      args,
-      cwd: workspace,
-      stallHint: () => (lastMessage
-        ? `最后进度：${lastMessage}${lastTokens ? ` · 思考 ${lastTokens} tokens` : ""}`
-        : "Agent 启动后没有任何进展"),
-      // Through stdin, like codex: `--tools <tools...>` is variadic, so a
-      // trailing positional prompt gets swallowed as another tool name and the
-      // CLI exits with "Input must be provided".
-      prompt,
-      onStdoutLine: (line) => {
-        let event;
-        try {
-          event = JSON.parse(line);
-        } catch {
-          return;
-        }
-        if (event.type === "result") { resultLine = line; return; }
-        const status = claudeStreamStatus(event);
-        if (!status) return;
-        if (status.kind === "tokens") {
-          // ~1000 of these per run: report progress at most once a second.
-          lastTokens = status.tokens;
-          // A counter that restarts at "1 tokens" each turn reads like a glitch.
-          if (lastTokens < 50) return;
-          const at = Date.now();
-          if (at - lastTokenReport < 1000) return;
-          lastTokenReport = at;
-          // Tagged so the view can feed the header counter without adding a
-          // trail step for every tick.
-          report(`思考中 · ${lastTokens} tokens`, { kind: "tokens", tokens: lastTokens });
-          return;
-        }
-        report(status.text, { kind: status.kind, ...(lastTokens ? { tokens: lastTokens } : {}) });
-      },
-      parseOutput: (stdout) => options.parseOutput
-        ? options.parseOutput(resultLine || stdout)
-        : parseClaudeDraft(resultLine || stdout),
-      onChild: options.onChild,
-      onToolOutput: options.onToolOutput,
-      onAgentLog: options.onAgentLog,
-      });
-  } finally {
-    await fs.rm(workspace, { recursive: true, force: true });
-  }
+  return `工具策略：内置 Pi Agent；仅允许 ${AGENT_POLICY.tools.join("、")}；低思考强度；网页工具最多 ${AGENT_POLICY.maxNetworkUses} 次；草稿只进入人工确认，不直接保存。`;
 }
 
 async function existingResources() {
@@ -560,43 +246,55 @@ function buildAgentPrompt(url, note, catalog, targetBlock, existingContent = "")
 }
 
 
-async function polishDraft(draft, selected, model, options) {
+function forwardPiDraftEvent(event, options) {
+  if (event.type === "text.delta") options.onAgentLog?.(event.text, "text");
+  else if (event.type === "reasoning.delta") options.onAgentLog?.(event.text, "reasoning");
+  else if (event.type === "submission.started") options.onProgress?.("正在生成结构化草稿", { kind: "tool", tool: "submit_draft" });
+  else if (event.type === "tool.started") {
+    const labels = { web_fetch: "读取页面", web_search: "搜索网页", submit_draft: "生成结构化草稿" };
+    options.onProgress?.(labels[event.tool] || `调用 ${event.tool}`, { kind: "tool", tool: event.tool });
+  } else if (event.type === "tool.completed" && event.isError) {
+    options.onProgress?.(`${event.tool} 调用失败`, { kind: "tool", tool: event.tool });
+  }
+}
+
+async function polishDraft(draft, model, options) {
   if (!["skill", "project"].includes(draft?.blockType) || !String(draft?.body || "").trim()) return { draft, polished: false };
   const prompt = composePolishPrompt({ draft });
   options.onProgress?.("第一稿完成，开始润色正文", { kind: "status" });
-  const polishOptions = {
-    ...options,
-    schemaPath: POLISH_SCHEMA_PATH,
-    networkAccess: false,
-    tools: [],
-    parseOutput: (stdout) => parseClaudeStructured(stdout, (result) => typeof result?.body === "string" && Boolean(result.body.trim())),
-  };
-  const result = selected === "claude"
-    ? await runClaude(prompt, model, polishOptions)
-    : await runCodex(prompt, model, polishOptions);
+  const result = await runCuratorDraft({
+    prompt,
+    schema: POLISH_SCHEMA,
+    selectedModel: model,
+    allowNetwork: false,
+    onAgent: options.onAgent,
+    onEvent: (event) => forwardPiDraftEvent(event, options),
+  });
   options.onProgress?.("正文润色完成", { kind: "status" });
-  return { draft: { ...draft, body: result.body.trim() }, polished: true };
+  return { draft: { ...draft, body: result.draft.body.trim() }, polished: true };
 }
 
-async function agentDraft(url, note, tool, model, targetBlock = "tool", options = {}) {
+async function agentDraft(url, note, model, targetBlock = "tool", options = {}) {
   const prompt = buildAgentPrompt(url, note, options.catalog || "", targetBlock, options.existingContent);
-  const selected = tool === "claude" ? "claude" : "codex";
   try {
-    const firstDraft = selected === "claude"
-      ? await runClaude(prompt, model, options)
-      : await runCodex(prompt, model, options);
+    const first = await runCuratorDraft({
+      prompt,
+      schema: DRAFT_SCHEMA,
+      selectedModel: model,
+      allowNetwork: true,
+      onAgent: options.onAgent,
+      onEvent: (event) => forwardPiDraftEvent(event, options),
+    });
+    const firstDraft = first.draft;
     let result = { draft: firstDraft, polished: false };
     try {
-      result = await polishDraft(firstDraft, selected, model, options);
+      result = await polishDraft(firstDraft, model, options);
     } catch (error) {
-      const detail = describeAgentFailure(error instanceof Error ? error.message : "", selected === "claude" ? "Claude Code" : "Codex");
-      options.onProgress?.(`润色失败，保留第一稿：${detail}`, { kind: "status" });
+      options.onProgress?.(`润色失败，保留第一稿：${error instanceof Error ? error.message : "未知错误"}`, { kind: "status" });
     }
-    return { draft: result.draft, agent: { mode: selected, tool: selected, model, polished: result.polished } };
+    return { draft: result.draft, agent: { mode: "embedded", tool: "pi", model: first.model, polished: result.polished } };
   } catch (error) {
-    if (error?.agentDetail) throw error;
-    const toolLabel = selected === "claude" ? "Claude Code" : "Codex";
-    throw new Error(describeAgentFailure(error instanceof Error ? error.message : "", toolLabel));
+    throw new Error(error instanceof Error ? error.message : "Pi Agent 整理失败");
   }
 }
 
@@ -637,7 +335,6 @@ function publicRun(run) {
       ...(run.input?.mode ? { mode: run.input.mode } : {}),
       ...(run.input?.contentId ? { contentId: run.input.contentId } : {}),
       ...(run.input?.conversationId ? { conversationId: run.input.conversationId } : {}),
-      ...(run.input?.tool ? { tool: run.input.tool } : {}),
       ...(run.input?.model ? { model: run.input.model } : {}),
     },
     ...(run.draft ? { draft: run.draft } : {}),
@@ -742,13 +439,12 @@ async function restoreRuns() {
         ...(item.input?.mode ? { mode: item.input.mode } : {}),
         ...(item.input?.contentId ? { contentId: item.input.contentId } : {}),
         ...(item.input?.conversationId ? { conversationId: item.input.conversationId } : {}),
-        tool: item.input?.tool === "claude" ? "claude" : "codex",
         model: item.input?.model || "",
       },
       events: [],
       restoredEventCount: item.eventCount || 0,
       subscribers: new Set(),
-      child: null,
+      agentRuntime: null,
     });
   }
   const keepIds = new Set(kept.map((item) => item.id));
@@ -807,6 +503,60 @@ async function executeRun(run) {
   run.status = "running";
   try {
     let existingContent = "";
+    if (run.input.mode === "conversation") {
+      const repository = await contentStore();
+      const conversation = repository.getConversation(run.input.conversationId);
+      if (!conversation) throw new Error("找不到这段对话");
+      const item = repository.get(run.input.contentId);
+      if (!item) throw new Error("会话绑定的内容不存在");
+      emitRunEvent(run, "run", "phase.started", "info", "思考中", {
+        tool: "pi",
+        model: run.input.model,
+      });
+      const result = await runCuratorConversation({
+        text: run.input.note,
+        conversationMessages: conversation.messages.filter((message) => message.runId !== run.id),
+        item,
+        conversationId: conversation.id,
+        selectedModel: run.input.model,
+        onAgent: (agent) => { run.agentRuntime = agent; },
+        onEvent: (event) => {
+          if (event.type === "text.delta") {
+            emitRunEvent(run, "run", "agent.log", "info", event.text, { stream: "text" });
+          } else if (event.type === "reasoning.delta") {
+            emitRunEvent(run, "run", "agent.log", "info", event.text, { stream: "reasoning" });
+          } else if (event.type === "tool.started") {
+            const labels = { web_fetch: "读取页面", web_search: "搜索网页", submit_draft: "生成结构化草稿" };
+            emitRunEvent(run, "run", "phase.progress", "info", labels[event.tool] || `调用 ${event.tool}`, { tool: event.tool });
+          } else if (event.type === "tool.completed") {
+            emitRunEvent(run, "run", "phase.progress", event.isError ? "warning" : "success", event.isError ? "工具调用失败" : "工具调用完成", { tool: event.tool });
+          }
+        },
+      });
+      throwIfCancelled(run);
+      run.agent = { tool: "pi", mode: "embedded", model: result.model };
+      if (result.action.type === "reply") {
+        repository.addMessage(conversation.id, {
+          role: "assistant",
+          kind: "text",
+          text: result.text,
+          runId: run.id,
+        });
+        run.status = "saved";
+        run.agentRuntime = null;
+        emitRunEvent(run, "complete", "run.completed", "success", "Pi Agent 已回复", {
+          durationMs: Date.now() - new Date(run.createdAt).getTime(),
+        });
+        return;
+      }
+      // The embedded agent decides whether a full workflow is warranted. The
+      // existing deterministic drafting flow remains the first implementation
+      // of that tool and can be replaced independently later.
+      run.input.note = result.action.instruction;
+      run.input.mode = "reprocess";
+      run.agentRuntime = null;
+      emitRunEvent(run, "run", "phase.progress", "info", "进入受控重新整理流程");
+    }
     if (run.input.mode === "reprocess") {
       const repository = await contentStore();
       const reprocessTarget = repository.get(run.input.contentId);
@@ -817,8 +567,8 @@ async function executeRun(run) {
       existingContent = JSON.stringify({ title: reprocessTarget.title, payload: reprocessTarget.payload }, null, 2);
     }
 
-    emitRunEvent(run, "run", "phase.started", "info", "Agent 正在整理", {
-      tool: run.input.tool,
+    emitRunEvent(run, "run", "phase.started", "info", "思考中", {
+      tool: "pi",
       model: run.input.model,
       policy: AGENT_POLICY,
     });
@@ -827,19 +577,14 @@ async function executeRun(run) {
     const catalogText = (await existingResources())
       .map((item) => `${item.slug} | ${item.name} | ${item.kind || "tool"}`)
       .join("\n");
-    const result = await agentDraft(run.input.url, run.input.note, run.input.tool, run.input.model, run.input.block, {
+    const result = await agentDraft(run.input.url, run.input.note, run.input.model, run.input.block, {
       catalog: catalogText,
       existingContent,
-      onChild: (child) => { run.child = child; },
+      onAgent: (agent) => { run.agentRuntime = agent; },
       onProgress: (message, data) => emitRunEvent(run, "run", "phase.progress", "info", message, data),
       onAgentLog: (text, stream) => emitRunEvent(run, "run", "agent.log", "info", text, { stream }),
-      onToolOutput: (payload) => {
-        if (!payload.stdout && !payload.stderr) return;
-        const toolLabel = payload.command === "claude" ? "Claude Code" : "Codex";
-        emitRunEvent(run, "run", "tool.output", "info", describeAgentFailure(payload.stderr || payload.stdout || "", toolLabel), payload);
-      },
     });
-    run.child = null;
+    run.agentRuntime = null;
     throwIfCancelled(run);
     run.agent = result.agent;
 
@@ -887,7 +632,7 @@ async function executeRun(run) {
       durationMs: Date.now() - new Date(run.createdAt).getTime(),
     });
   } catch (error) {
-    run.child = null;
+    run.agentRuntime = null;
     if (run.status === "cancelled" || error?.cancelled) return;
     run.status = "failed";
     run.error = error instanceof Error ? error.message : "整理失败";
@@ -897,7 +642,7 @@ async function executeRun(run) {
         role: "assistant",
         kind: "run",
         text: run.error,
-        data: { runId: run.id, status: run.status, error: run.error, tool: run.input.tool, elapsedMs: runElapsedMs(run) },
+        data: { runId: run.id, status: run.status, error: run.error, tool: "pi", elapsedMs: runElapsedMs(run) },
         runId: run.id,
       });
     }
@@ -917,20 +662,19 @@ function createRun(input) {
       url: String(input.url || "").trim(),
       note: cleanText(input.note, 1000),
       block: input.block === "auto" ? "auto" : INGEST_BLOCKS.includes(input.block) ? input.block : "auto",
-      ...(input.mode === "reprocess" ? { mode: "reprocess" } : { mode: "ingest" }),
+      mode: ["conversation", "reprocess"].includes(input.mode) ? input.mode : "ingest",
       ...(input.contentId ? { contentId: String(input.contentId) } : {}),
       ...(input.conversationId ? { conversationId: String(input.conversationId) } : {}),
-      tool: input.tool === "claude" ? "claude" : "codex",
       model: cleanText(input.model, 80),
       ...(input.seed ? { seed: input.seed } : {}),
     },
     events: [],
     subscribers: new Set(),
-    child: null,
+    agentRuntime: null,
   };
   runs.set(run.id, run);
   persistRuns();
-  emitRunEvent(run, "prepare", "phase.progress", "info", "任务已创建");
+  emitRunEvent(run, "prepare", "phase.progress", "info", run.input.mode === "conversation" ? "消息已发送" : "任务已创建");
   setTimeout(() => executeRun(run), 0);
   return run;
 }
@@ -938,8 +682,8 @@ function createRun(input) {
 function cancelRun(run) {
   if (runIsTerminal(run)) return run;
   run.status = "cancelled";
-  run.child?.kill("SIGTERM");
-  run.child = null;
+  run.agentRuntime?.abort();
+  run.agentRuntime = null;
   emitRunEvent(run, run.phase, "run.cancelled", "warning", "分析已取消");
   return run;
 }
@@ -1262,7 +1006,7 @@ async function saveCandidate(run, draft) {
   const payload = contentPayloadFromDraft(draft, current.payload);
   const candidate = repository.createCandidate(current.id, payload, {
     note: "Agent 重新处理候选版本",
-    createdBy: run.input.tool || "agent",
+    createdBy: "pi",
   });
   run.candidateId = candidate.id;
   return {
@@ -1355,7 +1099,7 @@ async function listContentPage(searchParams) {
   const query = String(searchParams.get("query") || "").trim().toLowerCase();
   const issuesOnly = searchParams.get("issues") === "true";
   const sort = searchParams.get("sort") || "updated-desc";
-  const pageSize = [20, 50].includes(Number(searchParams.get("pageSize"))) ? Number(searchParams.get("pageSize")) : 20;
+  const pageSize = [6, 20, 50].includes(Number(searchParams.get("pageSize"))) ? Number(searchParams.get("pageSize")) : 20;
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   if (block !== "all" && !INGEST_BLOCKS.includes(block)) throw new Error("未知内容板块");
   if (status !== "all" && !["draft", "active", "archived"].includes(status)) throw new Error("未知内容状态");
@@ -1483,9 +1227,7 @@ function firstPublicUrl(text) {
 
 async function createConversationRun(repository, conversation, body) {
   const text = cleanText(body.text, 4000);
-  if (!text) throw new Error("请输入要交给 Agent 的内容");
-  if (!["codex", "claude", undefined].includes(body.tool)) throw new Error("未知 Agent");
-
+  if (!text) throw new Error("请输入消息");
   let input;
   if (conversation.contentId) {
     const item = repository.get(conversation.contentId);
@@ -1496,10 +1238,9 @@ async function createConversationRun(repository, conversation, body) {
       url: sourceUrl,
       note: text,
       block: item.blockType,
-      mode: "reprocess",
+      mode: "conversation",
       contentId: item.id,
       conversationId: conversation.id,
-      tool: body.tool,
       model: body.model,
     };
   } else {
@@ -1511,7 +1252,6 @@ async function createConversationRun(repository, conversation, body) {
       block: INGEST_BLOCKS.includes(body.block) ? body.block : "auto",
       mode: "ingest",
       conversationId: conversation.id,
-      tool: body.tool,
       model: body.model,
     };
   }
@@ -1532,7 +1272,7 @@ async function recordCancelledConversationRun(run) {
     role: "assistant",
     kind: "run",
     text: "已停止这次整理。",
-    data: { runId: run.id, status: "cancelled", tool: run.input.tool, elapsedMs: runElapsedMs(run) },
+    data: { runId: run.id, status: "cancelled", tool: "pi", elapsedMs: runElapsedMs(run) },
     runId: run.id,
   });
 }
@@ -1557,6 +1297,33 @@ const server = http.createServer(async (request, response) => {
     }
     if (request.method === "GET" && url.pathname === "/agents") {
       return sendJson(response, 200, await listAgents(), origin);
+    }
+    if (request.method === "GET" && url.pathname === "/pi-config") {
+      return sendJson(response, 200, publicPiProjectConfig(await readPiProjectConfig()), origin);
+    }
+    if (request.method === "PUT" && url.pathname === "/pi-config") {
+      const saved = await writePiProjectConfig(await readJson(request));
+      return sendJson(response, 200, {
+        ...publicPiProjectConfig(saved),
+        message: "Pi Agent 配置已保存在当前项目",
+        agents: await listAgents(),
+      }, origin);
+    }
+    if (request.method === "DELETE" && url.pathname === "/pi-config") {
+      await deletePiProjectConfig();
+      return sendJson(response, 200, {
+        ...publicPiProjectConfig(),
+        message: "已清除当前项目的 Pi Agent 配置",
+        agents: await listAgents(),
+      }, origin);
+    }
+    if (request.method === "POST" && url.pathname === "/pi-config/test") {
+      const model = await testGatewayConnection(await mergedPiConfig(await readJson(request)));
+      return sendJson(response, 200, { message: `连接成功，${model} 可以正常响应` }, origin);
+    }
+    if (request.method === "POST" && url.pathname === "/pi-config/models") {
+      const models = await listGatewayModels({ strict: true, config: await mergedPiConfig(await readJson(request)) });
+      return sendJson(response, 200, { message: `已读取 ${models.length} 个模型`, models }, origin);
     }
     if (request.method === "GET" && url.pathname === "/build") {
       return sendJson(response, 200, buildJob, origin);
@@ -1669,7 +1436,6 @@ const server = http.createServer(async (request, response) => {
         url: sourceUrl,
         note: body.note || "请找出遗漏并改善这条内容，保留可靠信息。",
         block: item.blockType,
-        tool: body.tool,
         model: body.model,
         mode: "reprocess",
         contentId: item.id,
@@ -1750,7 +1516,7 @@ const server = http.createServer(async (request, response) => {
             runId: run.id,
             status: run.status,
             error: run.error || null,
-            tool: run.input.tool,
+            tool: "pi",
             elapsedMs: runElapsedMs(run),
           },
           runId: run.id,
@@ -1761,7 +1527,6 @@ const server = http.createServer(async (request, response) => {
         const body = await readJson(request);
         const next = createRun({
           ...run.input,
-          ...(body.tool ? { tool: body.tool } : {}),
           ...(body.model !== undefined ? { model: body.model } : {}),
         });
         if (next.input.conversationId) {

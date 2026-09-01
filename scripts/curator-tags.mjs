@@ -1,63 +1,51 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-/** data/tags.json is the single vocabulary; the browser reads it through
- *  lib/tags.ts and the Curator scripts read it here. Neither side keeps its
- *  own copy, so adding a tag is a one-file change. */
-const vocabulary = JSON.parse(
-  readFileSync(fileURLToPath(new URL("../data/tags.json", import.meta.url)), "utf8"),
+/** data/taxonomy.json is the single vocabulary shared by browser and scripts. */
+const taxonomy = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../data/taxonomy.json", import.meta.url)), "utf8"),
 );
 
-export const TAG_GROUPS = vocabulary.groups;
-export const TAGS = vocabulary.tags;
-export const CATEGORY_TAGS = TAGS.filter((tag) => tag.group === "category");
+export const CATEGORIES = taxonomy.categories;
+export const TAGS = taxonomy.tags;
 
-const BY_ID = new Map(TAGS.map((tag) => [tag.id, tag]));
-const GROUP_ORDER = new Map(TAG_GROUPS.map((group, index) => [group.id, index]));
+const CATEGORY_BY_ID = new Map(CATEGORIES.map((category) => [category.id, category]));
+const TAG_BY_ID = new Map(TAGS.map((tag) => [tag.id, tag]));
+
+export function knownCategory(id) {
+  return CATEGORY_BY_ID.get(id);
+}
 
 export function knownTag(id) {
-  return BY_ID.get(id);
+  return TAG_BY_ID.get(id);
 }
 
-export function tagsInGroup(group) {
-  return TAGS.filter((tag) => tag.group === group);
-}
-
-/** Vocabulary order first, proposed tags last — the same ordering the site
- *  uses, so a card reads the same before and after export. */
 export function sortTags(ids) {
   return [...new Set(ids.map(String))].sort((a, b) => {
-    const left = BY_ID.get(a);
-    const right = BY_ID.get(b);
+    const left = TAG_BY_ID.get(a);
+    const right = TAG_BY_ID.get(b);
     if (!left && !right) return a.localeCompare(b);
     if (!left) return 1;
     if (!right) return -1;
-    const byGroup = (GROUP_ORDER.get(left.group) ?? 99) - (GROUP_ORDER.get(right.group) ?? 99);
-    return byGroup !== 0 ? byGroup : TAGS.indexOf(left) - TAGS.indexOf(right);
+    return TAGS.indexOf(left) - TAGS.indexOf(right);
   });
 }
 
-/** Tags outside the vocabulary. An Agent is allowed to propose one, so these
- *  are kept and surfaced rather than dropped. */
 export function proposedTags(ids) {
-  return sortTags(ids).filter((id) => !BY_ID.get(id));
+  return sortTags(ids).filter((id) => !TAG_BY_ID.has(id));
 }
 
 export function categoryOf(item = {}) {
-  if (item.category && BY_ID.get(String(item.category))?.group === "category") return String(item.category);
-  return (item.tags || []).map(String).find((id) => BY_ID.get(id)?.group === "category") || "";
+  if (item.category && CATEGORY_BY_ID.has(String(item.category))) return String(item.category);
+  return (item.tags || []).map(String).find((id) => CATEGORY_BY_ID.has(id)) || "";
 }
 
 export function attributeTags(ids = []) {
-  return sortTags(ids).filter((id) => BY_ID.get(id)?.group !== "category");
+  return sortTags(ids).filter((id) => !CATEGORY_BY_ID.has(id));
 }
 
-/** The vocabulary as prompt text: id, label and hint, grouped, plus how many
- *  of each group to pick. Agents get the real table instead of a paraphrase. */
 export function tagVocabularyPrompt() {
-  return TAG_GROUPS.map((group) => {
-    const lines = tagsInGroup(group.id).map((tag) => `  ${tag.id}（${tag.label.zh}）：${tag.hint}`);
-    const field = group.id === "category" ? "category" : "tags";
-    return `${group.label.zh}（写入 ${field}）— ${group.note}\n${lines.join("\n")}`;
-  }).join("\n\n");
+  const categories = CATEGORIES.map((category) => `  ${category.id}（${category.label.zh}）：${category.hint}`);
+  const tags = TAGS.map((tag) => `  ${tag.id}（${tag.label.zh}）：${tag.hint}`);
+  return `二级分类（写入 category）— 每条必须且只能选一个。\n${categories.join("\n")}\n\n标签（写入 tags）— 所有标签平级、独立多选，没有互斥规则。\n${tags.join("\n")}`;
 }

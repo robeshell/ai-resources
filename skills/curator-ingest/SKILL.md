@@ -48,7 +48,7 @@
 ## 资源类型（kind 与 blockType 对应）
 
 - tool：能直接打开用的 AI 产品或服务（blockType=tool）
-- skill：给 Agent（Codex / Claude Code 等）用的技能包或指令集（blockType=skill）
+- skill：给编程 Agent 使用的技能包或指令集（blockType=skill）
 - open-source：开源仓库、框架或可本地部署的工具（blockType=project）
 - prompt：可直接复制、改写和复用的提示词模板（blockType=prompt）
 
@@ -109,7 +109,7 @@
   生成张图、做次深度研究，那些是功能，不是它的用途——通用助手就只打 chat。
   反过来，一个专门做这件事的产品才配拿那个标签。
 - `category` 必须且只能从二级分类中选一个，不得自造；不要再把它放进 `tags`。
-- `tags` 中定价最多一个；平台有几个填几个；特性没有就不填。
+- `tags` 全部平级、独立多选，没有互斥规则；符合事实就填，判断不了就不填。
 - 属性词表里实在没有合适的才自造标签，用英文小写连字符，并在 `rationale` 里说明为什么现有标签都不合适。自造标签不会自动进词表，会在编辑器里标成待归入等人确认。
 - 判断不了的标签就不填，不要为了补齐它继续搜索。
 

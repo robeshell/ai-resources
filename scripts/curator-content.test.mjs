@@ -146,7 +146,6 @@ test("publishing enforces what the public build requires", () => {
     [{ ...complete, payload: { ...complete.payload, url: "http://127.0.0.1/x" } }, /内网或保留地址/],
     [{ ...complete, category: "" }, /有效的二级分类/],
     [{ ...complete, tags: ["coding", "free"] }, /二级分类不能放在卡片标签中/],
-    [{ ...complete, tags: ["free", "paid"] }, /定价标签只能选一个/],
     [skill("empty", "active", "  "), /已发布的长文必须填写正文/],
   ];
   for (const [item, message] of cases) assert.throws(() => validateContentPayload(item), message);
@@ -164,20 +163,16 @@ test("publishing enforces what the public build requires", () => {
 });
 
 test("the vocabulary is internally consistent and shared by both sides", () => {
-  const vocabulary = JSON.parse(readFileSync(new URL("../data/tags.json", import.meta.url), "utf8"));
-  const groups = new Set(vocabulary.groups.map((group) => group.id));
+  const vocabulary = JSON.parse(readFileSync(new URL("../data/taxonomy.json", import.meta.url), "utf8"));
   const seen = new Set();
-  for (const tag of vocabulary.tags) {
-    assert.ok(groups.has(tag.group), `${tag.id} 的分组 ${tag.group} 不存在`);
-    assert.match(tag.id, /^[a-z0-9]+(-[a-z0-9]+)*$/, `${tag.id} 不是合法 id`);
-    assert.ok(tag.label.zh && tag.label.en, `${tag.id} 缺少中英文名`);
-    assert.ok(!seen.has(tag.id), `${tag.id} 重复`);
-    seen.add(tag.id);
+  for (const entry of [...vocabulary.categories, ...vocabulary.tags]) {
+    assert.match(entry.id, /^[a-z0-9]+(-[a-z0-9]+)*$/, `${entry.id} 不是合法 id`);
+    assert.ok(entry.label.zh && entry.label.en, `${entry.id} 缺少中英文名`);
+    assert.ok(!seen.has(entry.id), `${entry.id} 重复`);
+    seen.add(entry.id);
   }
-  // Ordering is what makes a card read 用途 → 特性 → 定价 → 平台 no matter
-  // which order the tags were saved in.
-  assert.deepEqual(sortTags(["web", "free", "china", "coding"]), ["coding", "china", "free", "web"]);
-  assert.deepEqual(sortTags(["zzz-proposed", "coding"]), ["coding", "zzz-proposed"]);
+  assert.deepEqual(sortTags(["web", "free", "china", "self-host"]), ["self-host", "china", "free", "web"]);
+  assert.deepEqual(sortTags(["zzz-proposed", "free"]), ["free", "zzz-proposed"]);
 });
 
 test("the batch list parser rejects junk instead of ingesting it", () => {

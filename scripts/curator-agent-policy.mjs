@@ -44,7 +44,7 @@ export function buildAgentPrompt({ skill, url, note, catalog, targetBlock, exist
 ${blockNote}
 整理备注：${String(note || "无").slice(0, 1000)}
 
-分类与标签词表（category 必须从二级分类中单选；tags 只填属性，先在表里找，实在没有合适的才自造一个英文小写连字符 id）：
+分类与标签词表（category 从二级分类中单选；tags 是平级多选标签，没有分组和互斥规则。先在表里找，实在没有合适的才自造一个英文小写连字符 id）：
 ${tagVocabularyPrompt()}
 
 当前目录（用于查重与避免重复收录；仅参考，不要照抄其中的文案）：

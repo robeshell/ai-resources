@@ -1,6 +1,6 @@
 # 数据模型
 
-Curator 的编辑源是本机 SQLite（`.curator/content.sqlite`，schema v3）；公开站只消费导出的静态 JSON/Markdown。本文是两边共享的内容契约。
+Curator 的编辑源是本机 SQLite（`.curator/content.sqlite`，schema v6）；公开站只消费导出的静态 JSON/Markdown。本文是两边共享的内容契约。
 
 ## 内容板块
 
@@ -60,7 +60,7 @@ ai_candidate (candidate) ──apply──▶ manual (current) ──下一次�
 - 服务端另有硬截断兜底（verdict 36/72 字符、summary 72/140 等），两套数字用途不同：前者是编辑口径，后者是存储上限。
 - 中英各自独立撰写，专有名词保持原文。
 
-## SQLite（schema v3）
+## SQLite（schema v6）
 
 ```mermaid
 erDiagram
@@ -76,6 +76,7 @@ erDiagram
     string slug UK
     string title
     string status "draft | active | archived"
+    string category "二级分类"
     stringArray tags
     string sourceUrl
     int sortOrder

@@ -6,8 +6,8 @@
       "name": "Claude",
       "url": "https://claude.ai/",
       "logo": "/logos/claude.png",
+      "category": "chat",
       "tags": [
-        "chat",
         "freemium",
         "web",
         "app"
@@ -32,8 +32,8 @@
       "name": "ChatGPT",
       "url": "https://chatgpt.com/",
       "logo": "/logos/chatgpt.png",
+      "category": "chat",
       "tags": [
-        "chat",
         "freemium",
         "web"
       ],
@@ -57,8 +57,8 @@
       "name": "Gemini",
       "url": "https://gemini.google.com/",
       "logo": "/logos/gemini.png",
+      "category": "chat",
       "tags": [
-        "chat",
         "freemium",
         "web",
         "app"
@@ -83,8 +83,8 @@
       "name": "DeepSeek",
       "url": "https://chat.deepseek.com/",
       "logo": "/logos/deepseek.png",
+      "category": "chat",
       "tags": [
-        "chat",
         "china",
         "free",
         "web",
@@ -110,8 +110,8 @@
       "name": "豆包",
       "url": "https://www.doubao.com/",
       "logo": "/logos/doubao.png",
+      "category": "chat",
       "tags": [
-        "chat",
         "china",
         "freemium",
         "web",
@@ -137,8 +137,8 @@
       "name": "Claude Code",
       "url": "https://claude.com/product/claude-code",
       "logo": "/logos/claude-code.png",
+      "category": "coding",
       "tags": [
-        "coding",
         "paid",
         "web",
         "app",
@@ -164,8 +164,8 @@
       "name": "Codex",
       "url": "https://openai.com/codex",
       "logo": "/logos/codex.png",
+      "category": "coding",
       "tags": [
-        "coding",
         "web",
         "app",
         "cli"
@@ -190,6 +190,7 @@
       "name": "Cursor",
       "url": "https://cursor.com/",
       "logo": "/logos/cursor.png",
+      "category": "",
       "tags": [
         "app",
         "cli"
@@ -214,8 +215,8 @@
       "name": "Gemini CLI",
       "url": "https://github.com/google-gemini/gemini-cli",
       "logo": "/logos/gemini-cli.jpg",
+      "category": "agent",
       "tags": [
-        "agent",
         "freemium",
         "cli"
       ],
@@ -239,6 +240,7 @@
       "name": "Zed",
       "url": "https://zed.dev/",
       "logo": "/logos/zed.png",
+      "category": "",
       "tags": [
         "app",
         "cli"
@@ -263,6 +265,7 @@
       "name": "GitHub Copilot",
       "url": "https://github.com/features/copilot",
       "logo": "/logos/github-copilot.png",
+      "category": "",
       "tags": [
         "freemium",
         "web",
@@ -289,6 +292,7 @@
       "name": "Devin Desktop",
       "url": "https://windsurf.com/",
       "logo": "/logos/devin-desktop.png",
+      "category": "",
       "tags": [
         "freemium",
         "app"
@@ -313,6 +317,7 @@
       "name": "Augment Code",
       "url": "https://augmentcode.com/",
       "logo": "/logos/augment-code.png",
+      "category": "",
       "tags": [
         "web",
         "cli"
@@ -337,6 +342,7 @@
       "name": "Manus",
       "url": "https://manus.im/",
       "logo": "/logos/manus.png",
+      "category": "",
       "tags": [
         "web",
         "app",
@@ -362,9 +368,8 @@
       "name": "Genspark",
       "url": "https://www.genspark.ai/",
       "logo": "/logos/genspark.png",
+      "category": "agent",
       "tags": [
-        "agent",
-        "research",
         "web"
       ],
       "status": "active",
@@ -387,8 +392,8 @@
       "name": "Midjourney",
       "url": "https://www.midjourney.com/",
       "logo": "/logos/midjourney.png",
+      "category": "video",
       "tags": [
-        "video",
         "paid",
         "web"
       ],
@@ -412,8 +417,8 @@
       "name": "Black Forest Labs",
       "url": "https://bfl.ai/",
       "logo": "/logos/black-forest-labs.png",
+      "category": "video",
       "tags": [
-        "video",
         "self-host",
         "web",
         "api"
@@ -438,6 +443,7 @@
       "name": "Ideogram",
       "url": "https://ideogram.ai/",
       "logo": "/logos/ideogram.png",
+      "category": "",
       "tags": [
         "web",
         "app",
@@ -463,8 +469,8 @@
       "name": "Recraft",
       "url": "https://www.recraft.ai/",
       "logo": "/logos/recraft.png",
+      "category": "image",
       "tags": [
-        "image",
         "freemium",
         "web",
         "api"
@@ -489,8 +495,8 @@
       "name": "Krea",
       "url": "https://www.krea.ai/",
       "logo": "/logos/krea.png",
+      "category": "video",
       "tags": [
-        "video",
         "freemium",
         "web",
         "api"
@@ -515,9 +521,8 @@
       "name": "Runway",
       "url": "https://runwayml.com/",
       "logo": "/logos/runway.png",
+      "category": "image",
       "tags": [
-        "image",
-        "video",
         "freemium",
         "web",
         "app",
@@ -543,8 +548,8 @@
       "name": "Kling AI",
       "url": "https://app.klingai.com/",
       "logo": "/logos/kling-ai.png",
+      "category": "image",
       "tags": [
-        "image",
         "china",
         "usage-based",
         "web",
@@ -570,6 +575,7 @@
       "name": "Hailuo AI",
       "url": "https://hailuoai.video/",
       "logo": "/logos/hailuo-ai.png",
+      "category": "",
       "tags": [
         "china",
         "web"
@@ -594,8 +600,8 @@
       "name": "Sora",
       "url": "https://sora.com/",
       "logo": "/logos/sora.png",
+      "category": "video",
       "tags": [
-        "video",
         "api"
       ],
       "status": "active",
@@ -618,6 +624,7 @@
       "name": "Veo",
       "url": "https://deepmind.google/models/veo/",
       "logo": "/logos/veo.png",
+      "category": "",
       "tags": [
         "web",
         "api"
@@ -642,6 +649,7 @@
       "name": "Suno",
       "url": "https://suno.com/",
       "logo": "/logos/suno.png",
+      "category": "",
       "tags": [
         "freemium",
         "web",
@@ -667,8 +675,8 @@
       "name": "ElevenLabs",
       "url": "https://elevenlabs.io/",
       "logo": "/logos/elevenlabs.png",
+      "category": "audio",
       "tags": [
-        "audio",
         "web",
         "api"
       ],
@@ -692,6 +700,7 @@
       "name": "Fish Audio",
       "url": "https://fish.audio/",
       "logo": "/logos/fish-audio.png",
+      "category": "",
       "tags": [
         "china",
         "freemium",
@@ -718,8 +727,8 @@
       "name": "Perplexity",
       "url": "https://www.perplexity.ai/",
       "logo": "/logos/perplexity.png",
+      "category": "research",
       "tags": [
-        "research",
         "freemium",
         "web",
         "api"
@@ -744,6 +753,7 @@
       "name": "NotebookLM",
       "url": "https://notebooklm.google.com/",
       "logo": "/logos/notebooklm.png",
+      "category": "",
       "tags": [
         "freemium",
         "web",
@@ -769,8 +779,8 @@
       "name": "Elicit",
       "url": "https://elicit.com/",
       "logo": "/logos/elicit.png",
+      "category": "research",
       "tags": [
-        "research",
         "freemium",
         "web",
         "api"
@@ -795,8 +805,8 @@
       "name": "OpenRouter",
       "url": "https://openrouter.ai/",
       "logo": "/logos/openrouter.png",
+      "category": "infra",
       "tags": [
-        "infra",
         "usage-based",
         "web",
         "api"
@@ -821,6 +831,7 @@
       "name": "fal",
       "url": "https://fal.ai/",
       "logo": "/logos/fal-ai.png",
+      "category": "",
       "tags": [
         "usage-based",
         "web",
@@ -846,8 +857,8 @@
       "name": "Firecrawl",
       "url": "https://firecrawl.dev/",
       "logo": "/logos/firecrawl.png",
+      "category": "infra",
       "tags": [
-        "infra",
         "usage-based",
         "web",
         "cli",
@@ -873,8 +884,8 @@
       "name": "Exa",
       "url": "https://exa.ai/",
       "logo": "/logos/exa.png",
+      "category": "infra",
       "tags": [
-        "infra",
         "api"
       ],
       "status": "active",
@@ -897,6 +908,7 @@
       "name": "Dify",
       "url": "https://dify.ai/",
       "logo": "/logos/dify.png",
+      "category": "",
       "tags": [
         "self-host",
         "china",
@@ -923,6 +935,7 @@
       "name": "Coze",
       "url": "https://www.coze.com/",
       "logo": "/logos/coze.png",
+      "category": "",
       "tags": [
         "china",
         "freemium",
@@ -949,6 +962,7 @@
       "name": "n8n",
       "url": "https://n8n.io/",
       "logo": "/logos/n8n.png",
+      "category": "agent",
       "tags": [
         "self-host",
         "freemium",
@@ -956,16 +970,16 @@
       ],
       "status": "active",
       "verdict": {
-        "en": "Workflows on a canvas, down to code.",
-        "zh": "画布搭工作流，需要时下钻写代码。"
+        "en": "Automation canvas, code when nodes fall short.",
+        "zh": "画布上搭流程，节点不够就写代码。"
       },
       "summary": {
-        "en": "Drag nodes into automated workflows, 500+ integrations, self-host or run on n8n cloud.",
-        "zh": "画布拖拽编排流程，500+ 集成，可自托管也能云端跑。"
+        "en": "Drag nodes into automated workflows with 500+ integrations; self-host via Docker or run on n8n cloud.",
+        "zh": "拖拽节点连成自动流程，500+ 集成，可 Docker 自托管或云端跑。"
       },
       "description": {
-        "en": "Build workflows by dragging nodes onto a canvas; each step's inputs and outputs sit next to its settings, and any step can be re-run or mocked after the run. When a prebuilt node doesn't fit, drop into JavaScript or Python. n8n ships 500+ integration nodes and accepts custom API and MCP connections.\n\nUse it to chain repetitive tasks across CRMs, databases, email and alerting systems, or to run AI workflows with human approval steps. Deploy on n8n's managed cloud or self-host via Docker, even in an air-gapped environment. The fair-code license keeps the source public on GitHub without making it open source.",
-        "zh": "在画布上把节点拖成一张流程图，每个节点的输入输出摊在设置面板旁边，跑完能单步重放、替换数据。预制节点接不了的就写一段 JavaScript 或 Python 下钻，官方有 500 多个集成节点，也支持自定义 API 和 MCP。\n\n适合把 CRM、数据库、邮件、告警之间的重复动作串成自动任务，也适合带人工审批步骤的 AI 工作流。部署要么托管在 n8n 云，要么 Docker 装到自己机器，甚至离线环境；许可为 fair-code，源码公开在 GitHub 但不是开源。"
+        "en": "Drag nodes onto a canvas to build a workflow; each step's inputs and outputs sit next to its settings, and a finished run can be replayed step by step with swapped data. When a prebuilt node doesn't fit, drop into JavaScript or Python, or wire in a custom API and MCP connection. n8n ships 500+ integration nodes.\n\nUse it to chain repetitive steps across CRMs, databases, email and alerting systems, or build AI workflows with human approval gates. Deploy on n8n's managed cloud, or self-host with Docker — even air-gapped. The fair-code license keeps source public on GitHub without being open source.",
+        "zh": "把节点拖到画布上连成流程，每个节点的输入输出跟在设置旁边，跑完能单步回放、换数据重跑。500+ 预制集成节点，预制接不了的就写一段 JavaScript 或 Python 下钻，也能连自定义 API 和 MCP。\n\n适合把 CRM、数据库、邮件、告警之间的重复动作串成自动任务，或搭带人工审批的 AI 工作流。部署可选 n8n 云托管或 Docker 自托管到本地，甚至离线环境；fair-code 许可让源码公开在 GitHub，但不算开源。"
       }
     }
   ]

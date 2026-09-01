@@ -86,9 +86,8 @@ export function CuratorChrome({ children }: { children: React.ReactNode }) {
       </Drawer>
 
       <AppShell.Main>
-        {(service === "offline" || build.status === "error") ? <Container size="xl" className="curator-shell-alerts">
+        {service === "offline" ? <Container size="xl" className="curator-shell-alerts">
           {service === "offline" ? <Alert color="yellow" title="Curator 服务未启动" role="status">运行 <code>npm run curator</code> 后重试。</Alert> : null}
-          {build.status === "error" ? <Alert color="red" title="构建校验失败" role="alert" mt="sm">{build.error || "构建没有完成"}</Alert> : null}
         </Container> : null}
         <Container component="div" size="xl" className="curator-main curator-page-container">{children}</Container>
       </AppShell.Main>

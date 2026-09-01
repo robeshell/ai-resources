@@ -23,7 +23,7 @@ npm run dev    # http://localhost:3000 → /en/
 
 ## 本地 Curator
 
-Curator 负责读取链接，调用本机 **Codex** 或 **Claude Code** 生成分类与双语草稿，并在人工确认后写入本地 SQLite。公开站仍只读取导出的静态 JSON/Markdown；服务只监听 `127.0.0.1`，不会随静态站部署。
+Curator 通过内置 **Pi Agent** 读取链接、调用受控网页工具并生成结构化草稿，在人工确认后写入本地 SQLite。公开站仍只读取导出的静态 JSON/Markdown；服务只监听 `127.0.0.1`，不会随静态站部署。
 
 ```bash
 npm run curator
@@ -36,8 +36,8 @@ npm run curator
 | `/curator/` | 工作台：待办、内容检查、最近修改、构建状态 |
 | `/curator/resources/` | 统一资源库：板块、检索、筛选、排序、分页和批量操作 |
 | `/curator/resources/[block]/[slug]` | 对应板块的独立编辑器 |
-| `/curator/ingest/` | 收录一条（Codex / Claude Code） |
-| `/curator/settings/` | 系统：Agent、构建校验和运行记录 |
+| `/curator/ingest/` | 通过 Pi Agent 收录一条 |
+| `/curator/settings/` | 系统：项目专用 Pi Agent 连接、构建校验和运行记录 |
 
 「构建校验」只在系统页执行；工作台只显示构建状态和失败入口。编辑页不做重复预览，保存后直接打开公开站查看。运行手册见 `docs/curator.md`，系统架构见 `docs/architecture.md`。
 

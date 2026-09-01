@@ -61,16 +61,16 @@ test("the Agent gets the real tag vocabulary, ids and judgement hints included",
   const prompt = buildAgentPrompt({
     skill: "SKILL", url: "https://example.dev", note: "", catalog: "", targetBlock: "tool",
   });
-  const vocabulary = JSON.parse(readFileSync(new URL("../data/tags.json", import.meta.url), "utf8"));
+  const vocabulary = JSON.parse(readFileSync(new URL("../data/taxonomy.json", import.meta.url), "utf8"));
   // A paraphrase drifts from the file; the prompt has to carry every id and
   // hint, or the Agent invents synonyms for tags that already exist.
-  for (const tag of vocabulary.tags) {
-    assert.ok(prompt.includes(tag.id), `词表缺少标签 ${tag.id}`);
-    assert.ok(prompt.includes(tag.hint), `词表缺少 ${tag.id} 的判定说明`);
+  for (const entry of [...vocabulary.categories, ...vocabulary.tags]) {
+    assert.ok(prompt.includes(entry.id), `词表缺少条目 ${entry.id}`);
+    assert.ok(prompt.includes(entry.hint), `词表缺少 ${entry.id} 的判定说明`);
   }
   assert.match(prompt, /先在表里找/);
   assert.match(prompt, /二级分类（写入 category）/);
-  assert.match(prompt, /定价（写入 tags）— 互斥，取一个。/);
+  assert.match(prompt, /标签（写入 tags）— 所有标签平级、独立多选，没有互斥规则。/);
 });
 
 test("the ingest rules keep the Agent out of this site's own published copy", () => {
