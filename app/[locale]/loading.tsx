@@ -2,11 +2,10 @@ export default function Loading() {
   return (
     <>
       <header className="compact-intro" aria-hidden="true">
-        <span className="skeleton-line skeleton-tagline compact-intro-kicker" />
         <div>
           <span className="skeleton-line skeleton-display" />
-          <span className="skeleton-line skeleton-line-short" />
         </div>
+        <span className="skeleton-line skeleton-line-short" />
       </header>
       <section className="catalog-only" aria-hidden="true">
         <div className="library-shell">

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Alert, AppShell, Badge, Box, Burger, Container, Drawer, Group, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { BrandMark } from "@/components/BrandMark";
+import { AccentPicker } from "@/components/AccentPicker";
 import { curatorRequest, type BuildJob } from "@/lib/curator-client";
 import { useBuildJob } from "@/components/curator/useBuildJob";
 
@@ -43,7 +44,7 @@ export function CuratorChrome({ children }: { children: React.ReactNode }) {
           <Group h="100%" justify="space-between" wrap="nowrap">
           <Group gap="xl" wrap="nowrap">
           <Link href="/zh/" className="curator-brand-link" aria-label="返回 AI 资源集">
-            <Group gap="xs" wrap="nowrap"><BrandMark size={22} /><span>Curator</span></Group>
+            <Group gap="sm" wrap="nowrap"><BrandMark size={28} /><span><strong>AI 资源集</strong><small>Curator</small></span></Group>
           </Link>
           <Group component="nav" aria-label="Curator" gap="xl" visibleFrom="sm">
             {links.map((link) => (
@@ -60,7 +61,8 @@ export function CuratorChrome({ children }: { children: React.ReactNode }) {
           </Group>
           </Group>
           <Group gap="sm" wrap="nowrap">
-            <Badge color={service === "online" ? "teal" : service === "offline" ? "red" : "gray"} variant="light" size="sm" visibleFrom="sm">
+            <AccentPicker locale="zh" />
+            <Badge color={service === "online" ? "curator" : service === "offline" ? "red" : "gray"} variant="light" size="sm" visibleFrom="sm">
               {service === "online" ? "服务正常" : service === "offline" ? "服务未启动" : "连接中"}
             </Badge>
             {build.status === "running" ? <Badge color="curator" variant="light" size="sm" visibleFrom="sm">构建校验中</Badge> : null}
@@ -77,7 +79,7 @@ export function CuratorChrome({ children }: { children: React.ReactNode }) {
               {link.label}
             </Box>
           ))}
-          <Text size="sm" c={service === "online" ? "teal.8" : service === "offline" ? "red.7" : "dimmed"} mt="md">
+          <Text size="sm" c={service === "online" ? "curator.8" : service === "offline" ? "red.7" : "dimmed"} mt="md">
             {service === "online" ? "服务正常" : service === "offline" ? "服务未启动" : "连接中"}
           </Text>
         </Stack>

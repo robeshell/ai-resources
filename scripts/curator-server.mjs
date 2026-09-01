@@ -12,7 +12,7 @@ import {
   importLegacyCatalog,
 } from "./curator-db.mjs";
 import { claudeJsonSchema, claudeStreamStatus, codexProgressLine, describeAgentFailure, parseClaudeDraft, parseClaudeStructured } from "./curator-agent-output.mjs";
-import { sortTags } from "./curator-tags.mjs";
+import { attributeTags, categoryOf, sortTags } from "./curator-tags.mjs";
 import {
   assertContentItemShape,
   assertUrlShape,
@@ -1106,9 +1106,9 @@ function normalizeDraft(input = {}, finalUrl) {
   try { fallbackName = new URL(finalUrl).hostname.replace(/^www\./, ""); } catch {}
   const name = cleanText(input.name || fallbackName, 80);
   const kind = blockType === "project" ? "open-source" : blockType;
-  // Tags are the only classification axis; an Agent may propose one outside
-  // the vocabulary, so unknown ids survive here and get flagged in the editor.
-  const tags = sortTags(Array.isArray(input.tags) ? input.tags.map((tag) => slugify(String(tag))).filter(Boolean) : []);
+  const rawTags = Array.isArray(input.tags) ? input.tags.map((tag) => slugify(String(tag))).filter(Boolean) : [];
+  const category = categoryOf({ category: slugify(String(input.category || "")), tags: rawTags });
+  const tags = attributeTags(rawTags);
   const links = Array.isArray(input.links)
     ? input.links.map((link) => ({
         label: cleanText(link?.label, 80),
@@ -1122,6 +1122,7 @@ function normalizeDraft(input = {}, finalUrl) {
     url: finalUrl,
     kind,
     blockType,
+    category,
     tags,
     verdict: {
       en: cleanText(input.verdict?.en, 72),
@@ -1190,6 +1191,7 @@ function asLegacyCatalogItem(item) {
     url,
     ...(payload.logo ? { logo: payload.logo } : {}),
     kind: contentKindToLegacy(item.blockType),
+    category: categoryOf(item),
     tags: Array.isArray(item.tags) ? sortTags(item.tags) : [],
     // Legacy clients only understand active/archived. Keep the richer state
     // alongside it until the board-specific editors land.
@@ -1319,6 +1321,7 @@ async function saveDraft(rawDraft, conversationId) {
       slug: draft.slug,
       title: draft.name,
       status: blockType === "tool" ? "active" : "draft",
+      category: draft.category || "",
       tags: Array.isArray(draft.tags) ? draft.tags : [],
       sourceUrl: finalUrl,
       createdAt: at,
@@ -1426,7 +1429,8 @@ async function saveContentItem(raw, expectedRevisionId) {
     ...raw,
     id: current?.id || String(raw.id || raw.slug),
     slug: slugify(raw.slug || raw.title),
-    tags: sortTags(Array.isArray(raw.tags) ? raw.tags.map(String) : []),
+    category: categoryOf(raw),
+    tags: attributeTags(Array.isArray(raw.tags) ? raw.tags.map(String) : []),
     status: ["draft", "active", "archived"].includes(raw.status) ? raw.status : "draft",
     sourceUrl: raw.sourceUrl ? String(raw.sourceUrl) : undefined,
   };
@@ -1686,7 +1690,7 @@ const server = http.createServer(async (request, response) => {
     if (request.method === "POST" && contentAbandonCandidateMatch) {
       return sendJson(response, 200, await abandonCandidate(decodeURIComponent(contentAbandonCandidateMatch[1]), contentAbandonCandidateMatch[2]), origin);
     }
-    const runMatch = url.pathname.match(/^\/runs\/([^/]+)(?:\/(events|cancel|retry|save))?$/);
+    const runMatch = url.pathname.match(/^\/runs\/([^/]+)(?:\/(events|cancel|retry|resume|save))?$/);
     if (runMatch) {
       const run = runs.get(decodeURIComponent(runMatch[1]));
       if (!run) return sendJson(response, 404, { error: "找不到这次分析" }, origin);
@@ -1716,6 +1720,42 @@ const server = http.createServer(async (request, response) => {
         const cancelled = cancelRun(run);
         await recordCancelledConversationRun(cancelled);
         return sendJson(response, 200, publicRun(cancelled), origin);
+      }
+      if (request.method === "POST" && action === "resume") {
+        const repository = await contentStore();
+        const existingConversationId = run.input.conversationId;
+        if (existingConversationId) {
+          const existingConversation = repository.getConversation(existingConversationId);
+          if (existingConversation) return sendJson(response, 200, existingConversation, origin);
+        }
+
+        const title = run.draft?.name || run.source?.title || run.input.url || "资源收录";
+        const conversation = repository.createConversation({ title });
+        run.input.conversationId = conversation.id;
+        run.updatedAt = new Date().toISOString();
+        persistRuns();
+
+        const originalInput = [run.input.url, run.input.note].filter(Boolean).join("\n\n");
+        repository.addMessage(conversation.id, {
+          role: "user",
+          kind: "text",
+          text: originalInput || "继续上一次收录",
+          data: { resumedRunId: run.id },
+        });
+        repository.addMessage(conversation.id, {
+          role: "assistant",
+          kind: "run",
+          text: run.error || "上一次整理未完成。",
+          data: {
+            runId: run.id,
+            status: run.status,
+            error: run.error || null,
+            tool: run.input.tool,
+            elapsedMs: runElapsedMs(run),
+          },
+          runId: run.id,
+        });
+        return sendJson(response, 200, repository.getConversation(conversation.id), origin);
       }
       if (request.method === "POST" && action === "retry") {
         const body = await readJson(request);

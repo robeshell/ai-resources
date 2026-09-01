@@ -10,6 +10,7 @@ const vocabulary = JSON.parse(
 
 export const TAG_GROUPS = vocabulary.groups;
 export const TAGS = vocabulary.tags;
+export const CATEGORY_TAGS = TAGS.filter((tag) => tag.group === "category");
 
 const BY_ID = new Map(TAGS.map((tag) => [tag.id, tag]));
 const GROUP_ORDER = new Map(TAG_GROUPS.map((group, index) => [group.id, index]));
@@ -42,11 +43,21 @@ export function proposedTags(ids) {
   return sortTags(ids).filter((id) => !BY_ID.get(id));
 }
 
+export function categoryOf(item = {}) {
+  if (item.category && BY_ID.get(String(item.category))?.group === "category") return String(item.category);
+  return (item.tags || []).map(String).find((id) => BY_ID.get(id)?.group === "category") || "";
+}
+
+export function attributeTags(ids = []) {
+  return sortTags(ids).filter((id) => BY_ID.get(id)?.group !== "category");
+}
+
 /** The vocabulary as prompt text: id, label and hint, grouped, plus how many
  *  of each group to pick. Agents get the real table instead of a paraphrase. */
 export function tagVocabularyPrompt() {
   return TAG_GROUPS.map((group) => {
     const lines = tagsInGroup(group.id).map((tag) => `  ${tag.id}（${tag.label.zh}）：${tag.hint}`);
-    return `${group.label.zh} — ${group.note}\n${lines.join("\n")}`;
+    const field = group.id === "category" ? "category" : "tags";
+    return `${group.label.zh}（写入 ${field}）— ${group.note}\n${lines.join("\n")}`;
   }).join("\n\n");
 }

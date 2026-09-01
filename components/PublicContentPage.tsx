@@ -11,7 +11,7 @@ export function PublicContentPage({ item, locale }: { item: PublicContentDocumen
     <article className="public-article">
       <Link href={`/${locale}/?kind=${item.blockType}#catalog`} className="public-article-back">← {t.backToLibrary}</Link>
       <header>
-        <p>{t.contentBlock[item.blockType]}</p>
+        <p className="public-article-kind">{t.contentBlock[item.blockType]}</p>
         <h1>{item.title}</h1>
         <span>{text(item.summary, locale)}</span>
       </header>

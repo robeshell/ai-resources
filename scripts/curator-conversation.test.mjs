@@ -12,7 +12,8 @@ function tool(id, at) {
     slug: id,
     title: id,
     status: "draft",
-    tags: ["coding", "free", "web"],
+    category: "coding",
+    tags: ["free", "web"],
     createdAt: at,
     updatedAt: at,
     payload: {

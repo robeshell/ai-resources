@@ -1,6 +1,6 @@
 "use client";
 
-import { useRootDataset, useRovingKeys, useSlidingPill } from "@/components/Transitions";
+import { useMounted, useRootDataset } from "@/components/Transitions";
 import { ui } from "@/lib/i18n";
 import {
   applyTheme,
@@ -13,39 +13,29 @@ import type { Locale } from "@/lib/types";
 
 export function AppearanceToggle({ locale }: { locale: Locale }) {
   const t = ui(locale);
+  const mounted = useMounted();
   const current = useRootDataset("theme");
-  const theme: Theme = isTheme(current) ? current : DEFAULT_THEME;
-  const { barRef, pillRef } = useSlidingPill(current === undefined ? undefined : theme);
-  useRovingKeys(barRef);
+  const theme: Theme = mounted && isTheme(current) ? current : DEFAULT_THEME;
+  const next: Theme = theme === "dark" ? "light" : "dark";
 
-  function choose(next: Theme) {
+  function choose() {
     applyTheme(next);
     localStorage.setItem(THEME_STORAGE_KEY, next);
   }
 
   return (
-    <div ref={barRef} className="pill-switch" role="radiogroup" aria-label={t.themeGroup}>
-      <span ref={pillRef} className="t-tabs-pill" aria-hidden="true" />
-      <button
-        type="button"
-        role="radio"
-        aria-checked={theme === "light"}
-        tabIndex={theme === "light" ? 0 : -1}
-        className={theme === "light" ? "is-active" : undefined}
-        onClick={() => choose("light")}
-      >
-        {t.themeLight}
-      </button>
-      <button
-        type="button"
-        role="radio"
-        aria-checked={theme === "dark"}
-        tabIndex={theme === "dark" ? 0 : -1}
-        className={theme === "dark" ? "is-active" : undefined}
-        onClick={() => choose("dark")}
-      >
-        {t.themeDark}
-      </button>
-    </div>
+    <button
+      type="button"
+      className="theme-toggle"
+      aria-label={t.themeGroup}
+      aria-pressed={theme === "dark"}
+      suppressHydrationWarning
+      onClick={choose}
+    >
+      <span className="theme-toggle-moon" aria-hidden="true" />
+      <span className="theme-toggle-label" suppressHydrationWarning>
+        {theme === "dark" ? t.themeDark : t.themeLight}
+      </span>
+    </button>
   );
 }

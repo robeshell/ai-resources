@@ -18,7 +18,8 @@ function tool(id, status) {
     slug: id,
     title: id,
     status,
-    tags: ["coding", "free", "web"],
+    category: "coding",
+    tags: ["free", "web"],
     createdAt: at,
     updatedAt: at,
     payload: {
@@ -38,7 +39,8 @@ function skill(id, status, body) {
     slug: id,
     title: id,
     status,
-    tags: ["coding"],
+    category: "coding",
+    tags: [],
     createdAt: at,
     updatedAt: at,
     payload: { summary: { zh: "技能摘要", en: "Skill summary" }, body, links: [] },
@@ -142,9 +144,9 @@ test("publishing enforces what the public build requires", () => {
     [{ ...complete, payload: { ...complete.payload, tagline: { zh: "", en: "en only" } } }, /中英文定位/],
     [{ ...complete, payload: { ...complete.payload, url: "not-a-url" } }, /完整的 http/],
     [{ ...complete, payload: { ...complete.payload, url: "http://127.0.0.1/x" } }, /内网或保留地址/],
-    [{ ...complete, tags: ["free", "web"] }, /至少选择一个用途标签/],
-    [{ ...complete, tags: [] }, /至少选择一个用途标签/],
-    [{ ...complete, tags: ["coding", "free", "paid"] }, /定价标签只能选一个/],
+    [{ ...complete, category: "" }, /有效的二级分类/],
+    [{ ...complete, tags: ["coding", "free"] }, /二级分类不能放在卡片标签中/],
+    [{ ...complete, tags: ["free", "paid"] }, /定价标签只能选一个/],
     [skill("empty", "active", "  "), /已发布的长文必须填写正文/],
   ];
   for (const [item, message] of cases) assert.throws(() => validateContentPayload(item), message);

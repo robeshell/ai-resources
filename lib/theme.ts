@@ -1,7 +1,7 @@
 export const THEME_STORAGE_KEY = "ai-nav-theme";
 export const ACCENT_STORAGE_KEY = "ai-nav-accent";
 
-export const ACCENTS = ["orange", "purple", "blue", "teal", "rose"] as const;
+export const ACCENTS = ["orange", "purple", "blue", "rose"] as const;
 
 export type Theme = "light" | "dark";
 export type Accent = (typeof ACCENTS)[number];

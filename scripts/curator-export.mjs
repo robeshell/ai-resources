@@ -3,7 +3,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { createContentRepository, importLegacyCatalog, openContentDb } from "./curator-db.mjs";
-import { sortTags } from "./curator-tags.mjs";
+import { attributeTags, categoryOf } from "./curator-tags.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DB_FILE = path.resolve(process.env.CURATOR_CONTENT_DB || path.join(ROOT, ".curator", "content.sqlite"));
@@ -21,7 +21,8 @@ function legacyTool(item) {
     name: item.title,
     url: String(payload.url || item.sourceUrl || ""),
     ...(payload.logo ? { logo: payload.logo } : {}),
-    tags: sortTags(item.tags || []),
+    category: categoryOf(item),
+    tags: attributeTags(item.tags || []),
     status: item.status,
     verdict: payload.tagline,
     summary: payload.summary,
@@ -37,7 +38,8 @@ function markdownDocument(item) {
     blockType: item.blockType,
     title: item.title,
     status: item.status,
-    tags: item.tags || [],
+    category: categoryOf(item),
+    tags: attributeTags(item.tags || []),
     ...(item.sourceUrl ? { sourceUrl: item.sourceUrl } : {}),
     payload,
   };

@@ -403,7 +403,7 @@ export function ConversationPanel({ contentId, conversationId, currentPayload = 
             {durationLabel(data.elapsedMs)}{data.polished ? " · 含润色" : ""}
           </Text> : null}
         </Group>
-        <Badge color={changes.length || mode !== "editor" ? "teal" : "gray"} variant="light">
+        <Badge color={changes.length || mode !== "editor" ? "curator" : "gray"} variant="light">
           {mode !== "editor" ? "等待确认" : changes.length ? `${changes.length} 处建议` : adopted ? "已采用" : "无改动"}
         </Badge>
       </Group>

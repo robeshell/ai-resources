@@ -103,6 +103,870 @@
         "en": "DeepSeek is a general-purpose chat assistant built around the company’s own language models. In a conversation, users can switch on web search or Deep-Think mode, upload files, and ask the model to extract or reason over their contents. Chat history syncs across supported devices.\n\nIt suits everyday writing, analysis, coding questions, and tasks that benefit from a more deliberate reasoning pass. The consumer web and mobile apps are currently free; programmatic API access is a separate, usage-priced service, so the free label does not cover API calls.",
         "zh": "DeepSeek 是基于自研模型的通用对话助手。用户可以在会话中开启联网搜索或「深度思考」，也能上传文件，让模型抽取文本并结合内容回答；登录后，对话记录可在支持的设备间同步。\n\n它适合日常问答、写作、分析、编程咨询，以及需要多一步推理的任务。网页端和移动端目前免费，但程序调用属于单独的按量计费 API 服务，不能把聊天产品的免费范围直接理解成 API 也免费。"
       }
+    },
+    {
+      "id": "doubao",
+      "slug": "doubao",
+      "name": "豆包",
+      "url": "https://www.doubao.com/",
+      "logo": "/logos/doubao.png",
+      "tags": [
+        "chat",
+        "china",
+        "freemium",
+        "web",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "ByteDance assistant with Office task mode.",
+        "zh": "能接管 Office 的字节系助手"
+      },
+      "summary": {
+        "en": "Handles everyday questions and creation through chat; task mode can operate Office, browsers, skills, and schedules.",
+        "zh": "对话处理问答与创作，工作任务模式可自动操作 Office"
+      },
+      "description": {
+        "en": "Doubao starts as a general chat assistant for questions, search, writing, translation, coding, image creation, and document work. Its desktop task mode can use a browser, invoke skills, work inside Office tools, and schedule jobs instead of stopping at an answer.\n\nIt suits everyday Chinese-language study, life, and office tasks across the web and native apps. Core access is free, while professional plans and creation credits are sold through in-app purchases; automated work features may vary by client.",
+        "zh": "豆包以对话为入口，处理问答、搜索、写作、翻译、代码、图片生成和资料整理。桌面端的工作任务模式还能调用浏览器与 Skills，操作 Office 套件、生成文档和 PPT，并按计划执行任务，不只停在给出答案。\n\n它适合中文学习、日常查询和办公交付，可从网页及移动、桌面客户端使用。基础入口免费，专业版和创作额度通过应用内购买；自动办公能力会随客户端有所差异。"
+      }
+    },
+    {
+      "id": "claude-code",
+      "slug": "claude-code",
+      "name": "Claude Code",
+      "url": "https://claude.com/product/claude-code",
+      "logo": "/logos/claude-code.png",
+      "tags": [
+        "coding",
+        "paid",
+        "web",
+        "app",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "An agent that codes inside your terminal.",
+        "zh": "在终端里读写并验证整座代码库"
+      },
+      "summary": {
+        "en": "It searches repositories, edits files, runs commands, and asks permission before changing code or executing tools.",
+        "zh": "搜索代码库、跨文件修改并运行验证，动手前会请求权限。"
+      },
+      "description": {
+        "en": "Claude Code works directly against a codebase: it searches project structure and dependencies, edits multiple files, runs tests and command-line tools, and can carry an issue through to a pull request. It runs locally and talks to Claude’s model APIs without requiring a remote code index.\n\nIt fits repository onboarding, bug fixes, refactors, tests, and feature work where the agent needs to inspect and verify the whole project. Access requires an eligible Claude plan or a Console account billed at standard API rates; usage limits apply.",
+        "zh": "Claude Code 直接进入代码库工作，会搜索项目结构与依赖、跨文件改代码、调用 Git 等命令行工具、运行测试，也能把 issue 一路处理成 PR。它在本地终端运行，直接连接 Claude 模型 API，不依赖远程代码索引；修改文件或执行命令前会请求许可。\n\n它适合接手陌生仓库、修复缺陷、重构、补测试和实现功能，也可从网页、桌面与移动客户端继续编码任务。使用时需要 Claude Pro、Max、Team、Enterprise 等相应方案，或按标准 API 价格计费的 Console 账户，并受用量限制。"
+      }
+    },
+    {
+      "id": "codex",
+      "slug": "codex",
+      "name": "Codex",
+      "url": "https://openai.com/codex",
+      "logo": "/logos/codex.png",
+      "tags": [
+        "coding",
+        "web",
+        "app",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "One coding agent across every workspace.",
+        "zh": "同一个编码 Agent 跑遍各工作台"
+      },
+      "summary": {
+        "en": "Runs engineering tasks end to end across ChatGPT, editors, terminals, and cloud worktrees.",
+        "zh": "在 ChatGPT、编辑器与终端间执行完整工程任务。"
+      },
+      "description": {
+        "en": "Codex takes on engineering work such as feature development, refactors, migrations, testing, and code review. In ChatGPT, built-in worktrees and cloud environments let multiple agents work across projects in parallel.\n\nThe same agent also runs through its IDE extension and CLI, with work connected through a ChatGPT account. It fits repository-level tasks that need code changes and verification; access and execution still depend on the selected Codex surface and account.",
+        "zh": "Codex 接手功能开发、复杂重构、迁移、测试和代码审查等工程任务。在 ChatGPT 中，它借助内置 worktree 与云端环境让多个 Agent 并行处理不同项目，也能按团队编写的 Skills 执行约定流程。\n\n同一个 Agent 还能从 IDE 扩展和终端 CLI 使用，并通过 ChatGPT 账号串联工作。它适合需要实际修改仓库并完成验证的任务；具体入口与执行环境仍取决于所用客户端和账号权限。"
+      }
+    },
+    {
+      "id": "cursor",
+      "slug": "cursor",
+      "name": "Cursor",
+      "url": "https://cursor.com/",
+      "logo": "/logos/cursor.png",
+      "tags": [
+        "app",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Agents code inside your editor and terminal.",
+        "zh": "把编码 Agent 放进编辑器和终端"
+      },
+      "summary": {
+        "en": "It reads repositories, edits code, runs tasks, and returns changes for review across desktop and CLI.",
+        "zh": "读取仓库并自主编写、测试代码，结果交由你审查。"
+      },
+      "description": {
+        "en": "Cursor combines an AI code editor with autonomous coding agents. You can make targeted edits in the desktop editor or hand off a larger task; agents inspect repository files, plan changes, write code, run tests, and return the result for review. Multiple agents can also work in parallel on separate computers.\n\nIt fits feature development, repository maintenance, and recurring engineering tasks such as fixing CI failures. Cursor is available as a desktop app and CLI, while some agents run on Cursor-managed computers rather than entirely on your local machine.",
+        "zh": "Cursor 把 AI 代码编辑器与自主编码 Agent 放在同一套工作流里。你既可以在桌面编辑器中做定点修改，也可以交出完整任务，让 Agent 阅读仓库、制定计划、改写代码、运行测试，再把结果送回审查；较大的工作还能拆给多个 Agent 并行执行。\n\n它适合开发功能、维护仓库，以及定时修复 CI 等重复工程任务。主要入口包括桌面客户端和 CLI；其中云端 Agent 会在 Cursor 管理的计算机上运行，并非所有任务都只在本机完成。"
+      }
+    },
+    {
+      "id": "gemini-cli",
+      "slug": "gemini-cli",
+      "name": "Gemini CLI",
+      "url": "https://github.com/google-gemini/gemini-cli",
+      "logo": "/logos/gemini-cli.jpg",
+      "tags": [
+        "agent",
+        "freemium",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Gemini that works inside your terminal.",
+        "zh": "把 Gemini 放进终端干活。"
+      },
+      "summary": {
+        "en": "Reads and edits code, runs shell tasks, and supports MCP; free quotas require a Google login or API key.",
+        "zh": "能读写代码、执行命令并接入 MCP，免费额度需登录或配置密钥。"
+      },
+      "description": {
+        "en": "Gemini CLI runs an AI agent inside the terminal. It can inspect and edit a codebase, execute shell commands, fetch web content, ground answers with Google Search, and connect extra tools through MCP. Interactive sessions, JSON output, and headless scripting cover both hands-on coding and automated workflows.\n\nIt suits developers who want Gemini close to their repository and command-line tools. The client is open source under Apache 2.0 and installs locally, but model access still needs a Google account, Gemini API key, or Vertex AI connection. Free quotas are available; higher limits and some access paths are billed.",
+        "zh": "Gemini CLI 在终端中运行 Gemini Agent，可读取和修改代码库、执行 Shell 命令、抓取网页，并用 Google Search 补充实时信息。它既能交互式处理编码任务，也能输出 JSON 或以无头模式嵌入脚本；MCP 还能接入外部工具。\n\n它适合习惯围绕仓库和命令行工作的开发者。客户端以 Apache 2.0 开源并安装在本机，但模型推理仍需 Google 账号、Gemini API Key 或 Vertex AI，不能离线独立运行。个人账号和 API 有免费额度，更高限额或企业路径可能产生费用。"
+      }
+    },
+    {
+      "id": "zed",
+      "slug": "zed",
+      "name": "Zed",
+      "url": "https://zed.dev/",
+      "logo": "/logos/zed.png",
+      "tags": [
+        "app",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "A fast editor for parallel coding agents.",
+        "zh": "能并行跑 Agent 的极速编辑器"
+      },
+      "summary": {
+        "en": "A Rust-native editor where multiple agents can edit files, inspect code, and run tools concurrently.",
+        "zh": "Rust 原生编辑器，可并行调度 Agent 改文件、跑工具"
+      },
+      "description": {
+        "en": "Zed is a native code editor written from scratch in Rust to use multiple CPU cores and the GPU. Its agentic workflow can run several agent threads across projects, while inline assistance, edit prediction, Git, debugging, and remote development stay inside the editor.\n\nIt suits developers who want to delegate coding tasks without leaving their main editing surface. Zed supports Claude Agent, Codex, and OpenCode through ACP, plus MCP servers; desktop builds are available for macOS, Linux, and Windows, with a CLI for opening projects.",
+        "zh": "Zed 是从头以 Rust 编写的原生代码编辑器，会利用多核 CPU 与 GPU。它能跨项目并行运行多个 Agent 线程，让 Agent 修改文件、浏览代码和调用工具；行内改写、编辑预测、Git、调试与远程开发也留在同一编辑界面。\n\n它适合希望边看进度、边审查改动的开发者。Zed 可通过 ACP 接入 Claude Agent、Codex 和 OpenCode，也能连接 MCP 服务器；桌面客户端覆盖 macOS、Linux 与 Windows，并带有从终端打开项目的 CLI。"
+      }
+    },
+    {
+      "id": "github-copilot",
+      "slug": "github-copilot",
+      "name": "GitHub Copilot",
+      "url": "https://github.com/features/copilot",
+      "logo": "/logos/github-copilot.png",
+      "tags": [
+        "freemium",
+        "web",
+        "app",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "From inline completion to merged pull request.",
+        "zh": "从补全管到合并。"
+      },
+      "summary": {
+        "en": "Uses repository and workspace context for suggestions, chat, edits, reviews, and coding agents; free usage is capped.",
+        "zh": "结合仓库与工作区上下文补全、改码和审查，免费版有额度限制。"
+      },
+      "description": {
+        "en": "GitHub Copilot works inside GitHub, supported editors, the terminal, and its desktop workspace. It combines your prompt with nearby code, open files, workspace details, or repository context to generate completions, explain code, propose edits, review changes, and let coding agents execute assigned tasks.\n\nIt fits developers who want one coding assistant across the path from editing to pull-request review. Copilot Free limits monthly completions and chat requests; paid plans expand usage and add features such as cloud agents, model selection, governance, and organization controls.",
+        "zh": "GitHub Copilot 嵌在 GitHub、主流编辑器、终端和桌面工作区里。它会把提示词与光标附近代码、已打开文件、依赖信息或仓库上下文组合起来，生成补全、解释代码、提出修改、审查变更，也能把开发任务交给后台 Agent 执行。\n\n它适合希望从写代码一路衔接到 Pull Request 审查的开发者。免费版限制每月补全和聊天次数；更高用量、云端 Agent、模型选择及团队治理等能力需要付费方案。"
+      }
+    },
+    {
+      "id": "devin-desktop",
+      "slug": "devin-desktop",
+      "name": "Devin Desktop",
+      "url": "https://windsurf.com/",
+      "logo": "/logos/devin-desktop.png",
+      "tags": [
+        "freemium",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "One desk for a fleet of coding agents.",
+        "zh": "一处调度多路编码 Agent"
+      },
+      "summary": {
+        "en": "Run local and cloud coding agents beside a full IDE, then inspect their changes before shipping.",
+        "zh": "在完整 IDE 里调度本地与云端 Agent，提交前审查改动。"
+      },
+      "description": {
+        "en": "Devin Desktop is the new name for Windsurf. It combines a full IDE with a command center where engineers can assign coding work to multiple local or cloud agents, track sessions on a board, share repository context through Spaces, and inspect generated diffs before pushing them.\n\nIt fits developers who regularly run several coding agents but still want hands-on editing, debugging, and review in the same desktop workspace. The app supports agents through ACP, while its free tier sits alongside paid Pro, Max, Teams, and Enterprise plans.",
+        "zh": "Devin Desktop 是 Windsurf 的新名称。它把完整 IDE 和 Agent 指挥台放在同一个桌面工作区，工程师可以把编码任务交给多个本地或云端 Agent，通过看板跟踪进度，并用 Spaces 共享上下文与 Git worktree，最后直接检查它们写出的改动。\n\n它适合经常并行跑多个编码 Agent、又要亲自编辑、调试和审查代码的团队。ACP 可接入不同模型与 Agent；产品有免费档，也有 Pro、Max、Teams 和 Enterprise 付费方案。"
+      }
+    },
+    {
+      "id": "augment-code",
+      "slug": "augment-code",
+      "name": "Augment Code",
+      "url": "https://augmentcode.com/",
+      "logo": "/logos/augment-code.png",
+      "tags": [
+        "web",
+        "cli"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Software-agent fleets for sprawling codebases.",
+        "zh": "让软件 Agent 编队接手大型代码库"
+      },
+      "summary": {
+        "en": "Agents carry tickets through coding and review, backed by codebase context and human approval gates.",
+        "zh": "用代码库上下文串起工单、编码与审查，关键动作由人确认"
+      },
+      "description": {
+        "en": "Augment Code’s Cosmos coordinates specialized software agents across the development lifecycle. A ticket can move through triage, implementation, testing, and review, while its Context Engine supplies codebase understanding and shared memory carries corrections into later runs.\n\nIt fits engineering organizations that want recurring work handled across large repositories, including PR review, migrations, incident investigation, and vulnerability remediation. Teams retain human approval gates, and execution can use managed cloud sandboxes, company-owned machines, or a mixture of both.",
+        "zh": "Augment Code 的 Cosmos 把分诊、改代码、测试和审查拆给不同的软件 Agent，再由 Context Engine 补齐大型代码库的上下文。工单可以一路推进到 PR，跨任务的共享记忆也会保留工程师的修正。\n\n它更适合要批量处理代码审查、迁移、故障调查或漏洞修复的工程团队。关键节点会停下来等人确认；运行环境既能选托管云沙箱，也能接入企业自己的机器，敏感代码不必离开内部环境。"
+      }
+    },
+    {
+      "id": "manus",
+      "slug": "manus",
+      "name": "Manus",
+      "url": "https://manus.im/",
+      "logo": "/logos/manus.png",
+      "tags": [
+        "web",
+        "app",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "An agent that ships finished artifacts.",
+        "zh": "接目标，直接交付成品"
+      },
+      "summary": {
+        "en": "Turns broad requests into slides, websites, designs, games, and research across hosted apps and an API.",
+        "zh": "把宽泛目标做成幻灯片、网站、设计、游戏或研究结果。"
+      },
+      "description": {
+        "en": "Manus starts from a broad request rather than a manually assembled workflow. It can turn that request into concrete artifacts such as slides, websites, designs, games, images, music, or research, and includes a browser operator for tasks that require working across web pages.\n\nIt fits jobs where the desired outcome is clearer than the sequence of steps: preparing a deck, building a small site, exploring a topic, or producing creative assets. The official site exposes a web app, mobile and desktop downloads, and an API; it does not state that the service can be self-hosted.",
+        "zh": "Manus 从一个宽泛目标开始工作，不要求用户先把步骤编排成流程。它会围绕目标产出幻灯片、网站、设计、游戏、图片、音乐或研究结果，也有浏览器操作能力，可处理需要跨网页完成的任务。\n\n它适合“结果明确、过程不想逐步指定”的工作，比如做一份演示稿、搭建小型网站、整理研究材料或生成创意资产。官网列出了网页端、移动与桌面客户端以及 API；页面没有说明支持本地部署。"
+      }
+    },
+    {
+      "id": "genspark",
+      "slug": "genspark",
+      "name": "Genspark",
+      "url": "https://www.genspark.ai/",
+      "logo": "/logos/genspark.png",
+      "tags": [
+        "agent",
+        "research",
+        "web"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "An agent that ships finished work.",
+        "zh": "直接交付工作成品"
+      },
+      "summary": {
+        "en": "It turns plain-language requests into slides, documents, spreadsheets, web pages, or live dashboards in the browser.",
+        "zh": "从一句需求拆解任务，生成幻灯片、文档、表格、网页或实时看板。"
+      },
+      "description": {
+        "en": "Genspark is a browser-based AI workspace built around completing multi-step work rather than stopping at a chat response. A request can become a presentation, document, spreadsheet, web page, report, or other finished artifact; its dashboard tool can also query data in natural language, choose a chart, and keep the result live.\n\nIt fits research and business tasks where the desired output is something shareable, not merely an answer. The site exposes many specialist generators alongside the main workspace, so capabilities vary by artifact; the reviewed page confirms web access but does not state a clear pricing boundary.",
+        "zh": "Genspark 是一个以交付成品为核心的网页 AI 工作区。用户描述目标后，它可以继续处理多步任务，并产出幻灯片、文档、表格、网页、报告等内容；其中实时看板功能还能用自然语言查询数据、选择图表并持续刷新结果。\n\n它更适合市场研究、汇报材料和业务分析这类最终需要可分享成果的工作，而不只是问答。站内也集合了图片、音视频和写作等专项工具，不同成品的流程会有所区别；已读页面能确认网页入口，但没有明确说明收费边界。"
+      }
+    },
+    {
+      "id": "midjourney",
+      "slug": "midjourney",
+      "name": "Midjourney",
+      "url": "https://www.midjourney.com/",
+      "logo": "/logos/midjourney.png",
+      "tags": [
+        "video",
+        "paid",
+        "web"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Distinctive visuals from prompts and references.",
+        "zh": "风格辨识度高的图像生成器"
+      },
+      "summary": {
+        "en": "Create and edit images from prompts or references, then animate a still into a five-second video.",
+        "zh": "用文字和参考图生成、编辑图像，也能把单图变成五秒视频。"
+      },
+      "description": {
+        "en": "Midjourney’s web Create page turns text prompts and uploaded images into new visuals. Image prompts steer composition and color, style references carry over a look, and Omni Reference maintains a character or object. Finished work can be varied, edited, organized, or used as the opening frame of a short video.\n\nIt suits concept art, campaign exploration, illustration, and rapid visual direction when aesthetic interpretation matters more than exact manual control. Access requires a renewing subscription. Creations are open by default; private Stealth Mode is limited to Pro and Mega plans.",
+        "zh": "Midjourney 在网页 Create 页面里接收文字与参考图，再生成新的视觉结果。Image Prompt 可影响构图和色彩，Style Reference 延续特定风格，Omni Reference 用来保持人物或物体一致；生成结果还能继续做变体、编辑、归档，或作为短视频的起始帧。\n\n它适合概念图、插画、活动视觉探索和快速确定美术方向，尤其偏向让模型参与审美解释的工作。使用前需要订阅，方案按月或按年自动续费；作品默认可能公开，Stealth 私密模式仅限 Pro 与 Mega 方案。"
+      }
+    },
+    {
+      "id": "black-forest-labs",
+      "slug": "black-forest-labs",
+      "name": "Black Forest Labs",
+      "url": "https://bfl.ai/",
+      "logo": "/logos/black-forest-labs.png",
+      "tags": [
+        "video",
+        "self-host",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "FLUX models, from playground to self-hosting.",
+        "zh": "FLUX 从网页试做到自托管"
+      },
+      "summary": {
+        "en": "Create images and video in a browser, integrate via API, or deploy open-weight FLUX models yourself.",
+        "zh": "浏览器生成图像与视频，也能接入 API 或自行部署开放权重"
+      },
+      "description": {
+        "en": "Black Forest Labs is the company behind FLUX. Its browser playground accepts prompts and media for image transformation and generation; FLUX 3 also spans video with native audio, including text, image, or keyframe inputs and multi-shot output.\n\nTeams can move the same model family into products through the FLUX API. Open-weight releases can instead run on private infrastructure and be fine-tuned or customized, but self-hosted and commercial uses remain subject to the applicable BFL license terms.",
+        "zh": "Black Forest Labs 是 FLUX 背后的公司。网页 Playground 可直接测试提示词、生成图像或转换媒体；FLUX 3 还覆盖带原生音频的视频生成，可从文字、图片或关键帧开始，一次生成多个镜头。\n\n需要接入产品时，可调用 FLUX API；希望掌控部署与微调时，也能下载开放权重并运行在自己的基础设施上。开放权重不等于用途不受限，自托管和商业使用仍须遵守对应的 BFL 许可条款。"
+      }
+    },
+    {
+      "id": "ideogram",
+      "slug": "ideogram",
+      "name": "Ideogram",
+      "url": "https://ideogram.ai/",
+      "logo": "/logos/ideogram.png",
+      "tags": [
+        "web",
+        "app",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Image generation that can spell.",
+        "zh": "排版文字不再靠抽卡"
+      },
+      "summary": {
+        "en": "Generate, edit, and typeset visuals in one workspace, or connect through its API and MCP.",
+        "zh": "在同一画布生成、改图和排字，也能经 API 或 MCP 接入。"
+      },
+      "description": {
+        "en": "Ideogram turns text prompts into finished visual assets, with particular attention to readable typography and faithful layouts. Its workspace combines image generation, editing, background and object removal, resizing, style control, and iterative revisions.\n\nIt fits posters, ads, print-on-demand designs, and other work where words must survive inside the image. You can use it in a browser or iPhone app, while developers can connect through a unified API and agents through MCP; API requests are billed per request.",
+        "zh": "Ideogram 把文字提示变成可继续修改的视觉成品，重点处理图片里的清晰文字与版式。网页工作区把生图、局部编辑、去背景、删物体、尺寸适配和样式调整放在连续流程里，适合反复修改而非一次出图。\n\n它更适合海报、广告素材、按需印刷和其他需要准确排字的场景。创作者可从网页或 iPhone 客户端使用，开发者还能通过统一 API 接入，Agent 工作流则可连接 MCP；API 按请求计费。"
+      }
+    },
+    {
+      "id": "recraft",
+      "slug": "recraft",
+      "name": "Recraft",
+      "url": "https://www.recraft.ai/",
+      "logo": "/logos/recraft.png",
+      "tags": [
+        "image",
+        "freemium",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Editable vectors generated from prompts.",
+        "zh": "提示词直接生成可编辑矢量图"
+      },
+      "summary": {
+        "en": "Generates styled vectors, typography, and raster images for design work in the browser or through an API.",
+        "zh": "生成风格统一的矢量、文字与位图素材，可在网页或 API 中使用"
+      },
+      "description": {
+        "en": "Recraft turns text prompts into editable vector graphics, illustrations, typography, and raster images. Its image models emphasize prompt adherence and art-directed output, while reusable styles keep assets visually consistent across a project.\n\nIt fits designers making icons, brand graphics, advertising assets, or other artwork that must remain editable after generation. Recraft runs in a browser and also exposes an API; free usage is available, while heavier use and some capabilities require paid credits or plans.",
+        "zh": "Recraft 把文字描述变成可编辑矢量图、插画、排版文字和位图。它强调对复杂提示词的理解，并能用统一风格生成一组视觉素材，生成结果可继续用于设计制作。\n\n它适合制作图标、品牌图形、广告素材等需要后续编辑的内容。主要入口是网页工作室，也有 API；可免费开始使用，更高额度和部分能力需要购买积分或订阅。"
+      }
+    },
+    {
+      "id": "krea",
+      "slug": "krea",
+      "name": "Krea",
+      "url": "https://www.krea.ai/",
+      "logo": "/logos/krea.png",
+      "tags": [
+        "video",
+        "freemium",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "A visual canvas that renders as you steer.",
+        "zh": "边调边出的实时视觉画布"
+      },
+      "summary": {
+        "en": "Generate images live from prompts and controllable primitives; video and editing are included, with limited free credits.",
+        "zh": "文字与图元实时生图，兼顾视频和编辑；免费额度有限。"
+      },
+      "description": {
+        "en": "Krea turns text prompts and controllable visual primitives into images with a live preview, so composition and style can be adjusted while the result changes. The same browser workspace also covers generative editing, upscaling, custom LoRA training, video, 3D, and node-based workflows.\n\nIt suits visual exploration where waiting for a full render would interrupt iteration. Free accounts receive daily credits and full access to real-time models, but broader model access and commercial licensing require a paid plan; API usage is billed separately per successful generation.",
+        "zh": "Krea 把文字提示和可控图元直接映射成实时画面，构图或风格一变，预览也跟着更新。网页工作区还包含生成式编辑、图像放大、LoRA 训练、视频、3D 与节点工作流。\n\n它适合需要连续试构图、快速定视觉方向的创作过程。免费账户有每日额度，并可完整使用实时模型，但其他图像、视频和 3D 模型受到限制；商业授权需付费方案，API 余额也与网页套餐分开计算。"
+      }
+    },
+    {
+      "id": "runway",
+      "slug": "runway",
+      "name": "Runway",
+      "url": "https://runwayml.com/",
+      "logo": "/logos/runway.png",
+      "tags": [
+        "image",
+        "video",
+        "freemium",
+        "web",
+        "app",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Generate and edit in one workspace.",
+        "zh": "生成和剪辑同处一个工作区"
+      },
+      "summary": {
+        "en": "Generate and edit video, images, and audio in a cloud workspace, with apps and an API available.",
+        "zh": "在云端工作区生成并编辑视频、图像和音频，另有客户端与 API。"
+      },
+      "description": {
+        "en": "Runway Creative combines AI generation and editing for video, images, and audio in a shared cloud workspace. Creators can move from generated material to edited output without switching between separate media tools.\n\nIt suits individual creators and teams producing visual content in a browser or mobile app. Runway also runs a separate developer platform for model access through APIs; free access is available, while deeper use has paid pricing.",
+        "zh": "Runway Creative 把视频、图像和音频的 AI 生成与编辑放进同一个云端工作区。创作者可以从素材生成接着做到成片处理，不必在多个媒介工具之间来回切换。\n\n它适合个人或团队制作视觉内容，可从网页和移动客户端使用。面向程序接入的 Runway Dev 是另一套 API 平台；产品可以免费试用，持续或更深度的使用涉及付费方案。"
+      }
+    },
+    {
+      "id": "kling-ai",
+      "slug": "kling-ai",
+      "name": "Kling AI",
+      "url": "https://app.klingai.com/",
+      "logo": "/logos/kling-ai.png",
+      "tags": [
+        "image",
+        "china",
+        "usage-based",
+        "web",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Multi-shot video with native audio.",
+        "zh": "多镜头与原生音频一起生成"
+      },
+      "summary": {
+        "en": "Turns prompts and visual references into controlled video; credits vary by duration, resolution, and audio mode.",
+        "zh": "从提示词和参考素材生成可控视频，按时长、清晰度与音频模式扣点。"
+      },
+      "description": {
+        "en": "Kling AI generates videos from text, images, and reference elements. Its current workflow can plan multi-shot sequences, preserve referenced subjects across camera changes, generate dialogue and ambient sound natively, or let creators specify individual shots and durations. It also includes image generation and a shared creative canvas.\n\nIt suits short films, advertising concepts, product visuals, and character-led clips where motion and subject consistency matter. The web service charges credits according to output duration, resolution, and audio settings; some character-capture features are app-only, and individual generations remain short-form.",
+        "zh": "Kling AI 可把文字、图片和角色参考转成视频。生成时既能自动规划多镜头，也能逐镜设置内容与时长；参考元素可约束人物或物体的一致性，并能直接生成对白、环境声和多语言口音。站内也包含图片生成与创作画布。\n\n它适合短片分镜、广告概念、商品视觉和角色连续性要求较高的片段。视频按时长、分辨率及是否生成原生音频扣除点数，部分角色采集能力仅在客户端开放，单次成片仍以短视频为主。"
+      }
+    },
+    {
+      "id": "hailuo-ai",
+      "slug": "hailuo-ai",
+      "name": "Hailuo AI",
+      "url": "https://hailuoai.video/",
+      "logo": "/logos/hailuo-ai.png",
+      "tags": [
+        "china",
+        "web"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Turns photos into staged short videos.",
+        "zh": "让照片直接演成短视频"
+      },
+      "summary": {
+        "en": "Upload photos or text to generate template-based videos directly in the browser.",
+        "zh": "上传照片或文字生成模板化视频，浏览器直接使用。"
+      },
+      "description": {
+        "en": "Hailuo AI turns uploaded photos and text prompts into short AI-generated videos. Its creation feed centers on ready-made scenarios such as dance clips, transformations, sports scenes, atmospheric promos, and photo-driven motion, while Omni Reference supports visual consistency across a generation.\n\nIt suits quick social clips, stylized effects, and concept shots when starting from an existing portrait or reference image. It runs in the browser, and the site explicitly warns that generated content must be used legally and responsibly; subscription details are visible, but the accessible page does not establish exact pricing or free-use limits.",
+        "zh": "Hailuo AI 以照片和文字为输入生成短视频。页面里的创作入口围绕舞蹈、变身、运动、氛围短片等现成场景展开，也能通过 Omni Reference 维持参考对象的视觉特征，适合从人物照快速做出带动作和镜头效果的片段。\n\n它更适合社交短片、风格化特效和概念镜头，不是传统时间线剪辑器。产品可在浏览器中直接使用，页面同时提醒用户合法、友善地使用 AI 生成内容；站内出现订阅入口，但当前页面没有明确说明价格和免费额度。"
+      }
+    },
+    {
+      "id": "sora",
+      "slug": "sora",
+      "name": "Sora",
+      "url": "https://sora.com/",
+      "logo": "/logos/sora.png",
+      "tags": [
+        "video",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "OpenAI’s retiring video generator.",
+        "zh": "即将退场的视频生成器"
+      },
+      "summary": {
+        "en": "Turns prompts and images into video; its web and app experiences have shut down.",
+        "zh": "从文字或图像生成视频；网页和客户端已停运。"
+      },
+      "description": {
+        "en": "Sora is OpenAI’s video-generation system. It creates clips from text or images, while earlier versions also supported storyboards, remixing, blending, looping, and extending existing footage.\n\nIt was aimed at short-form visual concepts and scene prototyping, but it is now being discontinued. The web and app experiences closed on April 26, 2026, and the remaining API is scheduled to shut down on September 24, 2026, so it is unsuitable for new long-term workflows.",
+        "zh": "Sora 是 OpenAI 的视频生成系统，可从文字或图像合成短片。此前的网页产品还包含故事板、重混、融合、循环和片段延展等编辑方式，适合快速试做镜头与视觉概念。\n\n这项产品已进入停运阶段。网页和客户端于 2026 年 4 月 26 日关闭，尚存的 API 也计划在 2026 年 9 月 24 日停止，因此不适合再作为长期工作流的新依赖。"
+      }
+    },
+    {
+      "id": "veo",
+      "slug": "veo",
+      "name": "Veo",
+      "url": "https://deepmind.google/models/veo/",
+      "logo": "/logos/veo.png",
+      "tags": [
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Video generation with native sound.",
+        "zh": "画面和声音一次生成"
+      },
+      "summary": {
+        "en": "Turns prompts and reference images into cinematic clips with dialogue, ambience, and sound effects.",
+        "zh": "用提示词或参考图生成带对白、环境声和音效的视频。"
+      },
+      "description": {
+        "en": "Veo 3.1 generates video and audio together from written prompts. It can synthesize dialogue, ambience, and sound effects natively, while reference images can anchor a scene, character, object, or visual style across a generation.\n\nIt fits short cinematic sequences, concept shots, trailers, and other work where sound belongs in the first draft. Veo is available through Gemini and Google Flow in the browser, with a developer entry point for API integration; access conditions vary by entry point.",
+        "zh": "Veo 3.1 根据文字提示同时生成画面与声音，对白、环境声和音效都能直接进入成片。还可以加入场景、角色、物体或风格参考图，让生成结果更贴近既定视觉方向。\n\n它适合制作短片概念、电影感镜头、预告片和需要同步声音初稿的内容。网页端可从 Gemini 或 Google Flow 使用，开发者也能通过接口接入；具体可用范围取决于所选入口。"
+      }
+    },
+    {
+      "id": "suno",
+      "slug": "suno",
+      "name": "Suno",
+      "url": "https://suno.com/",
+      "logo": "/logos/suno.png",
+      "tags": [
+        "freemium",
+        "web",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "A prompt becomes a finished song.",
+        "zh": "一句描述生成完整歌曲"
+      },
+      "summary": {
+        "en": "Generate vocals, lyrics, and instrumentation, then edit or export stems; commercial rights require a paid subscription.",
+        "zh": "生成词曲、人声与编曲，可继续编辑；商用权需付费订阅。"
+      },
+      "description": {
+        "en": "Describe a genre, mood, theme, or supply your own lyrics, and Suno turns the prompt into a complete track with vocals, instrumentation, and production. You can regenerate or extend the result, rewrite lyrics, rearrange sections, upload audio, and export aligned stems for further work in a DAW.\n\nIt suits quick demos, background music, playful songs, and fuller production workflows through Suno Studio. The free tier allows up to ten songs per day, while advanced editing, larger quotas, stem export, and commercial rights are tied to paid plans.",
+        "zh": "写下曲风、情绪、主题或自己的歌词，Suno 会生成包含人声、乐器与完整制作的歌曲。成品还能重新生成、续写、改词、调整段落，或拆成对齐的音轨后送进常用 DAW 继续制作。\n\n它适合快速做歌曲小样、视频配乐，也能通过 Suno Studio 进入多轨编辑流程。免费层每天可生成最多 10 首；更高额度、进阶编辑、音轨导出及歌曲商用权属于付费方案。"
+      }
+    },
+    {
+      "id": "elevenlabs",
+      "slug": "elevenlabs",
+      "name": "ElevenLabs",
+      "url": "https://elevenlabs.io/",
+      "logo": "/logos/elevenlabs.png",
+      "tags": [
+        "audio",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Voices that act, not just speak.",
+        "zh": "让合成语音带上情绪和角色"
+      },
+      "summary": {
+        "en": "Generate, clone, transcribe, and dub voices in 70+ languages through a browser or API.",
+        "zh": "在网页或 API 中生成、克隆、转写及跨语言配音。"
+      },
+      "description": {
+        "en": "ElevenLabs turns text into controllable, expressive speech and can clone or design voices. Its creative workspace also handles transcription, dubbing, music, and sound effects, while the API exposes speech models tuned for consistency, latency, or emotional control.\n\nIt fits audiobook, podcast, character, localization, and conversational-agent workflows. You can work in the browser or integrate it into software through the API; language support and commercial rights can vary by model or subscription tier.",
+        "zh": "ElevenLabs 能把文字合成为可控制情绪与表现力的语音，也能克隆真人声音或根据描述设计新声音。网页创作区还集成了转写、配音、音乐和音效，开发者则可通过 API 选用偏重稳定性、低延迟或情绪控制的语音模型。\n\n它适合有声书、播客、游戏角色、内容本地化和实时语音 Agent。既能在浏览器里直接制作，也能接入程序；不同模型支持的语言范围并不完全相同，部分内容的商业权利还会随订阅档位变化。"
+      }
+    },
+    {
+      "id": "fish-audio",
+      "slug": "fish-audio",
+      "name": "Fish Audio",
+      "url": "https://fish.audio/",
+      "logo": "/logos/fish-audio.png",
+      "tags": [
+        "china",
+        "freemium",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Clone multilingual voices from ten seconds.",
+        "zh": "十秒样音克隆多语种声音"
+      },
+      "summary": {
+        "en": "Generate expressive speech, clone voices, or transcribe audio on the web and via API; commercial use requires a paid plan.",
+        "zh": "克隆声音并合成带情绪的语音，免费版仅限个人用途。"
+      },
+      "description": {
+        "en": "Fish Audio turns text into speech, clones a speaker from as little as ten seconds of recorded audio, and transcribes speech. Its web workspace includes a large voice library, multilingual output, and inline tags for emotions, pauses, laughter, and other vocal cues; developers can use REST APIs for text-to-speech and voice cloning.\n\nIt fits video narration, audiobooks, character dialogue, and low-latency voices for conversational agents. Monthly free generations are available for personal use, while monetized or business content requires a paid plan; API usage follows pay-as-you-go pricing.",
+        "zh": "Fish Audio 能把文本合成为语音，也能用最短约十秒的录音克隆说话人，并处理语音转写。网页端可选声音库与多种语言，还能在文本中加入愤怒、耳语、叹气、停顿等标签；开发者也可通过 REST API 接入语音合成和声音克隆。\n\n它适合视频旁白、有声书、角色对白和低延迟语音机器人。免费额度仅限个人用途，商业发布或内容变现需要升级付费方案；API 则按调用量结算。"
+      }
+    },
+    {
+      "id": "perplexity",
+      "slug": "perplexity",
+      "name": "Perplexity",
+      "url": "https://www.perplexity.ai/",
+      "logo": "/logos/perplexity.png",
+      "tags": [
+        "research",
+        "freemium",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Web answers with citations attached.",
+        "zh": "把网页搜索写成带引文的答案"
+      },
+      "summary": {
+        "en": "Searches the live web, synthesizes sources, and keeps citations visible for verification; deeper research has plan limits.",
+        "zh": "实时检索并综合多方来源，答案保留引文；深度研究受套餐额度限制。"
+      },
+      "description": {
+        "en": "Perplexity interprets a question, searches the web in real time, reads relevant pages, and writes a conversational answer with links back to its sources. Follow-up questions retain the thread’s context, while Pro Search and Research mode run broader, multi-step investigations.\n\nIt fits fact-finding, source discovery, and research drafts where traceability matters more than a list of blue links. Free accounts receive limited advanced searches; higher limits and model selection require a subscription, while API credits are billed separately.",
+        "zh": "Perplexity 接收自然语言问题后实时搜索网页，筛选相关材料，再把多方信息整理成带来源链接的回答。用户可以沿着同一话题追问；Pro Search 与 Research 模式会执行更多轮检索和分析，适合处理复杂问题。\n\n它适合查证事实、寻找原始资料和起草需要追溯出处的研究结论。普通账户可使用有限次数的高级搜索，更高额度、模型选择等能力需要订阅；API 另设额度与账单，回答中的结论仍应回到原文核验。"
+      }
+    },
+    {
+      "id": "notebooklm",
+      "slug": "notebooklm",
+      "name": "NotebookLM",
+      "url": "https://notebooklm.google.com/",
+      "logo": "/logos/notebooklm.png",
+      "tags": [
+        "freemium",
+        "web",
+        "app"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Answers from your sources, with citations.",
+        "zh": "只围着你的来源回答。"
+      },
+      "summary": {
+        "en": "Import mixed source material, then ask questions or turn it into cited briefs, maps, and audio overviews.",
+        "zh": "导入多种资料，再生成带引用的回答、简报、导图和音频概览。"
+      },
+      "description": {
+        "en": "NotebookLM builds each notebook around material you choose, including PDFs, web pages, YouTube transcripts, audio, Google files, and pasted text. Its chat retrieves relevant passages from those sources and attaches inline citations; the same material can become briefings, study guides, mind maps, quizzes, or audio overviews.\n\nIt fits research, study, and document-heavy work where claims need a visible trail back to the source. A Google Account is required, imports have size and source-count limits, and free usage is capped; eligible Google AI or Workspace plans raise limits and unlock additional features.",
+        "zh": "NotebookLM 以你导入的资料为边界，可接收 PDF、网页、YouTube 字幕、音频、Google 文件和粘贴文本。聊天时会从所选来源检索相关内容并标注行内引用，同一批材料还能整理成简报、学习指南、思维导图、测验或音频概览。\n\n它适合读论文、备课和梳理项目资料，尤其是需要随时回查出处的工作。使用时必须登录 Google 账号；单个来源、每本笔记的来源数量和每日生成次数都有上限，部分 Google AI 或 Workspace 方案可提高限额并开放更多功能。"
+      }
+    },
+    {
+      "id": "elicit",
+      "slug": "elicit",
+      "name": "Elicit",
+      "url": "https://elicit.com/",
+      "logo": "/logos/elicit.png",
+      "tags": [
+        "research",
+        "freemium",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Literature reviews with sentence-level citations.",
+        "zh": "逐句引用的文献综述"
+      },
+      "summary": {
+        "en": "Searches scientific papers, extracts evidence, and builds cited reports; best suited to rigorous literature reviews.",
+        "zh": "检索论文、抽取证据并生成带引用的报告，适合严谨综述。"
+      },
+      "description": {
+        "en": "Enter a research question and Elicit searches scientific literature semantically, compares relevant papers in structured tables, and generates reports whose claims link back to source sentences. Its systematic-review workflow can also screen studies and extract selected data fields.\n\nIt fits evidence synthesis, early literature mapping, and longer systematic reviews in academia, policy, and life sciences. The browser app has a free entry tier, while deeper usage is paid; an API is also available. Automated output still needs expert review, especially for high-stakes decisions and judgments about study quality.",
+        "zh": "输入研究问题后，Elicit 会语义检索科学论文，把相关研究整理进结构化表格，并生成能追溯到原文句子的引用报告。系统综述流程还能筛选研究、抽取指定字段，让检索、比较和证据整理留在同一条工作线上。\n\n它适合前期文献摸底、证据综合和较长周期的系统综述，尤其常见于学术、政策与生命科学研究。网页端可免费开始使用，深入使用需付费，另有 API。自动生成的结论仍需研究者核查，不能替代研究质量判断。"
+      }
+    },
+    {
+      "id": "openrouter",
+      "slug": "openrouter",
+      "name": "OpenRouter",
+      "url": "https://openrouter.ai/",
+      "logo": "/logos/openrouter.png",
+      "tags": [
+        "infra",
+        "usage-based",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "One API key across hundreds of models.",
+        "zh": "一个密钥切换数百种模型"
+      },
+      "summary": {
+        "en": "Routes one compatible API across model providers, with shared credits and automatic fallback when a provider fails.",
+        "zh": "统一接口连接多家模型商，按量扣减共享余额并支持故障回退。"
+      },
+      "description": {
+        "en": "OpenRouter puts models from many providers behind one OpenAI-compatible API. Applications keep the same integration while switching models, and its distributed routing can fall back to another provider when an endpoint goes down.\n\nIt fits teams that compare models or need to change providers without rebuilding their API layer. Usage draws from prepaid credits shared across models and providers; there is no subscription requirement, but model calls are billed according to usage.",
+        "zh": "OpenRouter 把多家供应商的模型接到同一个兼容 OpenAI 的 API 后面。应用只需维护一套接入，就能按任务切换模型；某个供应商不可用时，分布式路由还能回退到其他可用端点。\n\n它适合需要持续比较模型，或不想反复改造接口的开发团队。用户先购买通用余额，再按具体模型调用量扣费，不要求订阅；不同模型与供应商的实际成本仍会变化。"
+      }
+    },
+    {
+      "id": "fal-ai",
+      "slug": "fal-ai",
+      "name": "fal",
+      "url": "https://fal.ai/",
+      "logo": "/logos/fal-ai.png",
+      "tags": [
+        "usage-based",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "One API for generative media models.",
+        "zh": "生成媒体模型的统一接口。"
+      },
+      "summary": {
+        "en": "Call hosted media models or deploy your own, with output-based or GPU-time billing.",
+        "zh": "统一调用托管模型，也能部署自有模型；按输出或 GPU 用量计费。"
+      },
+      "description": {
+        "en": "fal exposes image, video, audio, speech, 3D, and streaming models through a unified API. Developers select a model endpoint, submit typed inputs through REST or client SDKs, and can use queues and webhooks for longer-running generation. A browser playground is available for testing models before integration.\n\nIt suits teams building generative-media features without operating inference infrastructure themselves. fal also supports deploying custom Python model applications onto managed GPU runners, but it is a hosted service rather than self-hosted software. Charges vary by endpoint and are based on successful outputs or GPU processing time.",
+        "zh": "fal 把图像、视频、音频、语音、3D 与实时生成模型放在统一 API 后面。开发者选择模型端点，通过 REST 或客户端 SDK 提交结构化参数；耗时任务可接队列和 webhook，也能先在网页 Playground 里试跑模型。\n\n它适合给产品接入多种生成媒体能力，而不想自行维护推理集群的团队。除调用现成模型外，也能把自有 Python 模型应用部署到 fal 管理的 GPU runner；它属于托管服务，并非本地部署软件。费用随端点变化，按成功输出或实际 GPU 处理时间扣除预付额度。"
+      }
+    },
+    {
+      "id": "firecrawl",
+      "slug": "firecrawl",
+      "name": "Firecrawl",
+      "url": "https://firecrawl.dev/",
+      "logo": "/logos/firecrawl.png",
+      "tags": [
+        "infra",
+        "usage-based",
+        "web",
+        "cli",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Web context built for AI agents.",
+        "zh": "给 Agent 接上实时网页"
+      },
+      "summary": {
+        "en": "Searches, renders, and scrapes sites into clean Markdown or structured JSON, with free monthly credits and usage billing.",
+        "zh": "搜索、渲染并抓取网站，输出干净 Markdown 或结构化 JSON，按额度计费。"
+      },
+      "description": {
+        "en": "Firecrawl gives agents and AI applications one API for web search, page scraping, site crawling, and browser interaction. It renders JavaScript-heavy pages, waits for dynamic content, and returns Markdown, HTML, screenshots, metadata, or JSON shaped by a supplied schema.\n\nIt fits research agents, RAG ingestion, monitoring, and workflows that need current web context without maintaining browsers and proxies. The hosted service includes proprietary rendering and interaction infrastructure; self-serve accounts receive monthly free credits, then use credit-based pay-as-you-go billing.",
+        "zh": "Firecrawl 把网页搜索、单页抓取、整站爬取和页面交互收进同一套 API。它会处理 JavaScript 渲染与动态加载，再把页面整理成 Markdown、HTML、截图、元数据，或按指定 schema 返回结构化 JSON；Agent 也能通过 CLI、Skill 或 MCP 接入。\n\n它适合研究 Agent、RAG 数据导入、网页监控，以及需要实时网页上下文但不想自行维护浏览器和代理的团队。托管版包含专有的渲染与交互基础设施；自助账户每月有免费 credits，超出后按 credits 继续计费，开源版与托管版能力并不完全相同。"
+      }
+    },
+    {
+      "id": "exa",
+      "slug": "exa",
+      "name": "Exa",
+      "url": "https://exa.ai/",
+      "logo": "/logos/exa.png",
+      "tags": [
+        "infra",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Web search shaped for AI agents.",
+        "zh": "给 Agent 接入全网检索"
+      },
+      "summary": {
+        "en": "Search, crawl, extract highlights, or run cited research through one agent-facing API.",
+        "zh": "从快速搜索到带引用研究，都经同一套 API 返回。"
+      },
+      "description": {
+        "en": "Exa gives agents a programmable route into the web. Its APIs search a dedicated index, crawl pages, extract concise highlights, and can return structured results or deeper research with citations.\n\nIt fits coding agents, research pipelines, enrichment jobs, and other systems that need fresh external context without operating a consumer search interface. The primary interface is an API; the site also exposes a dashboard and playground for trying requests.",
+        "zh": "Exa 把网页搜索做成 Agent 可调用的接口。程序可以检索其网页索引、抓取页面正文、提取更省 token 的相关片段，也能按结构化格式返回结果，或执行带引用的深度研究。\n\n它适合编码 Agent、资料检索流程和数据补全任务，尤其是模型需要实时外部上下文时。主要入口是 API，并非面向普通用户的搜索框；官网另有控制台和 Playground 供开发者试跑请求。"
+      }
+    },
+    {
+      "id": "dify",
+      "slug": "dify",
+      "name": "Dify",
+      "url": "https://dify.ai/",
+      "logo": "/logos/dify.png",
+      "tags": [
+        "self-host",
+        "china",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Draw agent logic before shipping it.",
+        "zh": "把 Agent 流程画出来"
+      },
+      "summary": {
+        "en": "Visually compose agents and RAG pipelines, then publish them as web apps or APIs.",
+        "zh": "可视化编排 Agent 与 RAG，再发布成网页应用或 API。"
+      },
+      "description": {
+        "en": "Dify turns prompts, model calls, retrieval, tools, decisions, and human input into a visible workflow. Teams can test each path, attach searchable knowledge bases, inspect run logs, and publish the same logic as a hosted app, embedded experience, API endpoint, or MCP-compatible tool.\n\nIt fits teams building repeatable AI applications without maintaining every orchestration layer themselves. Dify Cloud handles hosting, while Community Edition runs through Docker and Enterprise supports private or VPC deployments. Self-hosting still leaves model access, infrastructure, upgrades, and operations to the adopting team.",
+        "zh": "Dify 把提示词、模型调用、知识检索、工具、条件判断和人工输入编排成可视化流程。团队能逐段测试执行路径，接入经过清洗与索引的知识库，再将同一套逻辑发布为网页应用、嵌入组件、API 或兼容 MCP 的工具，并通过日志和反馈检查运行结果。\n\n它适合需要反复构建 Agent、RAG 应用和内部 AI 流程的团队。Dify Cloud 负责托管，Community Edition 可用 Docker 自行部署，企业版也支持私有环境或 VPC；选择自托管后，模型账户、算力、升级和日常运维仍需自己承担。"
+      }
+    },
+    {
+      "id": "coze",
+      "slug": "coze",
+      "name": "Coze",
+      "url": "https://www.coze.com/",
+      "logo": "/logos/coze.png",
+      "tags": [
+        "china",
+        "freemium",
+        "web",
+        "api"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Build agents that ship across channels.",
+        "zh": "把 Agent 搭成可发布应用"
+      },
+      "summary": {
+        "en": "Arrange prompts, models, workflows, and templates, then publish agents to apps, web pages, mini programs, or APIs.",
+        "zh": "编排模型、提示词与工作流，再发布到应用、网页、小程序或 API。"
+      },
+      "description": {
+        "en": "Coze is a browser-based development platform for assembling AI agents without starting from application code. Its studio combines prompt development, multiple models, templates, workflows, and supporting resources into a visual building process.\n\nIt fits teams prototyping task-specific assistants or turning repeatable AI processes into deployable products. Agents can be released to apps, web pages, mini programs, or accessed through APIs. API use starts with 100 free call credits per account; further usage requires purchasing tokens.",
+        "zh": "Coze 是浏览器里的 AI Agent 开发平台，用户可以在工作台中组合提示词、不同模型、应用模板和编排流程，不必先从完整代码工程起步，再把做好的 Agent 变成可运行的应用。\n\n它适合搭建面向具体任务的助手，或把重复的 AI 处理步骤做成固定流程。成品可发布到应用、网页和小程序，也能通过 API 接入其他系统。每个账户有 100 次免费 API 调用额度，超出后需要购买 Token。"
+      }
+    },
+    {
+      "id": "n8n",
+      "slug": "n8n",
+      "name": "n8n",
+      "url": "https://n8n.io/",
+      "logo": "/logos/n8n.png",
+      "tags": [
+        "self-host",
+        "freemium",
+        "web"
+      ],
+      "status": "active",
+      "verdict": {
+        "en": "Workflows on a canvas, down to code.",
+        "zh": "画布搭工作流，需要时下钻写代码。"
+      },
+      "summary": {
+        "en": "Drag nodes into automated workflows, 500+ integrations, self-host or run on n8n cloud.",
+        "zh": "画布拖拽编排流程，500+ 集成，可自托管也能云端跑。"
+      },
+      "description": {
+        "en": "Build workflows by dragging nodes onto a canvas; each step's inputs and outputs sit next to its settings, and any step can be re-run or mocked after the run. When a prebuilt node doesn't fit, drop into JavaScript or Python. n8n ships 500+ integration nodes and accepts custom API and MCP connections.\n\nUse it to chain repetitive tasks across CRMs, databases, email and alerting systems, or to run AI workflows with human approval steps. Deploy on n8n's managed cloud or self-host via Docker, even in an air-gapped environment. The fair-code license keeps the source public on GitHub without making it open source.",
+        "zh": "在画布上把节点拖成一张流程图，每个节点的输入输出摊在设置面板旁边，跑完能单步重放、替换数据。预制节点接不了的就写一段 JavaScript 或 Python 下钻，官方有 500 多个集成节点，也支持自定义 API 和 MCP。\n\n适合把 CRM、数据库、邮件、告警之间的重复动作串成自动任务，也适合带人工审批步骤的 AI 工作流。部署要么托管在 n8n 云，要么 Docker 装到自己机器，甚至离线环境；许可为 fair-code，源码公开在 GitHub 但不是开源。"
+      }
     }
   ]
 }

@@ -22,7 +22,7 @@ const BLOCKS: Array<{ value: LibraryBlock; label: string }> = [
   ...ENABLED_CONTENT_BLOCK_IDS.map((value) => ({ value, label: contentBlocks[value].label.zh })),
 ];
 const STATUS_LABEL: Record<ContentStatus, string> = { draft: "草稿", active: "已发布", archived: "已归档" };
-const STATUS_COLOR: Record<ContentStatus, string> = { draft: "gray", active: "teal", archived: "red" };
+const STATUS_COLOR: Record<ContentStatus, string> = { draft: "gray", active: "curator", archived: "red" };
 
 function summaryOf(item: LibraryItem) {
   const payload = item.payload as { summary?: { zh?: string }; tagline?: { zh?: string } };
@@ -110,7 +110,7 @@ export function ResourceLibrary() {
       <Tabs.List className="curator-block-tabs">{BLOCKS.map((item) => <Tabs.Tab value={item.value} key={item.value}>{item.label}</Tabs.Tab>)}</Tabs.List>
     </Tabs>
 
-    <Paper component="form" withBorder p="md" onSubmit={submitSearch}>
+    <Paper component="form" withBorder p="md" onSubmit={submitSearch} className="curator-library-filters">
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 5 }} spacing="sm">
         <TextInput value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="搜索名称、Slug、链接或摘要" aria-label="搜索资源" />
         <Button type="submit" variant="default" h={42}>搜索</Button>
@@ -120,7 +120,7 @@ export function ResourceLibrary() {
       </SimpleGrid>
     </Paper>
 
-    {notice ? <Alert color={notice.tone === "error" ? "red" : "teal"} title={notice.tone === "error" ? "操作失败" : "操作完成"} role={notice.tone === "error" ? "alert" : "status"}>{notice.text}</Alert> : null}
+    {notice ? <Alert color={notice.tone === "error" ? "red" : "curator"} title={notice.tone === "error" ? "操作失败" : "操作完成"} role={notice.tone === "error" ? "alert" : "status"}>{notice.text}</Alert> : null}
 
     <Paper withBorder p={0} className="curator-library-table-shell">
       <Group justify="space-between" p="md" mih={58}>

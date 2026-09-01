@@ -31,7 +31,7 @@ function blankItem(block: EditableBlock): CuratorContentItem {
 
 function EditorSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return <Paper component="section" withBorder p={{ base: "md", sm: "lg" }} className="curator-editor-section">
-    <Flex align="baseline" justify="space-between" gap="sm" wrap="wrap" className="curator-editor-section-heading">
+    <Flex direction="column" gap={6} className="curator-editor-section-heading">
       <Title order={2}>{title}</Title>
       {description ? <Text size="xs" c="dimmed" lh={1.5}>{description}</Text> : null}
     </Flex>

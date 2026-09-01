@@ -18,7 +18,7 @@ export function SiteHeader({
     <header className="site-header" style={{ viewTransitionName: "site-header" }}>
       <div className="site-header-inner">
         <Link href={localePath(locale)} className="brand" transitionTypes={["nav-back"]}>
-          <BrandMark />
+          <BrandMark size={34} />
           <span className="brand-name">{t.siteName}</span>
         </Link>
         <div className="site-header-actions">

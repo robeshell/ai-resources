@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { LearnChevron } from "@/components/Transitions";
 import { ToolLogo } from "@/components/ToolLogo";
 import { ui } from "@/lib/i18n";
 import { sortTags, tagLabel } from "@/lib/tags";
@@ -49,14 +48,14 @@ export function ToolDialogPanel({
         {text(tool.description, locale).split(/\n\s*\n/).filter(Boolean).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
       </div> : null}
       <div className="dialog-tags">
+        {tool.category ? <span className="tool-category">{tagLabel(tool.category, locale)}</span> : null}
         {sortTags(tool.tags ?? []).map((tag) => (
           <span key={tag} className="tool-tag">{tagLabel(tag, locale)}</span>
         ))}
       </div>
       <div className="dialog-actions">
         <a href={tool.url} className="btn-open t-learn" rel="noreferrer" target="_blank">
-          {t.openTool}
-          <LearnChevron />
+          {t.openTool} →
         </a>
         {onClose ? (
           <button type="button" className="dialog-cancel" onClick={onClose}>

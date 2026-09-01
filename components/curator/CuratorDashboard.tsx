@@ -46,14 +46,16 @@ function runTitle(run: CuratorRun) {
 /**
  * Where a run can actually be picked up again. A reprocess lives in the
  * editor of the content it belongs to; a fresh ingest lives in its own
- * conversation on the ingest page. Without a conversation there is nothing to
- * resume, so the ingest page opens a new one.
+ * conversation on the ingest page. Legacy runs may predate conversations; the
+ * ingest page adopts those runs before opening them.
  */
 function runHref(run: CuratorRun) {
   const contentId = run.input?.contentId;
   if (contentId) return `/curator/resources/${run.input?.block ?? "tool"}/${encodeURIComponent(contentId)}`;
   const conversationId = run.input?.conversationId;
-  return conversationId ? `/curator/ingest/?conversation=${encodeURIComponent(conversationId)}` : "/curator/ingest/";
+  return conversationId
+    ? `/curator/ingest/?conversation=${encodeURIComponent(conversationId)}`
+    : `/curator/ingest/?resume=${encodeURIComponent(run.id)}`;
 }
 
 function QueueItemRow({ tone, title, detail, action, href }: QueueRow) {
@@ -97,7 +99,7 @@ export function CuratorDashboard() {
     setBuildBusy(true);
     try {
       setBuild(await curatorRequest<BuildJob>("/build", { method: "POST" }));
-      notifications.show({ message: "构建校验已开始", color: "teal" });
+      notifications.show({ message: "构建校验已开始", color: "curator" });
     } catch (caught) {
       notifications.show({ message: caught instanceof Error ? caught.message : "构建校验没有开始", color: "red" });
     } finally { setBuildBusy(false); }
@@ -115,6 +117,16 @@ export function CuratorDashboard() {
   const pureDrafts = (data?.draftItems ?? []).filter((item) => !issueIds.has(item.id));
 
   const buckets: Bucket[] = [];
+  if (failedRuns.length) {
+    buckets.push({
+      id: "failed-runs", label: "分析失败", total: failedRuns.length,
+      rows: failedRuns.slice(0, BUCKET_PREVIEW).map((run) => ({
+        key: `failed:${run.id}`, tone: "error", title: runTitle(run),
+        detail: `${run.error || "分析没有完成"} · ${relativeTime(run.updatedAt)}`,
+        action: run.input?.contentId ? "去编辑器重试" : "继续这次收录", href: runHref(run),
+      })),
+    });
+  }
   if (data?.issueItems.length) {
     buckets.push({
       id: "issues", label: "内容待补齐", total: data.issuesTotal, moreHref: "/curator/resources/?issues=true",
@@ -148,13 +160,14 @@ export function CuratorDashboard() {
   const pendingTotal = buckets.reduce((total, bucket) => total + bucket.total, 0);
   const counts = data?.counts;
 
-  return <Stack gap="xl">
-    <Flex justify="space-between" align="flex-end" gap="lg" wrap="wrap" className="curator-page-heading-mantine">
+  return <Stack gap="xl" className="curator-dashboard">
+    <Flex justify="space-between" align="flex-end" gap="lg" wrap="wrap" className="curator-page-heading-mantine curator-dashboard-hero">
       <Box>
         <Text className="curator-eyebrow-mantine">Curator / 工作台</Text>
         <Title order={1} mt={4}>今天要处理的内容</Title>
+        <Text className="curator-dashboard-intro" mt="xs">从收录、校验到发布，把资源库今天需要推进的事情放在一起。</Text>
       </Box>
-      <Group gap="sm" wrap="wrap">
+      <Group gap="sm" wrap="wrap" className="curator-dashboard-actions">
         <Button component={Link} href="/curator/ingest/">收录新资源</Button>
         <Button variant="default" disabled={buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>
           {build.status === "running" ? "校验中…" : "构建校验"}
@@ -172,36 +185,22 @@ export function CuratorDashboard() {
       </Group>
     </Alert> : null}
 
-    {failedRuns.length ? <Alert color="red" title={`${failedRuns.length} 次分析失败`} role="alert">
-      <Stack gap="xs">
-        {failedRuns.slice(0, BUCKET_PREVIEW).map((run) => (
-          <Group key={run.id} justify="space-between" wrap="nowrap" gap="md">
-            <Box miw={0}>
-              <Text size="sm" fw={600} truncate="end">{runTitle(run)}</Text>
-              <Text size="xs" lineClamp={1}>{run.error || "分析没有完成"} · {relativeTime(run.updatedAt)}</Text>
-            </Box>
-            <Button component={Link} href={runHref(run)} size="xs" variant="white" color="red" style={{ flex: "0 0 auto" }}>
-              {run.input?.contentId ? "去编辑器重试" : "继续这次收录"}
-            </Button>
-          </Group>
-        ))}
-        {failedRuns.length > BUCKET_PREVIEW ? <Text size="xs">另有 {failedRuns.length - BUCKET_PREVIEW} 次，在系统页可以清理运行记录</Text> : null}
-      </Stack>
-    </Alert> : null}
-
-    <div>
+    <section className="curator-dashboard-section" aria-labelledby="curator-overview-title">
       <Group justify="space-between" mb="md" wrap="wrap">
         <Box>
           <Text className="curator-eyebrow-mantine">内容概览</Text>
-          <Title order={2} mt={4}>各板块发布中与草稿</Title>
+          <Title id="curator-overview-title" order={2} mt={4}>各板块发布中与草稿</Title>
         </Box>
-        {counts ? <Group gap="xs"><Badge variant="light" color="teal">发布中 {counts.active}</Badge><Badge variant="light" color="gray">草稿 {counts.draft ?? "—"}</Badge><Badge variant="light" color="red">归档 {counts.archived}</Badge></Group> : null}
+        {counts ? <Group gap="xs"><Badge variant="light" color="curator">发布中 {counts.active}</Badge><Badge variant="light" color="gray">草稿 {counts.draft ?? "—"}</Badge><Badge variant="light" color="red">归档 {counts.archived}</Badge></Group> : null}
       </Group>
       <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
         {ENABLED_CONTENT_BLOCK_IDS.map((block) => {
           const stat = counts?.blocks?.[block];
-          return <Paper withBorder p="lg" key={block}>
-            <Text size="sm" c="dimmed">{contentBlocks[block].label.zh}</Text>
+          return <Paper withBorder p="lg" key={block} className="curator-dashboard-stat" data-block={block}>
+            <Group justify="space-between" align="flex-start" wrap="nowrap">
+              <Text size="sm" c="dimmed">{contentBlocks[block].label.zh}</Text>
+              <Text className="curator-dashboard-stat-index">0{ENABLED_CONTENT_BLOCK_IDS.indexOf(block) + 1}</Text>
+            </Group>
             <Title order={2} mt={8} className="curator-number">{stat ? stat.active : counts ? counts[block] : <Skeleton h={28} w={48} />}</Title>
             <Group gap="xs" mt={6} wrap="nowrap">
               {stat
@@ -211,24 +210,24 @@ export function CuratorDashboard() {
           </Paper>;
         })}
       </SimpleGrid>
-    </div>
+    </section>
 
-    <div>
-      <Group justify="space-between" mb="md" wrap="wrap">
+    <section className="curator-dashboard-section curator-dashboard-work" aria-labelledby="curator-work-title">
+      <Group justify="space-between" mb="md" wrap="wrap" className="curator-dashboard-work-heading">
         <Box>
           <Text className="curator-eyebrow-mantine">待办与记录</Text>
-          <Title order={2} mt={4}>{!data ? "读取中" : pendingTotal ? `${pendingTotal} 项等你处理` : "没有待处理的内容"}</Title>
+          <Title id="curator-work-title" order={2} mt={4}>{!data ? "读取中" : pendingTotal ? <><span className="curator-dashboard-pending-number">{pendingTotal}</span> 项等你处理</> : "没有待处理的内容"}</Title>
         </Box>
         <Text size="xs" c="dimmed" className="curator-number">数据更新于 {data?.updatedAt?.replaceAll("-", ".") || "—"}</Text>
       </Group>
       {!data ? <Stack gap="xs"><Skeleton h={52} /><Skeleton h={52} /></Stack> : (
-        <Accordion variant="separated" multiple chevronPosition="right">
+        <Accordion variant="separated" multiple chevronPosition="right" className="curator-dashboard-accordion">
           {buckets.map((bucket) => (
             <Accordion.Item value={bucket.id} key={bucket.id}>
               <Accordion.Control>
                 <Group justify="space-between" wrap="nowrap" pr="sm">
                   <Text fw={600} size="sm">{bucket.label}</Text>
-                  <Badge variant="light" color="orange">{bucket.total}</Badge>
+                  <Badge variant="light" color={bucket.id === "failed-runs" ? "red" : "orange"}>{bucket.total}</Badge>
                 </Group>
               </Accordion.Control>
               <Accordion.Panel>
@@ -237,6 +236,11 @@ export function CuratorDashboard() {
                   {bucket.moreHref && bucket.total > bucket.rows.length ? (
                     <Group py="sm" className="curator-dashboard-row">
                       <Button component={Link} href={bucket.moreHref} variant="subtle" size="xs" px={0}>在资源库看全部 {bucket.total} 条</Button>
+                    </Group>
+                  ) : null}
+                  {bucket.id === "failed-runs" && bucket.total > bucket.rows.length ? (
+                    <Group py="sm" className="curator-dashboard-row">
+                      <Button component={Link} href="/curator/settings/" variant="subtle" color="red" size="xs" px={0}>在系统页查看全部 {bucket.total} 次</Button>
                     </Group>
                   ) : null}
                 </Stack>
@@ -253,7 +257,7 @@ export function CuratorDashboard() {
             <Accordion.Panel>
               {data.activity.length ? <Stack gap={0}>
                 {data.activity.slice(0, 6).map((entry, index) => <Group justify="space-between" align="center" wrap="nowrap" py="sm" className="curator-dashboard-row" key={`${entry.at}-${index}`}>
-                  <Group wrap="nowrap" gap="sm"><Box className="curator-state-dot" data-color="teal" /><Box maw="100%" miw={0}><Text fw={600} size="sm" truncate="end">{entry.message}</Text><Text size="xs" c="dimmed" mt={2} truncate="end">{entry.slug || entry.type}</Text></Box></Group>
+                  <Group wrap="nowrap" gap="sm"><Box className="curator-state-dot" data-color="curator" /><Box maw="100%" miw={0}><Text fw={600} size="sm" truncate="end">{entry.message}</Text><Text size="xs" c="dimmed" mt={2} truncate="end">{entry.slug || entry.type}</Text></Box></Group>
                   <Text size="xs" c="dimmed" style={{ flex: "0 0 auto" }}>{relativeTime(entry.at)}</Text>
                 </Group>)}
               </Stack> : <Text size="sm" c="dimmed" py="sm">还没有写入记录</Text>}
@@ -261,6 +265,6 @@ export function CuratorDashboard() {
           </Accordion.Item>
         </Accordion>
       )}
-    </div>
+    </section>
   </Stack>;
 }

@@ -69,7 +69,8 @@ test("the Agent gets the real tag vocabulary, ids and judgement hints included",
     assert.ok(prompt.includes(tag.hint), `词表缺少 ${tag.id} 的判定说明`);
   }
   assert.match(prompt, /先在表里找/);
-  assert.match(prompt, /定价 — 互斥，取一个。/);
+  assert.match(prompt, /二级分类（写入 category）/);
+  assert.match(prompt, /定价（写入 tags）— 互斥，取一个。/);
 });
 
 test("the ingest rules keep the Agent out of this site's own published copy", () => {
@@ -91,5 +92,5 @@ test("the ingest rules keep the Agent out of this site's own published copy", ()
   for (const answered of ["Claude", "ChatGPT", "Gemini", "Cursor", "NotebookLM", "Perplexity", "Codex", "Taste"]) {
     assert.ok(!examples.includes(answered), `口吻示例不能给出 ${answered} 的现成答案`);
   }
-  assert.match(skill, /用途看这个产品\*\*主要是干什么的\*\*/);
+  assert.match(skill, /二级分类看这个产品\*\*主要是干什么的\*\*/);
 });

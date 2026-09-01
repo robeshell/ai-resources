@@ -58,7 +58,7 @@ export function SiteChrome({
       <footer className="site-footer">
         <span className="footer-note">{t.footerNote}</span>
         <AccentPicker locale={locale} />
-        <span className="footer-updated">{t.updatedLabel} / {site.updatedAt.replaceAll("-", ".")}</span>
+        <span className="footer-updated">{t.updatedLabel} {site.updatedAt.replaceAll("-", ".")}</span>
       </footer>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { useRootDataset, useRovingKeys } from "@/components/Transitions";
+import { useMounted, useRootDataset, useRovingKeys } from "@/components/Transitions";
 import { ui } from "@/lib/i18n";
 import {
   ACCENTS,
@@ -16,8 +16,9 @@ import type { Locale } from "@/lib/types";
 export function AccentPicker({ locale }: { locale: Locale }) {
   const t = ui(locale);
   const barRef = useRef<HTMLDivElement>(null);
+  const mounted = useMounted();
   const current = useRootDataset("accent");
-  const accent: Accent = isAccent(current) ? current : DEFAULT_ACCENT;
+  const accent: Accent = mounted && isAccent(current) ? current : DEFAULT_ACCENT;
   useRovingKeys(barRef);
 
   function choose(next: Accent) {
@@ -26,7 +27,7 @@ export function AccentPicker({ locale }: { locale: Locale }) {
   }
 
   return (
-    <div ref={barRef} className="accent-picker" role="radiogroup" aria-label={t.accentGroup}>
+    <div ref={barRef} className="accent-picker" role="radiogroup" aria-label={t.accentGroup} suppressHydrationWarning>
       {ACCENTS.map((value) => (
         <button
           key={value}

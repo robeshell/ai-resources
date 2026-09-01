@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { sortTags } from "./curator-tags.mjs";
+import { attributeTags, categoryOf, sortTags } from "./curator-tags.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_DB_FILE = path.join(ROOT, ".curator", "content.sqlite");
@@ -12,7 +12,7 @@ const LEGACY_FILES = [
   { blockType: "tool", file: path.join(ROOT, "data/tools.json") },
 ];
 
-export const CONTENT_SCHEMA_VERSION = 5;
+export const CONTENT_SCHEMA_VERSION = 6;
 
 const MIGRATIONS = [
   {
@@ -146,6 +146,12 @@ const MIGRATIONS = [
         ON conversation_messages(run_id) WHERE run_id IS NOT NULL;
     `,
   },
+  {
+    version: 6,
+    sql: `
+      ALTER TABLE content_items ADD COLUMN category TEXT NOT NULL DEFAULT '';
+    `,
+  },
 ];
 
 function now() {
@@ -193,13 +199,15 @@ function withTransaction(db, callback) {
 
 function hydrateItem(row, revision) {
   if (!row) return null;
+  const storedTags = JSON.parse(row.tags_json || "[]");
   return {
     id: row.id,
     blockType: row.block_type,
     slug: row.slug,
     title: row.title,
     status: row.status,
-    tags: JSON.parse(row.tags_json || "[]"),
+    category: categoryOf({ category: row.category, tags: storedTags }),
+    tags: attributeTags(storedTags),
     ...(row.source_url ? { sourceUrl: row.source_url } : {}),
     ...(row.sort_order === undefined ? {} : { sortOrder: Number(row.sort_order) }),
     createdAt: row.created_at,
@@ -254,14 +262,15 @@ function saveItemWithin(db, item, { revisionKind = "manual", note = "", expected
   if (existing) {
     db.prepare(`
       UPDATE content_items
-      SET block_type = ?, slug = ?, title = ?, status = ?, tags_json = ?, source_url = ?, updated_at = ?
+      SET block_type = ?, slug = ?, title = ?, status = ?, category = ?, tags_json = ?, source_url = ?, updated_at = ?
       WHERE id = ?
     `).run(
       item.blockType,
       item.slug,
       item.title,
       item.status,
-      JSON.stringify(item.tags || []),
+      categoryOf(item),
+      JSON.stringify(attributeTags(item.tags || [])),
       item.sourceUrl || null,
       at,
       existing.id,
@@ -275,15 +284,16 @@ function saveItemWithin(db, item, { revisionKind = "manual", note = "", expected
       : Number(item.sortOrder);
     db.prepare(`
       INSERT INTO content_items
-        (id, block_type, slug, title, status, tags_json, source_url, created_at, updated_at, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (id, block_type, slug, title, status, category, tags_json, source_url, created_at, updated_at, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       item.id,
       item.blockType,
       item.slug,
       item.title,
       item.status,
-      JSON.stringify(item.tags || []),
+      categoryOf(item),
+      JSON.stringify(attributeTags(item.tags || [])),
       item.sourceUrl || null,
       at,
       at,
@@ -554,7 +564,8 @@ function migrateLegacyItem(item, defaultBlockType, sortOrder = 0) {
     slug: String(item.slug || item.id),
     title: String(item.name || item.slug || item.id),
     status: item.status === "archived" ? "archived" : blockType === "tool" ? "active" : "draft",
-    tags: legacyTags(item),
+    category: categoryOf({ category: item.category, tags: legacyTags(item) }),
+    tags: attributeTags(legacyTags(item)),
     sourceUrl: item.url ? String(item.url) : undefined,
     sortOrder,
     createdAt: at,
@@ -595,15 +606,16 @@ function insertItem(db, item) {
 
   db.prepare(`
     INSERT INTO content_items
-      (id, block_type, slug, title, status, tags_json, source_url, created_at, updated_at, sort_order)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, block_type, slug, title, status, category, tags_json, source_url, created_at, updated_at, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     item.id,
     item.blockType,
     item.slug,
     item.title,
     item.status,
-    JSON.stringify(item.tags),
+    categoryOf(item),
+    JSON.stringify(attributeTags(item.tags)),
     item.sourceUrl || null,
     item.createdAt,
     item.updatedAt,
