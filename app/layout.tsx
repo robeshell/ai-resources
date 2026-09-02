@@ -20,12 +20,12 @@ export const metadata: Metadata = {
     default: "AI Resources | Find something useful. Get to work.",
     template: "%s · AI Resources",
   },
-  description: "Useful AI products, skills and open-source projects, sorted by what they help you do.",
+  description: "Useful AI products, skills, projects, sites and prompts, sorted by what they help you do.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>

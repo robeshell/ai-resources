@@ -13,14 +13,13 @@ export function LocaleSwitch({
   pathname: string;
 }) {
   const t = ui(locale);
-  const other = locale === "en" ? "zh" : "en";
   const { barRef, pillRef } = useSlidingPill(locale);
 
   return (
     <div ref={barRef} className="pill-switch">
       <span ref={pillRef} className="t-tabs-pill" aria-hidden="true" />
       <Link
-        href={switchLocalePath(locale, locale, pathname)}
+        href={switchLocalePath(locale, "en", pathname)}
         className={locale === "en" ? "is-active" : undefined}
         aria-current={locale === "en" ? true : undefined}
         hrefLang="en"
@@ -29,7 +28,7 @@ export function LocaleSwitch({
       </Link>
       <span aria-hidden>/</span>
       <Link
-        href={switchLocalePath(locale, other, pathname)}
+        href={switchLocalePath(locale, "zh", pathname)}
         className={locale === "zh" ? "is-active" : undefined}
         aria-current={locale === "zh" ? true : undefined}
         hrefLang="zh"

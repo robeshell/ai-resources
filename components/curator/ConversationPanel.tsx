@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AssistantRuntimeProvider,
   ComposerPrimitive,
@@ -12,7 +12,7 @@ import {
   type DataMessagePartComponent,
   type ThreadMessageLike,
 } from "@assistant-ui/react";
-import { Alert, Badge, Box, Button, Group, Loader, Select, Stack, Text, Title } from "@mantine/core";
+import { Alert, Badge, Box, Button, Group, Loader, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { MarkdownBody } from "@/components/MarkdownBody";
 import {
   curatorEventUrl,
@@ -59,21 +59,68 @@ type DraftResultData = {
 };
 
 type ProgressData = {
+  runId: string;
   phase: string;
   activity: string;
   trail: string[];
   tokens: number;
-  elapsed: string;
+  startedAt: string;
   reasoning: string;
   streamedText: string;
   tools: string[];
 };
+
+const reasoningScrollPositions = new Map<string, number>();
+const reasoningOpenStates = new Map<string, boolean>();
+
+function ReasoningPanel({ runId, reasoning, initiallyOpen }: { runId: string; reasoning: string; initiallyOpen: boolean }) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(() => reasoningOpenStates.get(runId) ?? initiallyOpen);
+
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (content) content.scrollTop = reasoningScrollPositions.get(runId) ?? 0;
+  }, [reasoning, runId]);
+
+  return <details
+    className="curator-agent-thoughts"
+    open={open}
+    onToggle={(event) => {
+      const next = event.currentTarget.open;
+      reasoningOpenStates.set(runId, next);
+      setOpen(next);
+    }}
+  >
+    <summary>查看思考过程</summary>
+    <Text
+      ref={contentRef}
+      component="div"
+      size="xs"
+      c="dimmed"
+      className="curator-agent-thought-text"
+      onScroll={(event) => {
+        if (reasoningScrollPositions.size > 20 && !reasoningScrollPositions.has(runId)) {
+          reasoningScrollPositions.delete(reasoningScrollPositions.keys().next().value as string);
+        }
+        reasoningScrollPositions.set(runId, event.currentTarget.scrollTop);
+      }}
+    >{reasoning}</Text>
+  </details>;
+}
 
 const FIELD_LABEL: Record<string, string> = {
   summary: "摘要", body: "正文", links: "相关链接", tagline: "定位",
   description: "短详情",
   prompt: "提示词", variables: "变量", examples: "示例", logo: "Logo",
   url: "官网链接", category: "二级分类", tags: "卡片标签",
+};
+
+const INGEST_BLOCK_LABEL: Record<CuratorIngestBlock, string> = {
+  tool: "工具",
+  skill: "技能",
+  project: "项目",
+  site: "站点",
+  prompt: "提示词",
 };
 
 function readableValue(value: unknown): string {
@@ -174,23 +221,29 @@ function writeAgentChoice(model: string) {
 /** Declared at module scope on purpose: a component created inside the render
  *  is a new type on every render, so React remounts the whole progress block —
  *  which replayed its enter animation every time the timer ticked. */
-const AgentProgress: DataMessagePartComponent<ProgressData> = ({ data }) => <div className="curator-agent-live">
-  <Group gap="xs" wrap="nowrap" className="curator-agent-live-status">
-    <Loader size={14} color="curator" />
-    <Text size="sm" fw={500}>{data.tools.at(-1) || "思考中"}</Text>
-    <Text size="xs" c="dimmed" className="curator-number" aria-hidden="true">
-      {data.elapsed}{data.tokens ? ` · ${data.tokens} tokens` : ""}
-    </Text>
-  </Group>
-  {data.reasoning ? <details className="curator-agent-thoughts" open={!data.streamedText}>
-    <summary>查看思考过程</summary>
-    <Text component="div" size="xs" c="dimmed" className="curator-agent-thought-text">{data.reasoning}</Text>
-  </details> : null}
-  {data.tools.length || data.trail.length ? <div className="curator-agent-actions" aria-label="处理过程">
-    {[...data.trail, ...data.tools].slice(-4).map((line, index) => <Text key={`${index}-${line}`} size="xs" c="dimmed">{line}</Text>)}
-  </div> : null}
-  {data.streamedText ? <div className="curator-agent-live-text" role="status" aria-live="polite"><MarkdownBody source={data.streamedText} /></div> : null}
-</div>;
+const AgentProgress: DataMessagePartComponent<ProgressData> = ({ data }) => {
+  // Keep the clock local. Updating the external message every second causes
+  // assistant-ui to rebuild the data part and resets the reasoning scroller.
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <div className="curator-agent-live">
+    <Group gap="xs" wrap="nowrap" className="curator-agent-live-status">
+      <Loader size={14} color="curator" />
+      <Text size="sm" fw={500}>{data.tools.at(-1) || "思考中"}</Text>
+      <Text size="xs" c="dimmed" className="curator-number" aria-hidden="true">
+        {elapsedLabel(data.startedAt, clock)}{data.tokens ? ` · ${data.tokens} tokens` : ""}
+      </Text>
+    </Group>
+    {data.reasoning ? <ReasoningPanel runId={data.runId} reasoning={data.reasoning} initiallyOpen={!data.streamedText} /> : null}
+    {data.tools.length || data.trail.length ? <div className="curator-agent-actions" aria-label="处理过程">
+      {[...data.trail, ...data.tools].slice(-4).map((line, index) => <Text key={`${index}-${line}`} size="xs" c="dimmed">{line}</Text>)}
+    </div> : null}
+    {data.streamedText ? <div className="curator-agent-live-text" role="status" aria-live="polite"><MarkdownBody source={data.streamedText} /></div> : null}
+  </div>;
+};
 
 export function ConversationPanel({ contentId, conversationId, ingestBlock, currentPayload = {}, context, onAdopt, onSaved, hint }: Props) {
   const mode = contentId ? "editor" : "standalone";
@@ -203,9 +256,12 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
   const [loading, setLoading] = useState(Boolean(contentId || conversationId));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [now, setNow] = useState(() => Date.now());
+  const [promptSourceUrl, setPromptSourceUrl] = useState("");
 
   const running = Boolean(activeRun && ["queued", "running"].includes(activeRun.status));
+  const hasMessages = Boolean(conversation?.messages.length);
+  const hasDraft = Boolean(conversation?.messages.some((message) => message.role === "assistant" && message.kind === "run" && message.data?.draft));
+  const ingestStage = hasDraft ? 3 : running || hasMessages ? 2 : 1;
   const latest = runEvents[runEvents.length - 1] ?? null;
   const streamedText = runEvents.filter((event) => event.type === "agent.log" && event.data?.stream === "text").map((event) => event.message).join("");
   const reasoning = runEvents.filter((event) => event.type === "agent.log" && event.data?.stream === "reasoning").map((event) => event.message).join("");
@@ -215,7 +271,12 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
   const progressEvents = runEvents.filter((event) => event.type === "phase.progress");
   // The token counter updates every second and belongs in the header; keeping it
   // out of the trail stops the same step from being rewritten over and over.
-  const trail = progressEvents.filter((event) => event.data?.kind !== "tokens").slice(-3).map((event) => event.message);
+  // Tool steps have their own list below. Keeping them out of the general
+  // trail prevents every tool call from being rendered twice.
+  const trail = progressEvents
+    .filter((event) => event.data?.kind !== "tokens" && !event.data?.tool)
+    .slice(-3)
+    .map((event) => event.message);
   const tokens = Number([...progressEvents].reverse().find((event) => event.data?.tokens)?.data?.tokens ?? 0);
   // The picker exposes only concrete gateway models. "默认模型" follows the
   // current CC Switch selection, whose alias resolution stays server-side.
@@ -230,13 +291,6 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
     }
     return [{ group: "默认", items: [{ value: "__default__", label: currentAgent?.defaultModelLabel || "默认模型" }] }, ...groups];
   }, [agents, tool]);
-
-  // Only ticks while a run is open, so an idle panel does not re-render.
-  useEffect(() => {
-    if (!running) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [running]);
 
   useEffect(() => {
     curatorRequest<{ tools: AgentInfo[] }>("/agents").then((payload) => {
@@ -324,7 +378,12 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
         setConversation(created); conversationId = created.id;
       }
       const payload = await curatorRequest<{ messages: ConversationMessage[]; run: CuratorRun }>(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, model, ...(ingestBlock ? { block: ingestBlock } : {}) }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+          text,
+          model,
+          ...(ingestBlock ? { block: ingestBlock } : {}),
+          ...(ingestBlock === "prompt" && promptSourceUrl.trim() ? { sourceUrl: promptSourceUrl.trim() } : {}),
+        }),
       });
       setConversation((current) => current ? { ...current, messages: [...current.messages, ...payload.messages] } : current);
       setActiveRun(payload.run);
@@ -353,16 +412,17 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
       messages.push({
         id: `running-${activeRun.id}`, role: "assistant",
         content: [{ type: "data-agent-progress", data: {
+          runId: activeRun.id,
           phase: latest ? PHASE_LABEL[latest.phase] ?? latest.phase : "思考中",
           activity: trail[trail.length - 1] || "思考中",
-          trail, tokens, elapsed: elapsedLabel(activeRun.createdAt, now),
+          trail, tokens, startedAt: activeRun.createdAt,
           reasoning, streamedText, tools: toolActivity,
         } }],
         status: { type: "running" }, createdAt: new Date(activeRun.createdAt),
       });
     }
     return messages;
-  }, [activeRun, conversation?.messages, latest, now, reasoning, running, streamedText, tokens, toolActivity, trail]);
+  }, [activeRun, conversation?.messages, latest, reasoning, running, streamedText, tokens, toolActivity, trail]);
 
   const runtime = useExternalStoreRuntime({
     messages: externalMessages,
@@ -412,6 +472,8 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
       </Stack>;
     }
     if (!data.draft) return <Text size="sm" c="dimmed">Agent 没有返回可采用的草稿。</Text>;
+    const draftBlock: CuratorIngestBlock = data.draft.blockType
+      || (data.draft.kind === "skill" ? "skill" : data.draft.kind === "site" ? "site" : data.draft.kind === "prompt" ? "prompt" : data.draft.kind === "open-source" ? "project" : "tool");
     const proposed = draftPayload(data.draft, currentPayload);
     const fields = Object.keys(proposed);
     const changes = fields.filter((field) => JSON.stringify(currentPayload[field]) !== JSON.stringify(proposed[field]));
@@ -459,11 +521,18 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
           </div>
         </> : <Text size="sm" c="dimmed">{adopted ? "这份建议已经在编辑器里了，记得保存。" : "Agent 没有改变任何字段。"}</Text>}
         {changes.length ? <Group mt={4}><Button size="xs" disabled={busy} onClick={() => onAdopt?.(Object.fromEntries(changes.map((field) => [field, proposed[field]])))}>全部采用</Button><Text size="xs" c="dimmed">采用后仍需保存编辑器</Text></Group> : null}
-      </Stack> : <Stack gap="xs">
-        <Text size="sm"><Text span fw={600}>名称：</Text>{data.draft.name}</Text>
-        <Text size="sm"><Text span fw={600}>摘要：</Text>{data.draft.summary?.zh || data.draft.summary?.en}</Text>
-        <Button size="xs" loading={busy} onClick={() => void saveDraftToCatalog(data.draft!, data.runId)}>保存为资源</Button>
-      </Stack>}
+      </Stack> : <article className="curator-ingest-draft">
+        <div className="curator-ingest-draft-heading">
+          <div><Text size="xs" c="dimmed">待确认草稿</Text><Title order={3}>{data.draft.name}</Title></div>
+          <Badge color="curator" variant="light">{INGEST_BLOCK_LABEL[draftBlock]}</Badge>
+        </div>
+        <Text size="sm" className="curator-ingest-draft-summary">{data.draft.summary?.zh || data.draft.summary?.en || "暂无摘要"}</Text>
+        <Group gap="xs" className="curator-ingest-draft-meta">
+          {data.draft.category ? <Text size="xs">分类：{data.draft.category}</Text> : null}
+          {data.draft.tags?.length ? <Text size="xs">标签：{data.draft.tags.join("、")}</Text> : null}
+        </Group>
+        <div className="curator-ingest-draft-actions"><Button loading={busy} onClick={() => void saveDraftToCatalog(data.draft!, data.runId)}>保存到资源库</Button><Text size="xs" c="dimmed">保存后进入编辑器继续检查。</Text></div>
+      </article>}
     </Stack>;
   }, [busy, currentPayload, mode, onAdopt, retryRun, saveDraftToCatalog]);
 
@@ -473,19 +542,48 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
   }), [DraftResult]);
 
   return <AssistantRuntimeProvider runtime={runtime}>
-    <ThreadPrimitive.Root className="curator-conversation">
+    <ThreadPrimitive.Root className="curator-conversation" data-mode={mode} data-empty={!hasMessages && !running ? "true" : "false"}>
       {context ? <header className="curator-conversation-header">
         <Text component={Link} href={context.backHref} size="sm" c="dimmed" className="curator-back-link">← {context.backLabel}</Text>
         <Title order={2} lineClamp={1}>{context.title}</Title>
       </header> : null}
+      {mode === "standalone" ? <ol className="curator-ingest-steps" aria-label="收录进度">
+        {(ingestBlock === "prompt" ? ["粘贴正文", "AI 整理", "检查并保存"] : ["提交来源", "Agent 整理", "检查并保存"]).map((label, index) => {
+          const step = index + 1;
+          return <li key={label} data-active={step === ingestStage} data-complete={step < ingestStage}><span>{step < ingestStage ? "✓" : step}</span><Text component="strong" size="xs">{label}</Text></li>;
+        })}
+      </ol> : null}
       <ThreadPrimitive.Viewport className="curator-conversation-scroll">
-        {!externalMessages.length && hint ? <Text size="sm" c="dimmed" className="curator-conversation-empty">{hint}</Text> : null}
+        {!externalMessages.length && hint ? <section className="curator-conversation-empty">
+          <Text component="h2">{ingestBlock === "prompt" ? "把提示词整理成可复用内容" : "粘贴链接，或直接说明要收录什么"}</Text>
+          <Text size="sm" c="dimmed">{hint}</Text>
+          {ingestBlock !== "prompt" ? <div className="curator-ingest-examples"><span>官网链接</span><span>GitHub 仓库</span><span>补充整理要求</span></div> : null}
+        </section> : null}
         <ThreadPrimitive.Messages components={messageComponents} />
       </ThreadPrimitive.Viewport>
       <div className="curator-conversation-controls">
         {error ? <Alert color="red" title="出错了" role="alert" mb="xs">{error}</Alert> : null}
+        {mode === "standalone" && ingestBlock === "prompt" && !hasMessages ? <div className="curator-prompt-capture-note">
+          <Text size="sm" fw={600}>粘贴要保存的提示词</Text>
+          <Text size="xs" c="dimmed">AI 只整理标题、摘要、变量和示例，不会执行提示词，也不会联网。</Text>
+          <TextInput
+            mt="sm"
+            size="xs"
+            label="来源链接（可选）"
+            placeholder="https://example.com/prompt"
+            value={promptSourceUrl}
+            onChange={(event) => setPromptSourceUrl(event.currentTarget.value)}
+          />
+        </div> : null}
         <ComposerPrimitive.Root className="curator-composer">
-          <ComposerPrimitive.Input className="curator-composer-input" placeholder="丢一个链接，或直接说要改什么…" aria-label="发送消息" submitMode="enter" />
+          <ComposerPrimitive.Input
+            className="curator-composer-input"
+            placeholder={mode === "standalone" && ingestBlock === "prompt"
+              ? "粘贴完整提示词正文…"
+              : mode === "standalone" ? "https://example.com，也可以补充收录要求…" : "说明要修改什么…"}
+            aria-label={mode === "standalone" && ingestBlock === "prompt" ? "提示词正文" : "发送消息"}
+            submitMode="enter"
+          />
           <Group align="center" gap="sm" wrap="nowrap" mt="xs">
             <Select
               aria-label="模型"
@@ -501,7 +599,7 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
               </Group>}
             />
             <Box style={{ flex: 1 }} />
-            {running ? <ComposerPrimitive.Cancel asChild><Button size="xs" variant="default" loading={busy}>停止</Button></ComposerPrimitive.Cancel> : <ComposerPrimitive.Send asChild><Button size="xs" loading={busy}>发送</Button></ComposerPrimitive.Send>}
+            {running ? <ComposerPrimitive.Cancel asChild><Button size="xs" variant="default" loading={busy}>停止整理</Button></ComposerPrimitive.Cancel> : <ComposerPrimitive.Send asChild><Button size="xs" loading={busy}>{mode === "standalone" && ingestBlock === "prompt" && !hasMessages ? "整理提示词" : mode === "standalone" && !hasMessages ? "开始整理" : "发送"}</Button></ComposerPrimitive.Send>}
           </Group>
         </ComposerPrimitive.Root>
       </div>

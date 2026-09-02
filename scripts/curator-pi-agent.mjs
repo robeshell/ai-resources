@@ -24,6 +24,13 @@ function clean(value) {
   return String(value || "").trim();
 }
 
+/** Anthropic's SDK appends `/v1/messages` itself. Settings accept either the
+ * gateway root or its `/v1` endpoint, so remove that suffix only at the SDK
+ * boundary to avoid requests such as `/v1/v1/messages`. */
+function anthropicSdkBaseUrl(value) {
+  return clean(value).replace(/\/+$/, "").replace(/\/v1$/i, "");
+}
+
 function normalizeUsage(value) {
   return {
     input_tokens: Number(value?.input_tokens) || 0,
@@ -141,7 +148,7 @@ export async function loadPiGatewayConfig({ selectedModel = "", file = PI_CONFIG
       name: modelId,
       api: "anthropic-messages",
       provider: "curator-gateway",
-      baseUrl,
+      baseUrl: anthropicSdkBaseUrl(baseUrl),
       reasoning: true,
       input: ["text", "image"],
       cost: EMPTY_COST,
@@ -410,11 +417,17 @@ export async function runCuratorDraft({
   tools.push(submitDraftTool);
 
   const baseStream = streamFn || ((model, context, options) => anthropicStreams.streamSimple(model, context, { ...options, fetch: curatorGatewayFetch }));
+  let forceSubmission = false;
   const controlledStream = (model, context, options) => {
-    const onlySubmitDraft = context.tools?.length === 1 && context.tools[0]?.name === "submit_draft";
     return baseStream(model, context, {
       ...options,
-      ...(onlySubmitDraft ? { toolChoice: { type: "tool", name: "submit_draft" } } : {}),
+      ...(forceSubmission ? {
+        toolChoice: { type: "tool", name: "submit_draft" },
+        // Anthropic-compatible APIs reject forced tool choice while extended
+        // thinking is enabled. Research may think; deterministic submission
+        // must not, because this turn only serializes the completed result.
+        reasoning: undefined,
+      } : {}),
     });
   };
 
@@ -436,7 +449,11 @@ export async function runCuratorDraft({
   agent.subscribe((event) => {
     if (event.type === "message_update") {
       const update = event.assistantMessageEvent;
-      if (update.type === "text_delta") onEvent({ type: "text.delta", text: update.delta });
+      // A draft run has no user-facing assistant reply. Compatible models may
+      // narrate research or even print the pending article before they call
+      // submit_draft; keep that text in the process stream so it cannot appear
+      // as a chat message. Conversation runs still emit text.delta normally.
+      if (update.type === "text_delta") onEvent({ type: "draft.delta", text: update.delta });
       else if (update.type === "thinking_delta") onEvent({ type: "reasoning.delta", text: update.delta });
     } else if (event.type === "tool_execution_start") {
       onEvent({ type: "tool.started", tool: event.toolName, args: event.args });
@@ -455,7 +472,9 @@ export async function runCuratorDraft({
     // "must call". Narrow the next turn to one tool and force it at the API
     // level, preserving the complete research/tool history as context.
     onEvent({ type: "submission.started", tool: "submit_draft" });
-    agent.tools = [submitDraftTool];
+    forceSubmission = true;
+    agent.state.tools = [submitDraftTool];
+    agent.state.thinkingLevel = "off";
     await agent.prompt("根据刚才已经完成的研究提交最终草稿。现在必须调用 submit_draft，不要继续解释。 ");
     finalAssistant = [...agent.state.messages].reverse().find((message) => message.role === "assistant");
     if (finalAssistant?.stopReason === "error") throw new Error(finalAssistant.errorMessage || "Pi Agent 结构化提交失败");

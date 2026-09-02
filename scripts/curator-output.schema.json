@@ -33,6 +33,7 @@
         "tool",
         "skill",
         "open-source",
+        "site",
         "prompt"
       ]
     },
@@ -45,6 +46,7 @@
         "tool",
         "skill",
         "project",
+        "site",
         "prompt",
         null
       ]

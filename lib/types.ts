@@ -12,7 +12,7 @@ export function text(value: Localized, locale: Locale): string {
   return value[locale];
 }
 
-export type ResourceKind = "tool" | "skill" | "open-source";
+export type ResourceKind = "tool" | "skill" | "open-source" | "site";
 
 export type Tool = {
   id: string;

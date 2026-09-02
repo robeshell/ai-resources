@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
   if (!isLocale(locale)) return {};
   return locale === "zh"
     ? { title: "找个合适的 AI，开始做事", description: "真正值得用的 AI 工具、技能和开源项目，按用途整理。" }
-    : { title: "Find something useful. Get to work.", description: "Useful AI products, skills and open-source projects, sorted by what they help you do." };
+    : { title: "Find something useful. Get to work.", description: "Useful AI products, skills, projects, sites and prompts, sorted by what they help you do." };
 }
 
 export default async function LocaleLayout({

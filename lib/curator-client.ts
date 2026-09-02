@@ -30,7 +30,7 @@ export type CatalogItem = {
   name: string;
   url: string;
   logo?: string;
-  kind: "tool" | "skill" | "open-source";
+  kind: "tool" | "skill" | "open-source" | "site";
   category: string;
   tags: string[];
   status: "active" | "archived";
@@ -38,7 +38,7 @@ export type CatalogItem = {
   summary: { en: string; zh: string };
 };
 
-export type CuratorIngestBlock = "tool" | "skill" | "project" | "prompt";
+export type CuratorIngestBlock = "tool" | "skill" | "project" | "site" | "prompt";
 
 export type CuratorContentItem = ContentItem<ContentPayloadByBlock[ContentBlockId]> & {
   revision?: {
@@ -82,7 +82,7 @@ export type CuratorDraft = {
   name: string;
   slug: string;
   url: string;
-  kind: CatalogItem["kind"] | "prompt";
+  kind: CatalogItem["kind"] | "site" | "prompt";
   blockType?: CuratorIngestBlock;
   category: string;
   tags: string[];
@@ -142,7 +142,7 @@ export type CuratorRun = {
   phase: CuratorRunPhase;
   createdAt: string;
   updatedAt: string;
-  input?: { url: string; note: string; block?: "auto" | CuratorIngestBlock; mode?: "ingest" | "conversation" | "reprocess"; contentId?: string; conversationId?: string; model?: string };
+  input?: { url: string; note: string; promptText?: string; block?: "auto" | CuratorIngestBlock; mode?: "ingest" | "conversation" | "reprocess"; contentId?: string; conversationId?: string; model?: string };
   draft?: CuratorDraft;
   source?: { title: string; description: string; finalUrl: string; logoUrl?: string };
   agent?: { mode: "embedded" | "rules"; tool?: AgentTool; model?: string; message?: string };
@@ -203,6 +203,9 @@ export function draftPayload(draft: CuratorDraft, current: Record<string, unknow
   if (block === "tool") {
     return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), tagline: draft.verdict, summary: draft.summary, ...(draft.description ? { description: draft.description } : {}), url: draft.url };
   }
+  if (block === "site") {
+    return { ...base, ...(draft.sourceLogoUrl?.startsWith("/logos/") ? { logo: draft.sourceLogoUrl } : {}), summary: draft.summary, ...(draft.description ? { description: draft.description } : {}), url: draft.url };
+  }
   if (block === "prompt") {
     return { ...base, summary: draft.summary, prompt: (draft.prompt || "").trim(), variables: draft.variables || [], examples: draft.examples || [], links: draft.links?.length ? draft.links : base.links || [] };
   }
@@ -232,6 +235,7 @@ export const KIND_LABEL: Record<CatalogItem["kind"], string> = {
   tool: "AI 产品",
   skill: "技能",
   "open-source": "开源项目",
+  site: "站点",
 };
 
 /** Short block names shared by the library, the editor and the dashboard. */

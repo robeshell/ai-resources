@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, Box, Button, Skeleton, Stack, Text } from "@mantine/core";
+import { Alert, Button, SegmentedControl, Skeleton, Stack, Text } from "@mantine/core";
 import { ConversationPanel } from "@/components/curator/ConversationPanel";
 import { curatorRequest } from "@/lib/curator-client";
 import type { CuratorIngestBlock } from "@/lib/curator-client";
@@ -15,9 +15,10 @@ export function CuratorStudio() {
   const queryConversationId = searchParams.get("conversation") || undefined;
   const resumeRunId = searchParams.get("resume") || undefined;
   const requestedBlock = searchParams.get("block");
-  const block = (["tool", "skill", "project", "prompt"] as const).includes(requestedBlock as CuratorIngestBlock)
+  const initialBlock = (["tool", "skill", "project", "site", "prompt"] as const).includes(requestedBlock as CuratorIngestBlock)
     ? requestedBlock as CuratorIngestBlock
     : undefined;
+  const [block, setBlock] = useState<CuratorIngestBlock | undefined>(initialBlock);
   const [conversationId, setConversationId] = useState(queryConversationId);
   const [resumeError, setResumeError] = useState("");
   const isResuming = Boolean(resumeRunId && !conversationId && !resumeError);
@@ -38,33 +39,50 @@ export function CuratorStudio() {
   }, [queryConversationId, resumeRunId, router]);
 
   return <section className="curator-page">
-    <CuratorPageHeader title={conversationId || resumeRunId ? "继续收录" : "收录资源"} description={conversationId || resumeRunId ? "接着处理上一次未完成的内容。" : "提交链接或说明，让 Agent 生成可检查的草稿。"} />
+    <CuratorPageHeader
+      title={conversationId || resumeRunId ? "继续收录" : "收录资源"}
+      description={conversationId || resumeRunId
+        ? "接着处理上一次未完成的内容。"
+        : block === "prompt" ? "粘贴提示词正文，检查 AI 整理结果，再保存到资源库。" : "提交来源，检查 Agent 整理的草稿，再保存到资源库。"}
+      actions={conversationId ? <Button component="a" href="/curator/ingest/" variant="default">开始新收录</Button> : null}
+    />
 
-    <div className="curator-ingest-conversation">
+    <div className="curator-ingest-workspace">
+      <div className="curator-ingest-typebar">
+        <Text size="sm" fw={600}>内容类型</Text>
+        <SegmentedControl
+          aria-label="内容类型"
+          value={block || "auto"}
+          onChange={(value) => setBlock(value === "auto" ? undefined : value as CuratorIngestBlock)}
+          data={[
+            { value: "auto", label: "自动" },
+            { value: "tool", label: "工具" },
+            { value: "skill", label: "技能" },
+            { value: "project", label: "项目" },
+            { value: "site", label: "站点" },
+            { value: "prompt", label: "提示词" },
+          ]}
+        />
+      </div>
       {isResuming ? (
-        <Stack gap="sm" py="md">
+        <Stack gap="sm" py="xl" className="curator-ingest-loading">
           <Skeleton h={88} radius="md" />
           <Skeleton h={148} radius="md" />
-          <Text size="sm" c="dimmed">正在恢复上一次的链接、备注和失败记录…</Text>
+          <Text size="sm" c="dimmed">正在恢复上一次的来源、消息和处理记录…</Text>
         </Stack>
       ) : resumeError ? (
         <Alert color="red" title="无法恢复这次收录">{resumeError}</Alert>
       ) : (
         <ConversationPanel
-          key={conversationId || "new"}
+          key={`${conversationId || "new"}-${block || "auto"}`}
           conversationId={conversationId}
           ingestBlock={block}
-          hint="丢一个链接，它会读取页面、对照目录并生成草稿；确认后再保存。"
+          hint={block === "prompt"
+            ? "直接粘贴提示词正文。来源链接可不填，AI 只负责整理成草稿。"
+            : "丢一个链接，它会读取页面、对照目录并生成草稿；确认后再保存。"}
           onSaved={(saved) => router.push(curatorEditorHref(saved.blockType, saved.slug))}
         />
       )}
-      <Box>
-        {conversationId ? (
-          <Button component="a" href="/curator/ingest/" variant="subtle" color="gray" size="xs" px={0}>
-            开一段新的收录
-          </Button>
-        ) : null}
-      </Box>
     </div>
   </section>;
 }

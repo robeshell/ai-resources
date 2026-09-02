@@ -13,7 +13,7 @@ export function generateStaticParams() {
   if (!fs.existsSync(databasePath)) return params;
   const database = new DatabaseSync(databasePath, { readOnly: true });
   try {
-    const rows = database.prepare("SELECT block_type, slug FROM content_items WHERE block_type IN ('tool', 'skill', 'project', 'prompt')").all() as Array<{ block_type: string; slug: string }>;
+    const rows = database.prepare("SELECT block_type, slug FROM content_items WHERE block_type IN ('tool', 'skill', 'project', 'site', 'prompt')").all() as Array<{ block_type: string; slug: string }>;
     return [...params, ...rows.map((row) => ({ block: row.block_type, slug: row.slug }))];
   } finally {
     database.close();

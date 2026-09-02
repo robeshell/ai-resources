@@ -190,7 +190,7 @@
       "name": "Cursor",
       "url": "https://cursor.com/",
       "logo": "/logos/cursor.png",
-      "category": "",
+      "category": "coding",
       "tags": [
         "app",
         "cli"
@@ -240,7 +240,7 @@
       "name": "Zed",
       "url": "https://zed.dev/",
       "logo": "/logos/zed.png",
-      "category": "",
+      "category": "coding",
       "tags": [
         "app",
         "cli"
@@ -265,7 +265,7 @@
       "name": "GitHub Copilot",
       "url": "https://github.com/features/copilot",
       "logo": "/logos/github-copilot.png",
-      "category": "",
+      "category": "coding",
       "tags": [
         "freemium",
         "web",
@@ -292,7 +292,7 @@
       "name": "Devin Desktop",
       "url": "https://windsurf.com/",
       "logo": "/logos/devin-desktop.png",
-      "category": "",
+      "category": "coding",
       "tags": [
         "freemium",
         "app"
@@ -317,7 +317,7 @@
       "name": "Augment Code",
       "url": "https://augmentcode.com/",
       "logo": "/logos/augment-code.png",
-      "category": "",
+      "category": "coding",
       "tags": [
         "web",
         "cli"
@@ -342,7 +342,7 @@
       "name": "Manus",
       "url": "https://manus.im/",
       "logo": "/logos/manus.png",
-      "category": "",
+      "category": "agent",
       "tags": [
         "web",
         "app",
@@ -443,7 +443,7 @@
       "name": "Ideogram",
       "url": "https://ideogram.ai/",
       "logo": "/logos/ideogram.png",
-      "category": "",
+      "category": "image",
       "tags": [
         "web",
         "app",
@@ -575,7 +575,7 @@
       "name": "Hailuo AI",
       "url": "https://hailuoai.video/",
       "logo": "/logos/hailuo-ai.png",
-      "category": "",
+      "category": "video",
       "tags": [
         "china",
         "web"
@@ -624,7 +624,7 @@
       "name": "Veo",
       "url": "https://deepmind.google/models/veo/",
       "logo": "/logos/veo.png",
-      "category": "",
+      "category": "video",
       "tags": [
         "web",
         "api"
@@ -649,7 +649,7 @@
       "name": "Suno",
       "url": "https://suno.com/",
       "logo": "/logos/suno.png",
-      "category": "",
+      "category": "audio",
       "tags": [
         "freemium",
         "web",
@@ -700,7 +700,7 @@
       "name": "Fish Audio",
       "url": "https://fish.audio/",
       "logo": "/logos/fish-audio.png",
-      "category": "",
+      "category": "audio",
       "tags": [
         "china",
         "freemium",
@@ -753,7 +753,7 @@
       "name": "NotebookLM",
       "url": "https://notebooklm.google.com/",
       "logo": "/logos/notebooklm.png",
-      "category": "",
+      "category": "research",
       "tags": [
         "freemium",
         "web",
@@ -831,7 +831,7 @@
       "name": "fal",
       "url": "https://fal.ai/",
       "logo": "/logos/fal-ai.png",
-      "category": "",
+      "category": "infra",
       "tags": [
         "usage-based",
         "web",
@@ -908,7 +908,7 @@
       "name": "Dify",
       "url": "https://dify.ai/",
       "logo": "/logos/dify.png",
-      "category": "",
+      "category": "automation",
       "tags": [
         "self-host",
         "china",
@@ -935,7 +935,7 @@
       "name": "Coze",
       "url": "https://www.coze.com/",
       "logo": "/logos/coze.png",
-      "category": "",
+      "category": "automation",
       "tags": [
         "china",
         "freemium",

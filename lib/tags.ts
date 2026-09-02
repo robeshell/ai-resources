@@ -1,8 +1,10 @@
 import taxonomyJson from "@/data/taxonomy.json";
+import type { EnabledContentBlockId } from "./content-blocks";
 import type { Locale, Localized } from "./types";
 
 export type TaxonomyEntry = {
   id: string;
+  blocks?: EnabledContentBlockId[];
   label: Localized;
   hint: string;
 };
@@ -13,8 +15,13 @@ export const TAGS = taxonomyJson.tags as TaxonomyEntry[];
 const CATEGORY_BY_ID = new Map(CATEGORIES.map((category) => [category.id, category]));
 const TAG_BY_ID = new Map(TAGS.map((tag) => [tag.id, tag]));
 
-export function knownCategory(id: string): TaxonomyEntry | undefined {
-  return CATEGORY_BY_ID.get(id);
+export function categoriesForBlock(block: EnabledContentBlockId): TaxonomyEntry[] {
+  return CATEGORIES.filter((category) => category.blocks?.includes(block));
+}
+
+export function knownCategory(id: string, block?: EnabledContentBlockId): TaxonomyEntry | undefined {
+  const category = CATEGORY_BY_ID.get(id);
+  return category && (!block || category.blocks?.includes(block)) ? category : undefined;
 }
 
 export function knownTag(id: string): TaxonomyEntry | undefined {
@@ -37,9 +44,9 @@ export function sortTags(ids: readonly string[]): string[] {
 }
 
 /** Read old records too: category used to live among tags. */
-export function categoryOf(item: { category?: string; tags?: readonly string[] }): string {
-  if (item.category && CATEGORY_BY_ID.has(item.category)) return item.category;
-  return item.tags?.find((id) => CATEGORY_BY_ID.has(id)) ?? "";
+export function categoryOf(item: { category?: string; tags?: readonly string[]; blockType?: EnabledContentBlockId }, block = item.blockType): string {
+  if (item.category && knownCategory(item.category, block)) return item.category;
+  return item.tags?.find((id) => Boolean(knownCategory(id, block))) ?? "";
 }
 
 /** Remove legacy category ids from tags while preserving proposed tags. */
@@ -47,8 +54,8 @@ export function attributeTags(ids: readonly string[]): string[] {
   return sortTags(ids.filter((id) => !CATEGORY_BY_ID.has(id)));
 }
 
-export function usedCategories(items: ReadonlyArray<{ category?: string; tags?: readonly string[] }>): string[] {
-  const used = new Set(items.map(categoryOf).filter(Boolean));
+export function usedCategories(items: ReadonlyArray<{ category?: string; tags?: readonly string[]; blockType?: EnabledContentBlockId }>): string[] {
+  const used = new Set(items.map((item) => categoryOf(item)).filter(Boolean));
   return CATEGORIES.map((category) => category.id).filter((id) => used.has(id));
 }
 

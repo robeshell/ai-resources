@@ -75,7 +75,7 @@ export async function exportContent({ outputRoot = ROOT, dbFile = DB_FILE, inclu
   if (write) {
     await fs.mkdir(path.join(outputRoot, "data"), { recursive: true });
     await fs.rm(path.join(outputRoot, "data", "resources.json"), { force: true });
-    for (const block of ["skill", "project", "prompt", "course", "article"]) {
+    for (const block of ["skill", "project", "site", "prompt", "course", "article"]) {
       await fs.rm(path.join(outputRoot, "content", `${block}s`), { recursive: true, force: true });
     }
     for (const file of files) {

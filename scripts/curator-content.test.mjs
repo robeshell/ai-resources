@@ -41,9 +41,23 @@ function skill(id, status, body) {
     status,
     category: "coding",
     tags: [],
+    sourceUrl: `https://github.com/example/${id}`,
     createdAt: at,
     updatedAt: at,
     payload: { summary: { zh: "技能摘要", en: "Skill summary" }, body, links: [] },
+  };
+}
+
+function site(id, status = "active") {
+  const at = new Date().toISOString();
+  return {
+    id, blockType: "site", slug: id, title: id, status,
+    category: "directory", tags: ["web"], createdAt: at, updatedAt: at,
+    payload: {
+      summary: { zh: "资源导航摘要", en: "A directory summary" },
+      description: { zh: "按主题整理可浏览的网站。", en: "A browsable collection organized by topic." },
+      url: `https://${id}.example.com`,
+    },
   };
 }
 
@@ -81,6 +95,20 @@ test("drafts never reach the public export", async () => {
 
     assert.ok(await missing(path.join(outputRoot, "content/skills/draft-skill.md")));
     assert.ok(!(await missing(path.join(outputRoot, "content/skills/published-skill.md"))));
+  });
+});
+
+test("sites use their own payload and export directory", async () => {
+  await withRepository(async (repository, { root, dbFile }) => {
+    const item = site("design-directory");
+    validateContentPayload(item);
+    repository.save(item);
+    const outputRoot = path.join(root, "out");
+    await exportContent({ outputRoot, dbFile, write: true });
+    const exported = await readFile(path.join(outputRoot, "content/sites/design-directory.md"), "utf8");
+    assert.match(exported, /"blockType": "site"/);
+    assert.match(exported, /"category": "directory"/);
+    assert.match(exported, /"url": "https:\/\/design-directory\.example\.com"/);
   });
 });
 
@@ -147,6 +175,7 @@ test("publishing enforces what the public build requires", () => {
     [{ ...complete, category: "" }, /有效的二级分类/],
     [{ ...complete, tags: ["coding", "free"] }, /二级分类不能放在卡片标签中/],
     [skill("empty", "active", "  "), /已发布的长文必须填写正文/],
+    [{ ...skill("no-source", "active", "# 正文"), sourceUrl: undefined }, /来源链接或相关链接/],
   ];
   for (const [item, message] of cases) assert.throws(() => validateContentPayload(item), message);
 

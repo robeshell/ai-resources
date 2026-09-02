@@ -1,7 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicContentPage } from "@/components/PublicContentPage";
 import { loadPublicContent, loadPublicContentItem } from "@/lib/public-content";
-import { isLocale } from "@/lib/types";
+import { isLocale, text } from "@/lib/types";
 
 export function generateStaticParams() {
   // `output: export` rejects an empty param list for a dynamic segment, so an
@@ -11,6 +12,13 @@ export function generateStaticParams() {
 }
 
 export const dynamicParams = false;
+
+export async function generateMetadata({ params }: PageProps<"/[locale]/projects/[slug]">): Promise<Metadata> {
+  const { locale, slug } = await params;
+  if (!isLocale(locale)) return {};
+  const item = loadPublicContentItem("project", slug);
+  return item ? { title: item.title, description: text(item.summary, locale) } : {};
+}
 
 export default async function ProjectPage({ params }: PageProps<"/[locale]/projects/[slug]">) {
   const { locale, slug } = await params;

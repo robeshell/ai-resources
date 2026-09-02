@@ -1,7 +1,7 @@
 import net from "node:net";
 import { knownCategory, knownTag } from "./curator-tags.mjs";
 
-export const CONTENT_BLOCKS = ["tool", "skill", "project", "prompt", "course", "article"];
+export const CONTENT_BLOCKS = ["tool", "skill", "project", "site", "prompt", "course", "article"];
 const LONG_FORM_BLOCKS = ["skill", "project", "course", "article"];
 
 function isPrivateIp(address) {
@@ -66,15 +66,19 @@ export function validateContentPayload(item) {
   }
   if (item.status !== "active") return;
   assertLocalized(payload.summary, "简介");
-  if (!knownCategory(String(item.category || ""))) throw new Error("请选择一个有效的二级分类");
+  if (!knownCategory(String(item.category || ""), item.blockType)) throw new Error("请选择当前内容类型下有效的二级分类");
   const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
   if (tags.some((tag) => knownCategory(tag))) throw new Error("二级分类不能放在卡片标签中");
   if (item.blockType === "tool") {
     assertLocalized(payload.tagline, "定位");
     assertUrlShape(payload.url);
   }
+  if (item.blockType === "site") assertUrlShape(payload.url);
   if (LONG_FORM_BLOCKS.includes(item.blockType) && !String(payload.body || "").trim()) {
     throw new Error("已发布的长文必须填写正文");
+  }
+  if (["skill", "project"].includes(item.blockType) && !String(item.sourceUrl || "").trim() && !(payload.links || []).length) {
+    throw new Error("已发布的技能或项目必须填写来源链接或相关链接");
   }
   if (item.blockType === "prompt" && !String(payload.prompt || "").trim()) {
     throw new Error("已发布的提示词必须填写正文");
@@ -91,11 +95,13 @@ export function contentIssueCount(item) {
   if (!String(item.slug || "").trim()) count += 1;
   if (!String(payload.summary?.zh || "").trim() || !String(payload.summary?.en || "").trim()) count += 1;
   if (item.blockType === "tool" && (!String(payload.url || "").trim() || !String(payload.tagline?.zh || "").trim() || !String(payload.tagline?.en || "").trim())) count += 1;
+  if (item.blockType === "site" && !String(payload.url || "").trim()) count += 1;
   const tags = Array.isArray(item.tags) ? item.tags.map(String) : [];
-  if (!knownCategory(String(item.category || ""))) count += 1;
+  if (!knownCategory(String(item.category || ""), item.blockType)) count += 1;
   // Agent 提的新标签不会自动进词表，留在这里等人处理。
   if (tags.some((tag) => !knownTag(tag))) count += 1;
   if (["skill", "project"].includes(item.blockType) && !String(payload.body || "").trim()) count += 1;
+  if (["skill", "project"].includes(item.blockType) && !String(item.sourceUrl || "").trim() && !(payload.links || []).length) count += 1;
   if (item.blockType === "prompt" && !String(payload.prompt || "").trim()) count += 1;
   return count;
 }

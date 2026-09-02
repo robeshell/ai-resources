@@ -6,16 +6,19 @@ import { attributeTags, categoryOf } from "./tags";
 
 export type PublicContentSummary = {
   id: string;
-  blockType: "skill" | "project" | "prompt";
+  blockType: "skill" | "project" | "site" | "prompt";
   slug: string;
   title: string;
   category: string;
   tags: string[];
   summary: Localized;
+  logo?: string;
 };
 
 export type PublicContentDocument = PublicContentSummary & {
   sourceUrl?: string;
+  url?: string;
+  description?: Localized;
   body: string;
   links: ContentLink[];
   prompt?: string;
@@ -24,7 +27,7 @@ export type PublicContentDocument = PublicContentSummary & {
 };
 
 const ROOT = process.cwd();
-const PUBLIC_BLOCKS = ["skill", "project", "prompt"] as const;
+const PUBLIC_BLOCKS = ["skill", "project", "site", "prompt"] as const;
 
 function directory(block: (typeof PUBLIC_BLOCKS)[number]) {
   return path.join(ROOT, "content", `${block}s`);
@@ -53,10 +56,13 @@ function parseFile(file: string): PublicContentDocument | null {
     blockType: meta.blockType as PublicContentDocument["blockType"],
     slug: meta.slug,
     title: meta.title,
-    category: categoryOf({ category: meta.category, tags: meta.tags }),
+    category: categoryOf({ category: meta.category, tags: meta.tags }, meta.blockType as PublicContentDocument["blockType"]),
     tags: attributeTags(Array.isArray(meta.tags) ? meta.tags.map(String) : []),
     summary: summary || { en: meta.title, zh: meta.title },
     ...(meta.sourceUrl ? { sourceUrl: meta.sourceUrl } : {}),
+    ...(typeof payload.logo === "string" && payload.logo ? { logo: payload.logo } : {}),
+    ...(typeof payload.url === "string" ? { url: payload.url } : {}),
+    ...(payload.description && typeof payload.description === "object" ? { description: payload.description as Localized } : {}),
     body: String(payload.body || match[2] || "").trim(),
     links: Array.isArray(payload.links) ? payload.links as ContentLink[] : [],
     ...(typeof payload.prompt === "string" ? { prompt: payload.prompt } : {}),

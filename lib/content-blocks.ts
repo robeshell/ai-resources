@@ -1,8 +1,8 @@
 import type { Localized } from "./types";
 
-export const ENABLED_CONTENT_BLOCK_IDS = ["tool", "skill", "project", "prompt"] as const;
+export const ENABLED_CONTENT_BLOCK_IDS = ["tool", "skill", "project", "site", "prompt"] as const;
 
-export type ContentBlockId = "tool" | "skill" | "project" | "prompt" | "course" | "article";
+export type ContentBlockId = "tool" | "skill" | "project" | "site" | "prompt" | "course" | "article";
 export type EnabledContentBlockId = (typeof ENABLED_CONTENT_BLOCK_IDS)[number];
 export type ContentStatus = "draft" | "active" | "archived";
 
@@ -42,6 +42,13 @@ export type ArticlePayload = {
   links: ContentLink[];
 };
 
+export type SitePayload = {
+  logo?: string;
+  summary: Localized;
+  description?: Localized;
+  url: string;
+};
+
 export type PromptVariable = {
   name: string;
   description: string;
@@ -70,6 +77,7 @@ export type ContentPayloadByBlock = {
   tool: ToolPayload;
   skill: ArticlePayload;
   project: ArticlePayload;
+  site: SitePayload;
   prompt: PromptPayload;
   course: CoursePayload;
   article: ArticlePayload;
@@ -79,8 +87,8 @@ type ContentBlockDefinition = {
   id: ContentBlockId;
   enabled: boolean;
   label: Localized;
-  editor: "tool" | "article" | "prompt";
-  renderer: "tool-card" | "article-page" | "prompt-page";
+  editor: "tool" | "article" | "site" | "prompt";
+  renderer: "tool-card" | "article-page" | "site-page" | "prompt-page";
   exportTarget: { format: "json" | "markdown"; path: string };
 };
 
@@ -112,6 +120,14 @@ export const contentBlocks: Record<ContentBlockId, ContentBlockDefinition> = {
     editor: "article",
     renderer: "article-page",
     exportTarget: { format: "markdown", path: "content/projects" },
+  },
+  site: {
+    id: "site",
+    enabled: true,
+    label: { en: "Sites", zh: "站点" },
+    editor: "site",
+    renderer: "site-page",
+    exportTarget: { format: "markdown", path: "content/sites" },
   },
   prompt: {
     id: "prompt",

@@ -1,52 +1,119 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CopyPromptButton } from "@/components/CopyPromptButton";
 import { MarkdownBody } from "@/components/MarkdownBody";
-import { ui } from "@/lib/i18n";
+import { ui, type UiCopy } from "@/lib/i18n";
 import type { PublicContentDocument } from "@/lib/public-content";
 import { text, type Locale } from "@/lib/types";
 
-export function PublicContentPage({ item, locale }: { item: PublicContentDocument; locale: Locale }) {
+type PageProps = { item: PublicContentDocument; locale: Locale };
+
+function DetailHeader({ item, locale }: PageProps) {
+  return <header className="public-detail-header">
+    <div className="public-detail-title-row">
+      {item.logo?.startsWith("/") ? <Image src={item.logo} alt="" width={48} height={48} unoptimized /> : null}
+      <h1>{item.title}</h1>
+    </div>
+    <p>{text(item.summary, locale)}</p>
+  </header>;
+}
+
+function ResourceLinks({ item, t, className = "" }: { item: PublicContentDocument; t: UiCopy; className?: string }) {
+  const links = item.sourceUrl && !item.links.some((link) => link.url === item.sourceUrl)
+    ? [{ label: t.sourceLink, url: item.sourceUrl }, ...item.links]
+    : item.links;
+  if (!links.length) return null;
+  return <aside className={`public-detail-links ${className}`.trim()}>
+    <h2>{t.linksHeading}</h2>
+    <div>
+      {links.map((link) => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">
+        <span>{link.label}</span><span aria-hidden="true">↗</span>
+      </a>)}
+    </div>
+  </aside>;
+}
+
+function isChineseBody(body: string) {
+  const letters = body.match(/[A-Za-z\u3400-\u9fff]/g) || [];
+  const chinese = body.match(/[\u3400-\u9fff]/g) || [];
+  return letters.length > 0 && chinese.length / letters.length > 0.2;
+}
+
+function LanguageNotice({ item, locale, t }: PageProps & { t: UiCopy }) {
+  if (locale !== "en" || !isChineseBody(item.body)) return null;
+  return <div className="public-detail-language-notice">
+    <p>{t.chineseOnly}</p>
+    <Link href={`/zh/${item.blockType}s/${item.slug}/`}>{t.readChinese} →</Link>
+  </div>;
+}
+
+function SkillDetail({ item, locale, t }: PageProps & { t: UiCopy }) {
+  const unavailable = locale === "en" && isChineseBody(item.body);
+  return <div className="public-detail-skill-layout">
+    <main className="public-detail-reading">{unavailable ? <LanguageNotice item={item} locale={locale} t={t} /> : <MarkdownBody source={item.body} />}</main>
+    <ResourceLinks item={item} t={t} className="public-detail-skill-links" />
+  </div>;
+}
+
+function ProjectDetail({ item, locale, t }: PageProps & { t: UiCopy }) {
+  const unavailable = locale === "en" && isChineseBody(item.body);
+  return <div className={`public-detail-project-layout${item.links.length || item.sourceUrl ? " has-links" : ""}`}>
+    <main className="public-detail-project-body">{unavailable ? <LanguageNotice item={item} locale={locale} t={t} /> : <MarkdownBody source={item.body} />}</main>
+    <ResourceLinks item={item} t={t} className="public-detail-project-links" />
+  </div>;
+}
+
+function SiteDetail({ item, locale }: PageProps) {
+  const description = item.description ? text(item.description, locale) : "";
+  const url = item.url || item.sourceUrl || item.links[0]?.url;
+  return <div className="public-detail-site-layout">
+    <section className="public-detail-site-copy">
+      {description ? description.split(/\n{2,}/).map((paragraph) => <p key={paragraph}>{paragraph}</p>) : null}
+    </section>
+    {url ? <a className="public-detail-site-visit" href={url} target="_blank" rel="noreferrer">{locale === "zh" ? "访问站点" : "Visit site"}<span aria-hidden="true">↗</span></a> : null}
+  </div>;
+}
+
+function PromptDetail({ item, locale, t }: PageProps & { t: UiCopy }) {
+  return <div className="public-detail-prompt-layout">
+    <section className="public-detail-prompt-copy">
+      <div className="prompt-copy-heading"><h2>{t.promptHeading}</h2><CopyPromptButton value={item.prompt || ""} locale={locale} /></div>
+      <pre className="prompt-copy"><code>{item.prompt}</code></pre>
+    </section>
+    <div className="public-detail-prompt-meta">
+      {item.variables?.length ? (
+        <section className="public-detail-variables">
+          <h2>{t.variablesHeading}</h2>
+          <dl>
+            {item.variables.map((variable) => (
+              <div key={variable.name}><dt>{variable.name}</dt><dd>{variable.description}{variable.example ? <small>{variable.example}</small> : null}</dd></div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+      {item.examples?.length ? (
+        <section className="public-detail-examples">
+          <h2>{t.examplesHeading}</h2>
+          {item.examples.map((example, index) => (
+            <div className="prompt-example" key={index}><strong>{example.input}</strong><p>{example.output}</p></div>
+          ))}
+        </section>
+      ) : null}
+    </div>
+    <ResourceLinks item={item} t={t} className="public-detail-prompt-links" />
+  </div>;
+}
+
+export function PublicContentPage({ item, locale }: PageProps) {
   const t = ui(locale);
   return (
-    <article className="public-article">
-      <Link href={`/${locale}/?kind=${item.blockType}#catalog`} className="public-article-back">← {t.backToLibrary}</Link>
-      <header>
-        <p className="public-article-kind">{t.contentBlock[item.blockType]}</p>
-        <h1>{item.title}</h1>
-        <span>{text(item.summary, locale)}</span>
-      </header>
-      {item.blockType === "prompt" ? (
-        <>
-          <section>
-            <div className="prompt-copy-heading"><h2>{t.promptHeading}</h2><CopyPromptButton value={item.prompt || ""} locale={locale} /></div>
-            <pre className="prompt-copy"><code>{item.prompt}</code></pre>
-          </section>
-          {item.variables?.length ? (
-            <section>
-              <h2>{t.variablesHeading}</h2>
-              <dl>
-                {item.variables.map((variable) => (
-                  <div key={variable.name}><dt>{variable.name}</dt><dd>{variable.description}{variable.example ? ` · ${variable.example}` : ""}</dd></div>
-                ))}
-              </dl>
-            </section>
-          ) : null}
-          {item.examples?.length ? (
-            <section>
-              <h2>{t.examplesHeading}</h2>
-              {item.examples.map((example, index) => (
-                <div className="prompt-example" key={index}><strong>{example.input}</strong><p>{example.output}</p></div>
-              ))}
-            </section>
-          ) : null}
-        </>
-      ) : <MarkdownBody source={item.body} />}
-      {item.links.length ? (
-        <footer>
-          <h2>{t.linksHeading}</h2>
-          {item.links.map((link) => <a key={`${link.label}-${link.url}`} href={link.url} target="_blank" rel="noreferrer">{link.label} ↗</a>)}
-        </footer>
-      ) : null}
+    <article className={`public-detail public-detail--${item.blockType}`}>
+      <Link href={`/${locale}/?kind=${item.blockType}#catalog`} className="public-detail-back">← {t.backToLibrary}</Link>
+      <DetailHeader item={item} locale={locale} />
+      {item.blockType === "skill" ? <SkillDetail item={item} locale={locale} t={t} /> : null}
+      {item.blockType === "project" ? <ProjectDetail item={item} locale={locale} t={t} /> : null}
+      {item.blockType === "site" ? <SiteDetail item={item} locale={locale} /> : null}
+      {item.blockType === "prompt" ? <PromptDetail item={item} locale={locale} t={t} /> : null}
     </article>
   );
 }

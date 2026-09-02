@@ -39,8 +39,8 @@ flowchart LR
 | 路由 | 说明 |
 |------|------|
 | `/` | 重定向到 `/en/` |
-| `/[locale]` | 首页：工具 / 技能 / 项目 / 提示词四个板块（客户端切换，无单独路由） |
-| `/[locale]/skills/[slug]` `/projects/[slug]` `/prompts/[slug]` | 长文详情页（`generateStaticParams` 由 `content/` 驱动，无内容时保留 `__empty__` 占位路由命中 `notFound()`——`output: export` 要求动态段至少产出一个路由） |
+| `/[locale]` | 首页：工具 / 技能 / 项目 / 站点 / 提示词五个板块（客户端切换，无单独路由） |
+| `/[locale]/skills/[slug]` `/projects/[slug]` `/sites/[slug]` `/prompts/[slug]` | 分类详情页（`generateStaticParams` 由 `content/` 驱动，无内容时保留 `__empty__` 占位路由命中 `notFound()`——`output: export` 要求动态段至少产出一个路由） |
 | `/curator/**` | 管理台（CI 发布前会从 `out/` 移除） |
 
 内容文件是 JSON frontmatter + Markdown（`lib/public-content.ts` 解析），`status !== "active"` 的文件不参与构建。

@@ -33,7 +33,7 @@ export function loadResources(): Tool[] {
   return published.map((tool) => ({
     ...tool,
     kind: tool.kind ?? "tool",
-    category: categoryOf(tool),
+    category: categoryOf(tool, "tool"),
     tags: attributeTags(tool.tags ?? []),
   }) as Tool);
 }

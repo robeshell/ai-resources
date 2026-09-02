@@ -3,19 +3,19 @@
 import { useCallback, useMemo, useState } from "react";
 import { ToolDialog } from "@/components/ToolDialog";
 import { ToolLogo } from "@/components/ToolLogo";
-import { CATEGORIES, categoryOf } from "@/lib/tags";
+import { categoriesForBlock, categoryOf } from "@/lib/tags";
 import type { Locale, Tool } from "@/lib/types";
 
 export function ToolList({ tools, locale }: { tools: Tool[]; locale: Locale; section?: number }) {
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const closeDialog = useCallback(() => setSelectedTool(null), []);
   const groups = useMemo(() => {
-    const known = CATEGORIES.map((category) => ({
+    const known = categoriesForBlock("tool").map((category) => ({
       id: category.id,
       label: category.label[locale],
-      tools: tools.filter((tool) => categoryOf(tool) === category.id),
+      tools: tools.filter((tool) => categoryOf(tool, "tool") === category.id),
     })).filter((group) => group.tools.length);
-    const uncategorized = tools.filter((tool) => !categoryOf(tool));
+    const uncategorized = tools.filter((tool) => !categoryOf(tool, "tool"));
     return uncategorized.length
       ? [...known, { id: "uncategorized", label: locale === "zh" ? "未分类" : "Other", tools: uncategorized }]
       : known;

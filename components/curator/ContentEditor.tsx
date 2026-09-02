@@ -12,15 +12,16 @@ import { ExamplesEditor, StructuredLinks, VariablesEditor } from "@/components/c
 import { ConversationPanel } from "@/components/curator/ConversationPanel";
 import { MarkdownEditor } from "@/components/curator/MarkdownEditor";
 import { CategoryPicker, TagPicker } from "@/components/curator/TagPicker";
-import type { ArticlePayload, ContentBlockId, ContentStatus, PromptPayload, ToolPayload } from "@/lib/content-blocks";
+import type { ArticlePayload, ContentBlockId, ContentStatus, PromptPayload, SitePayload, ToolPayload } from "@/lib/content-blocks";
 import { BLOCK_LABELS, curatorRequest, type CuratorContentItem } from "@/lib/curator-client";
 import { curatorEditorHref } from "@/lib/curator-routes";
 import { CuratorPageHeader } from "@/components/curator/CuratorPageHeader";
 
-type EditableBlock = Extract<ContentBlockId, "tool" | "skill" | "project" | "prompt">;
+type EditableBlock = Extract<ContentBlockId, "tool" | "skill" | "project" | "site" | "prompt">;
 
 function blankPayload(block: EditableBlock): CuratorContentItem["payload"] {
   if (block === "tool") return { tagline: { zh: "", en: "" }, summary: { zh: "", en: "" }, url: "" } satisfies ToolPayload;
+  if (block === "site") return { summary: { zh: "", en: "" }, description: { zh: "", en: "" }, url: "" } satisfies SitePayload;
   if (block === "prompt") return { summary: { zh: "", en: "" }, prompt: "", variables: [], examples: [], links: [] } satisfies PromptPayload;
   return { summary: { zh: "", en: "" }, body: "", links: [] } satisfies ArticlePayload;
 }
@@ -31,12 +32,12 @@ function blankItem(block: EditableBlock): CuratorContentItem {
 }
 
 function EditorSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
-  return <Paper component="section" withBorder p={{ base: "md", sm: "lg" }} className="curator-editor-section">
-    <Flex direction="column" gap={6} className="curator-editor-section-heading">
+  return <Paper component="section" p={0} className="curator-editor-section">
+    <Flex direction={{ base: "column", sm: "row" }} align={{ sm: "baseline" }} gap={{ base: 4, sm: "md" }} className="curator-editor-section-heading">
       <Title order={2}>{title}</Title>
       {description ? <Text size="xs" c="dimmed" lh={1.5}>{description}</Text> : null}
     </Flex>
-    <Box mt="md">{children}</Box>
+    <Box mt="sm">{children}</Box>
   </Paper>;
 }
 
@@ -109,7 +110,12 @@ export function ContentEditor({ block, slug }: { block: EditableBlock; slug: str
       if (!tool.tagline.en.trim()) next.taglineEn = "请填写 English verdict";
       try { const url = new URL(tool.url); if (!['http:', 'https:'].includes(url.protocol)) throw new Error(); } catch { next.toolUrl = "请输入完整的 http 或 https 链接"; }
     }
+    if (block === "site") {
+      const site = payload as unknown as SitePayload;
+      try { const url = new URL(site.url); if (!['http:', 'https:'].includes(url.protocol)) throw new Error(); } catch { next.siteUrl = "请输入完整的 http 或 https 链接"; }
+    }
     if ((block === "skill" || block === "project") && !String(payload.body || "").trim()) next.body = "已发布的长文必须填写正文";
+    if ((block === "skill" || block === "project") && !String(draft.sourceUrl || "").trim() && !((payload.links || []) as unknown[]).length) next.links = "请填写来源链接或至少一条相关链接";
     if (block === "prompt" && !String(payload.prompt || "").trim()) next.prompt = "已发布的提示词必须填写正文";
     return next;
   }
@@ -129,6 +135,7 @@ export function ContentEditor({ block, slug }: { block: EditableBlock; slug: str
     <Stack gap="md"><Text size="sm">{loadError}</Text><Group><Button component={Link} href={`/curator/resources/?block=${block}`} variant="default">返回{BLOCK_LABELS[block]}列表</Button><Button onClick={() => window.location.reload()}>重新读取</Button></Group></Stack>
   </Alert>;
   const tool = block === "tool" ? draft.payload as ToolPayload : null;
+  const site = block === "site" ? draft.payload as SitePayload : null;
   const article = block === "skill" || block === "project" ? draft.payload as ArticlePayload : null;
   const prompt = block === "prompt" ? draft.payload as PromptPayload : null;
 
@@ -140,14 +147,18 @@ export function ContentEditor({ block, slug }: { block: EditableBlock; slug: str
     <Stack gap={0} className="curator-editor-main" style={{ minWidth: 0 }}>
     <Box className="curator-editor-form-scroll">
     {!conversationContentId ? <CuratorPageHeader title={draft.title || `未命名${BLOCK_LABELS[block]}`} description={`新建${BLOCK_LABELS[block]}`} meta={<Text component={Link} href={`/curator/resources/?block=${block}`} size="sm" c="dimmed" className="curator-back-link">← 返回{BLOCK_LABELS[block]}列表</Text>} /> : null}
-    <Stack gap="md">
+    <Stack gap={0}>
       <EditorSection title="基本信息" description="用于资源库索引和公开站识别。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="标题" value={draft.title} error={fieldErrors.title} onChange={(event) => updateItem("title", event.currentTarget.value)} /><TextInput label="Slug" value={draft.slug} error={fieldErrors.slug} onChange={(event) => updateItem("slug", event.currentTarget.value)} /><TextInput label="来源链接" value={draft.sourceUrl || ""} onChange={(event) => updateItem("sourceUrl", event.currentTarget.value)} placeholder="https://…" /><Select label="内容状态" value={draft.status} onChange={(value) => updateItem("status", (value || "draft") as ContentStatus)} data={[{ value: "draft", label: "草稿" }, { value: "active", label: "已发布" }, { value: "archived", label: "已归档" }]} /></SimpleGrid></EditorSection>
-      <EditorSection title="分类" description="决定这条内容在公开资源库中的栏目。"><CategoryPicker value={draft.category} error={fieldErrors.category} onChange={(category) => updateItem("category", category)} /></EditorSection>
+      <EditorSection title="分类" description={`只显示${BLOCK_LABELS[block]}板块下可用的栏目。`}><CategoryPicker block={block} value={draft.category} error={fieldErrors.category} onChange={(category) => updateItem("category", category)} /></EditorSection>
       <EditorSection title="标签" description="补充描述这条内容，可多选。"><TagPicker value={draft.tags} onChange={(tags) => updateItem("tags", tags)} /></EditorSection>
       {tool ? <>
         <EditorSection title="工具入口" description="Logo 与主要访问入口。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="Logo 路径" value={tool.logo || ""} onChange={(event) => updatePayload({ ...tool, logo: event.currentTarget.value })} placeholder="/logos/…" /><TextInput label="官网链接" value={tool.url} error={fieldErrors.toolUrl} onChange={(event) => updatePayload({ ...tool, url: event.currentTarget.value })} /></SimpleGrid></EditorSection>
         <EditorSection title="卡片文案" description="列表卡片只显示定位和摘要。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="中文定位" value={tool.tagline.zh} error={fieldErrors.taglineZh} onChange={(event) => updateLocalized("tagline", "zh", event.currentTarget.value)} /><TextInput label="English verdict" value={tool.tagline.en} error={fieldErrors.taglineEn} onChange={(event) => updateLocalized("tagline", "en", event.currentTarget.value)} /><Textarea label="中文简介" minRows={3} value={tool.summary.zh} error={fieldErrors.summaryZh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} /><Textarea label="English summary" minRows={3} value={tool.summary.en} error={fieldErrors.summaryEn} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection>
         <EditorSection title="快速查看" description="点击工具卡片后显示的补充介绍。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><Textarea label="中文短详情" description="建议两小段、120–240 字。" rows={10} resize="none" value={tool.description?.zh || ""} onChange={(event) => updateLocalized("description", "zh", event.currentTarget.value)} /><Textarea label="English details" description="Two short paragraphs." rows={10} resize="none" value={tool.description?.en || ""} onChange={(event) => updateLocalized("description", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection>
+      </> : null}
+      {site ? <>
+        <EditorSection title="站点入口" description="公开访问地址与可选图标。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><TextInput label="Logo 路径" value={site.logo || ""} onChange={(event) => updatePayload({ ...site, logo: event.currentTarget.value })} placeholder="/logos/…" /><TextInput label="站点地址" value={site.url} error={fieldErrors.siteUrl} onChange={(event) => updatePayload({ ...site, url: event.currentTarget.value })} /></SimpleGrid></EditorSection>
+        <EditorSection title="站点介绍" description="说明里面有什么、怎样组织以及适合何时打开。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><Textarea label="中文摘要" minRows={3} value={site.summary.zh} error={fieldErrors.summaryZh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} /><Textarea label="English summary" minRows={3} value={site.summary.en} error={fieldErrors.summaryEn} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} /><Textarea label="中文详情" rows={8} resize="none" value={site.description?.zh || ""} onChange={(event) => updateLocalized("description", "zh", event.currentTarget.value)} /><Textarea label="English details" rows={8} resize="none" value={site.description?.en || ""} onChange={(event) => updateLocalized("description", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection>
       </> : null}
       {article ? <><EditorSection title="摘要" description="中英文摘要用于列表和搜索结果。"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><Textarea label="中文摘要" minRows={4} value={article.summary.zh} error={fieldErrors.summaryZh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} /><Textarea label="English summary" minRows={4} value={article.summary.en} error={fieldErrors.summaryEn} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection><EditorSection title="正文" description="使用 Markdown 编写公开阅读页正文。"><MarkdownEditor value={article.body} error={fieldErrors.body} onChange={(body) => updatePayload({ ...article, body })} /></EditorSection><EditorSection title="相关链接"><StructuredLinks value={article.links} error={fieldErrors.links} onChange={(links) => updatePayload({ ...article, links })} /></EditorSection></> : null}
       {prompt ? <><EditorSection title="摘要"><SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md"><Textarea label="中文摘要" minRows={4} value={prompt.summary.zh} error={fieldErrors.summaryZh} onChange={(event) => updateLocalized("summary", "zh", event.currentTarget.value)} /><Textarea label="English summary" minRows={4} value={prompt.summary.en} error={fieldErrors.summaryEn} onChange={(event) => updateLocalized("summary", "en", event.currentTarget.value)} /></SimpleGrid></EditorSection><EditorSection title="提示词正文"><MarkdownEditor label="Prompt" minHeight="20rem" value={prompt.prompt} error={fieldErrors.prompt} onChange={(next) => updatePayload({ ...prompt, prompt: next })} /></EditorSection><EditorSection title="变量"><VariablesEditor value={prompt.variables} onChange={(variables) => updatePayload({ ...prompt, variables })} /></EditorSection><EditorSection title="示例"><ExamplesEditor value={prompt.examples} onChange={(examples) => updatePayload({ ...prompt, examples })} /></EditorSection><EditorSection title="相关链接"><StructuredLinks value={prompt.links} error={fieldErrors.links} onChange={(links) => updatePayload({ ...prompt, links })} /></EditorSection></> : null}

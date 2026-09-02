@@ -1,8 +1,9 @@
 {
-  "note": "分类与标签词表。categories 是板块内固定的二级分类；tags 是平级、独立多选的属性标签。二者使用不同字段，不共享类型。",
+  "note": "分类与标签词表。categories 是按一级内容类型限定的二级分类；blocks 决定该分类在哪些板块可用。tags 是平级、独立多选的属性标签。二者使用不同字段，不共享类型。",
   "categories": [
     {
       "id": "coding",
+      "blocks": ["tool", "skill", "project", "prompt"],
       "label": {
         "zh": "编程",
         "en": "Coding"
@@ -11,6 +12,7 @@
     },
     {
       "id": "agent",
+      "blocks": ["tool", "skill", "project"],
       "label": {
         "zh": "通用 Agent",
         "en": "General agent"
@@ -19,6 +21,7 @@
     },
     {
       "id": "chat",
+      "blocks": ["tool"],
       "label": {
         "zh": "通用对话",
         "en": "Chat"
@@ -27,6 +30,7 @@
     },
     {
       "id": "image",
+      "blocks": ["tool", "project", "prompt"],
       "label": {
         "zh": "图像",
         "en": "Image"
@@ -35,6 +39,7 @@
     },
     {
       "id": "video",
+      "blocks": ["tool", "project", "prompt"],
       "label": {
         "zh": "视频",
         "en": "Video"
@@ -43,6 +48,7 @@
     },
     {
       "id": "automation",
+      "blocks": ["tool", "skill", "project", "prompt"],
       "label": {
         "zh": "自动化",
         "en": "Automation"
@@ -51,6 +57,7 @@
     },
     {
       "id": "infra",
+      "blocks": ["tool", "project"],
       "label": {
         "zh": "基础设施",
         "en": "Infrastructure"
@@ -59,6 +66,7 @@
     },
     {
       "id": "audio",
+      "blocks": ["tool", "project", "prompt"],
       "label": {
         "zh": "音频",
         "en": "Audio"
@@ -67,11 +75,60 @@
     },
     {
       "id": "research",
+      "blocks": ["tool", "skill", "project", "prompt"],
       "label": {
         "zh": "研究",
         "en": "Research"
       },
-      "hint": "产品本身就是为查资料而做的：给结论要给得出出处。通用助手里的「深度研究」模式不算，那还是通用对话。"
+      "hint": "核心用途是查资料、整理证据或形成有出处的结论。通用助手里的附带研究模式仍归通用对话。"
+    },
+    {
+      "id": "design",
+      "blocks": ["skill", "prompt"],
+      "label": {
+        "zh": "设计",
+        "en": "Design"
+      },
+      "hint": "用于界面、视觉、排版、交互或设计判断的方法与提示词。"
+    },
+    {
+      "id": "writing",
+      "blocks": ["skill", "prompt"],
+      "label": {
+        "zh": "写作",
+        "en": "Writing"
+      },
+      "hint": "用于起草、改写、编辑或组织文字内容的方法与提示词。"
+    },
+    {
+      "id": "directory",
+      "blocks": ["site"],
+      "label": { "zh": "资源导航", "en": "Directory" },
+      "hint": "按主题整理入口、工具或链接，主要价值是帮助发现资源。"
+    },
+    {
+      "id": "inspiration",
+      "blocks": ["site"],
+      "label": { "zh": "灵感与案例", "en": "Inspiration" },
+      "hint": "集中展示作品、界面、视觉案例或创意参考，主要用途是浏览和找灵感。"
+    },
+    {
+      "id": "knowledge",
+      "blocks": ["site"],
+      "label": { "zh": "文档与知识", "en": "Knowledge" },
+      "hint": "以教程、文档、解释或系统知识为主要内容，不是可直接操作的产品。"
+    },
+    {
+      "id": "community",
+      "blocks": ["site"],
+      "label": { "zh": "社区与资讯", "en": "Community" },
+      "hint": "围绕持续更新、讨论、新闻或社区内容组织的网站。"
+    },
+    {
+      "id": "database",
+      "blocks": ["site"],
+      "label": { "zh": "数据库", "en": "Database" },
+      "hint": "可检索或浏览的专题资料库、索引库和档案集合。"
     }
   ],
   "tags": [
@@ -156,14 +213,5 @@
       "hint": "提供接口给程序调用。"
     }
   ],
-  "deferred": [
-    {
-      "id": "writing",
-      "label": {
-        "zh": "写作",
-        "en": "Writing"
-      },
-      "reason": "通用助手都归了通用对话，专门的写作工具目前一条都没有。"
-    }
-  ]
+  "deferred": []
 }

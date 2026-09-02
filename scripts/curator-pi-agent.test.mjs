@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, stat } from "node:fs/promises";
+import { mkdtemp, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { createModels } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage, fauxProvider, fauxToolCall } from "@earendil-works/pi-ai/providers/faux";
@@ -33,6 +33,20 @@ test("Pi gateway config does not fall back to computer-wide settings", async () 
     loadPiGatewayConfig({ file: path.join(directory, ".curator", "pi-config.json") }),
     /系统页设置/,
   );
+});
+
+test("Pi strips a configured /v1 suffix before handing the base URL to Anthropic SDK", async () => {
+  const directory = await mkdtemp("/tmp/curator-pi-v1-");
+  const file = path.join(directory, ".curator", "pi-config.json");
+  await writePiProjectConfig({
+    baseUrl: "https://gateway.example/api/agent/v1",
+    apiKey: "secret-key",
+    defaultModel: "deepseek-v4-flash",
+  }, { file });
+
+  const config = await loadPiGatewayConfig({ file });
+  assert.equal(config.model.baseUrl, "https://gateway.example/api/agent");
+  assert.equal(publicPiProjectConfig(JSON.parse(await readFile(file, "utf8"))).baseUrl, "https://gateway.example/api/agent/v1");
 });
 
 test("compatible Anthropic streams get missing usage counters normalized", () => {
@@ -177,6 +191,7 @@ test("Pi forces a structured second turn when research ends as plain text", asyn
     fauxAssistantMessage([fauxToolCall("submit_draft", { name: "Recovered" })], { stopReason: "toolUse" }),
   ]);
   const events = [];
+  const requests = [];
   const result = await runCuratorDraft({
     prompt: "整理示例",
     schema: {
@@ -187,9 +202,17 @@ test("Pi forces a structured second turn when research ends as plain text", asyn
     },
     allowNetwork: true,
     model: faux.getModel(),
-    streamFn: models.streamSimple.bind(models),
+    streamFn: (model, context, options) => {
+      requests.push(options);
+      return models.streamSimple(model, context, options);
+    },
     onEvent: (event) => events.push(event),
   });
   assert.deepEqual(result.draft, { name: "Recovered" });
   assert.ok(events.some((event) => event.type === "submission.started"));
+  assert.ok(events.some((event) => event.type === "draft.delta"));
+  assert.ok(!events.some((event) => event.type === "text.delta"), "整理过程不能伪装成对话回复");
+  assert.equal(requests[0].reasoning, "low");
+  assert.equal(requests[1].reasoning, undefined);
+  assert.deepEqual(requests[1].toolChoice, { type: "tool", name: "submit_draft" });
 });

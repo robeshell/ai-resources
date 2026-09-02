@@ -57,20 +57,28 @@ test("the polish pass is body-only and cannot invent research", () => {
   assert.ok(prompt.length < 1600, `润色 prompt 应保持精简，当前 ${prompt.length} 字符`);
 });
 
-test("the Agent gets the real tag vocabulary, ids and judgement hints included", () => {
+test("the Agent only gets categories valid for the selected content type", () => {
   const prompt = buildAgentPrompt({
     skill: "SKILL", url: "https://example.dev", note: "", catalog: "", targetBlock: "tool",
   });
   const vocabulary = JSON.parse(readFileSync(new URL("../data/taxonomy.json", import.meta.url), "utf8"));
-  // A paraphrase drifts from the file; the prompt has to carry every id and
-  // hint, or the Agent invents synonyms for tags that already exist.
-  for (const entry of [...vocabulary.categories, ...vocabulary.tags]) {
+  const expected = vocabulary.categories.filter((entry) => entry.blocks.includes("tool"));
+  const excluded = vocabulary.categories.filter((entry) => !entry.blocks.includes("tool"));
+  for (const entry of [...expected, ...vocabulary.tags]) {
     assert.ok(prompt.includes(entry.id), `词表缺少条目 ${entry.id}`);
     assert.ok(prompt.includes(entry.hint), `词表缺少 ${entry.id} 的判定说明`);
   }
+  for (const entry of excluded) assert.ok(!prompt.includes(entry.hint), `工具词表不应包含 ${entry.id}`);
   assert.match(prompt, /先在表里找/);
   assert.match(prompt, /二级分类（写入 category）/);
   assert.match(prompt, /标签（写入 tags）— 所有标签平级、独立多选，没有互斥规则。/);
+});
+
+test("auto ingest groups category vocabulary by content type", () => {
+  const prompt = buildAgentPrompt({
+    skill: "SKILL", url: "https://example.dev", note: "", catalog: "", targetBlock: "auto",
+  });
+  for (const block of ["tool", "skill", "project", "site", "prompt"]) assert.match(prompt, new RegExp(`  ${block}:`));
 });
 
 test("the ingest rules keep the Agent out of this site's own published copy", () => {

@@ -12,7 +12,7 @@ const LEGACY_FILES = [
   { blockType: "tool", file: path.join(ROOT, "data/tools.json") },
 ];
 
-export const CONTENT_SCHEMA_VERSION = 6;
+export const CONTENT_SCHEMA_VERSION = 7;
 
 const MIGRATIONS = [
   {
@@ -152,6 +152,63 @@ const MIGRATIONS = [
       ALTER TABLE content_items ADD COLUMN category TEXT NOT NULL DEFAULT '';
     `,
   },
+  {
+    version: 7,
+    rebuildContentItems: true,
+    sql: `
+      ALTER TABLE content_items RENAME TO content_items_v6;
+      CREATE TABLE content_items (
+        id TEXT PRIMARY KEY NOT NULL,
+        block_type TEXT NOT NULL CHECK (block_type IN ('tool', 'skill', 'project', 'site', 'prompt', 'course', 'article')),
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')),
+        tags_json TEXT NOT NULL DEFAULT '[]',
+        source_url TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        current_revision_id INTEGER,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        category TEXT NOT NULL DEFAULT ''
+      );
+      INSERT INTO content_items (
+        id, block_type, slug, title, status, tags_json, source_url,
+        created_at, updated_at, current_revision_id, sort_order, category
+      ) SELECT
+        id, block_type, slug, title, status, tags_json, source_url,
+        created_at, updated_at, current_revision_id, sort_order, category
+      FROM content_items_v6;
+      DROP TABLE content_items_v6;
+      CREATE INDEX idx_content_items_block_status ON content_items(block_type, status);
+    `,
+  },
+  {
+    version: 8,
+    sql: `
+      UPDATE content_items
+      SET category = CASE
+        WHEN block_type = 'tool' AND slug IN ('cursor', 'zed', 'github-copilot', 'devin-desktop', 'augment-code') THEN 'coding'
+        WHEN block_type = 'tool' AND slug = 'manus' THEN 'agent'
+        WHEN block_type = 'tool' AND slug = 'ideogram' THEN 'image'
+        WHEN block_type = 'tool' AND slug IN ('hailuo-ai', 'veo') THEN 'video'
+        WHEN block_type = 'tool' AND slug IN ('suno', 'fish-audio') THEN 'audio'
+        WHEN block_type = 'tool' AND slug = 'notebooklm' THEN 'research'
+        WHEN block_type = 'tool' AND slug = 'fal-ai' THEN 'infra'
+        WHEN block_type = 'tool' AND slug IN ('dify', 'coze') THEN 'automation'
+        WHEN tags_json LIKE '%"coding"%' THEN 'coding'
+        WHEN tags_json LIKE '%"agent"%' THEN 'agent'
+        WHEN tags_json LIKE '%"chat"%' THEN 'chat'
+        WHEN tags_json LIKE '%"image"%' THEN 'image'
+        WHEN tags_json LIKE '%"video"%' THEN 'video'
+        WHEN tags_json LIKE '%"automation"%' THEN 'automation'
+        WHEN tags_json LIKE '%"infra"%' THEN 'infra'
+        WHEN tags_json LIKE '%"audio"%' THEN 'audio'
+        WHEN tags_json LIKE '%"research"%' THEN 'research'
+        ELSE category
+      END
+      WHERE category = '';
+    `,
+  },
 ];
 
 function now() {
@@ -171,13 +228,22 @@ export async function openContentDb({ file = DEFAULT_DB_FILE } = {}) {
   const applied = new Set(db.prepare("SELECT version FROM schema_migrations").all().map((row) => Number(row.version)));
   for (const migration of MIGRATIONS) {
     if (applied.has(migration.version)) continue;
+    if (migration.rebuildContentItems) {
+      db.exec("PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON;");
+    }
     db.exec("BEGIN IMMEDIATE");
     try {
       db.exec(migration.sql);
       db.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)").run(migration.version, now());
       db.exec("COMMIT");
+      if (migration.rebuildContentItems) {
+        db.exec("PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;");
+        const violation = db.prepare("PRAGMA foreign_key_check").get();
+        if (violation) throw new Error(`数据库迁移后外键无效：${JSON.stringify(violation)}`);
+      }
     } catch (error) {
-      db.exec("ROLLBACK");
+      try { db.exec("ROLLBACK"); } catch { /* Migration may already be committed. */ }
+      if (migration.rebuildContentItems) db.exec("PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;");
       db.close();
       throw error;
     }
@@ -206,7 +272,7 @@ function hydrateItem(row, revision) {
     slug: row.slug,
     title: row.title,
     status: row.status,
-    category: categoryOf({ category: row.category, tags: storedTags }),
+    category: categoryOf({ category: row.category, tags: storedTags }, row.block_type),
     tags: attributeTags(storedTags),
     ...(row.source_url ? { sourceUrl: row.source_url } : {}),
     ...(row.sort_order === undefined ? {} : { sortOrder: Number(row.sort_order) }),
@@ -564,7 +630,7 @@ function migrateLegacyItem(item, defaultBlockType, sortOrder = 0) {
     slug: String(item.slug || item.id),
     title: String(item.name || item.slug || item.id),
     status: item.status === "archived" ? "archived" : blockType === "tool" ? "active" : "draft",
-    category: categoryOf({ category: item.category, tags: legacyTags(item) }),
+    category: categoryOf({ category: item.category, tags: legacyTags(item) }, blockType),
     tags: attributeTags(legacyTags(item)),
     sourceUrl: item.url ? String(item.url) : undefined,
     sortOrder,

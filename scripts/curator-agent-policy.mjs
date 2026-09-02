@@ -1,6 +1,6 @@
 import { tagVocabularyPrompt } from "./curator-tags.mjs";
 
-const INGEST_BLOCKS = ["tool", "skill", "project", "prompt"];
+const INGEST_BLOCKS = ["tool", "skill", "project", "site", "prompt"];
 
 function normalizedName(value) {
   return String(value || "").trim().toLocaleLowerCase("en-US").replace(/\s+/g, " ");
@@ -36,7 +36,7 @@ export function similarResources(draft, catalog) {
 export function buildAgentPrompt({ skill, url, note, catalog, targetBlock, existingContent = "" }) {
   const blockNote = INGEST_BLOCKS.includes(targetBlock)
     ? `目标板块已指定为 ${targetBlock}，不要更改。`
-    : "目标板块未指定：由你根据内容判断（tool / skill / project / prompt）。";
+    : "目标板块未指定：由你根据内容判断（tool / skill / project / site / prompt）。";
   return `${skill}
 
 ---- 本次任务 ----
@@ -45,7 +45,7 @@ ${blockNote}
 整理备注：${String(note || "无").slice(0, 1000)}
 
 分类与标签词表（category 从二级分类中单选；tags 是平级多选标签，没有分组和互斥规则。先在表里找，实在没有合适的才自造一个英文小写连字符 id）：
-${tagVocabularyPrompt()}
+${tagVocabularyPrompt(targetBlock)}
 
 当前目录（用于查重与避免重复收录；仅参考，不要照抄其中的文案）：
 ${catalog || "（空）"}${existingContent ? `

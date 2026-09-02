@@ -28,7 +28,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const LIST_FILE = process.env.CURATOR_BATCH_LIST || path.join(ROOT, ".curator", "ingest-list.txt");
 const SERVER = process.env.CURATOR_SERVER || `http://127.0.0.1:${process.env.CURATOR_PORT || 4317}`;
-const BLOCKS = ["tool", "skill", "project", "prompt"];
+const BLOCKS = ["tool", "skill", "project", "site", "prompt"];
 
 function argValue(name, fallback) {
   const index = process.argv.indexOf(name);

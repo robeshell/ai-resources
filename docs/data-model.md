@@ -1,6 +1,6 @@
 # 数据模型
 
-Curator 的编辑源是本机 SQLite（`.curator/content.sqlite`，schema v6）；公开站只消费导出的静态 JSON/Markdown。本文是两边共享的内容契约。
+Curator 的编辑源是本机 SQLite（`.curator/content.sqlite`，schema v8）；公开站只消费导出的静态 JSON/Markdown。本文是两边共享的内容契约。
 
 ## 内容板块
 
@@ -11,6 +11,7 @@ Curator 的编辑源是本机 SQLite（`.curator/content.sqlite`，schema v6）�
 | 工具 | `tool` | 结构化卡片：Logo、双语 tagline/summary、官网、定价、平台 | `data/tools.json` | 启用 |
 | 技能 | `skill` | Markdown 正文、双语摘要、相关链接 | `content/skills/*.md` | 启用 |
 | 项目 | `project` | 同技能 | `content/projects/*.md` | 启用 |
+| 站点 | `site` | 访问地址、双语摘要与短详情 | `content/sites/*.md` | 启用 |
 | 提示词 | `prompt` | 提示词正文、变量、示例、相关链接 | `content/prompts/*.md` | 启用 |
 | 课程 | `course` | 同技能 + 章节 | `content/courses/*.md` | 注册未启用 |
 | 专题文章 | `article` | 同技能 | `content/articles/*.md` | 注册未启用 |
@@ -27,6 +28,9 @@ Curator 的编辑源是本机 SQLite（`.curator/content.sqlite`，schema v6）�
 // skill / project / article
 { summary: Localized, body: string, links: ContentLink[] }
 
+// site
+{ logo?, summary: Localized, description?: Localized, url: string }
+
 // prompt
 { summary: Localized, prompt: string, variables: {name, description, example?}[],
   examples: {input, output}[], links: ContentLink[] }
@@ -42,7 +46,7 @@ Schema 校验（`contentSchemas`）在保存时强制执行；导出的工具条
 ## 状态与生命周期
 
 - `status: draft | active | archived`，只有 `active` 参与导出与构建。
-- 收录保存时：工具直接 `active`，长文进 `draft`（必须补正文后才能发布）。
+- 收录保存时：工具和站点直接 `active`，长文进 `draft`（必须补正文后才能发布）。
 - 发布校验：已发布的长文必须有 `body`，已发布的提示词必须有 `prompt`。
 - AI 重新处理**只生成候选 revision**，应用候选才落为当前版本；编辑器里的保存永远走人工确认。
 
@@ -72,7 +76,7 @@ erDiagram
 
   CONTENT_ITEM {
     string id PK
-    string blockType "tool | skill | project | prompt | course | article"
+    string blockType "tool | skill | project | site | prompt | course | article"
     string slug UK
     string title
     string status "draft | active | archived"

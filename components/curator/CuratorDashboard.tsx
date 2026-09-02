@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Accordion, Alert, Badge, Box, Button, Group, Paper, SimpleGrid, Skeleton, Stack, Text, Title } from "@mantine/core";
+import { Accordion, Alert, Badge, Box, Button, Group, Skeleton, Stack, Text, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { CuratorPageHeader } from "@/components/curator/CuratorPageHeader";
 import { curatorRequest, type ActivityEntry, type BuildJob, type CuratorIngestBlock, type CuratorRun } from "@/lib/curator-client";
@@ -14,7 +14,7 @@ type BlockStat = { total: number; active: number; draft: number };
 type ContentCounts = {
   all: number; active: number; archived: number; draft: number;
   issues: number; issueTotal: number;
-  tool: number; skill: number; project: number; prompt: number;
+  tool: number; skill: number; project: number; site: number; prompt: number;
   blocks?: Partial<Record<CuratorIngestBlock, BlockStat>>;
 };
 type ListItem = { id: string; slug: string; title: string; blockType: CuratorIngestBlock; updatedAt: string; issueCount?: number };
@@ -161,8 +161,8 @@ export function CuratorDashboard() {
   const pendingTotal = buckets.reduce((total, bucket) => total + bucket.total, 0);
   const counts = data?.counts;
 
-  return <Stack gap="xl" className="curator-dashboard">
-    <CuratorPageHeader title="工作台" description="查看待办、内容状态与最近处理记录。" className="curator-dashboard-hero" actions={<Group gap="xs" wrap="wrap" className="curator-dashboard-actions">
+  return <Stack gap="lg" className="curator-dashboard">
+    <CuratorPageHeader title="工作台" description="待办、内容状态和最近记录。" className="curator-dashboard-hero" actions={<Group gap="xs" wrap="wrap" className="curator-dashboard-actions">
         <Button component={Link} href="/curator/ingest/">收录新资源</Button>
         <Button variant="default" disabled={buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>
           {build.status === "running" ? "校验中…" : "构建校验"}
@@ -180,38 +180,28 @@ export function CuratorDashboard() {
     </Alert> : null}
 
     <section className="curator-dashboard-section" aria-labelledby="curator-overview-title">
-      <Group justify="space-between" mb="md" wrap="wrap">
-        <Box>
-          <Text className="curator-eyebrow-mantine">内容概览</Text>
-          <Title id="curator-overview-title" order={2} mt={4}>各板块发布中与草稿</Title>
-        </Box>
+      <Group justify="space-between" mb="xs" wrap="wrap" className="curator-compact-section-heading">
+        <Title id="curator-overview-title" order={2}>内容概览</Title>
         {counts ? <Group gap="xs"><Badge variant="light" color="curator">发布中 {counts.active}</Badge><Badge variant="light" color="gray">草稿 {counts.draft ?? "—"}</Badge><Badge variant="light" color="red">归档 {counts.archived}</Badge></Group> : null}
       </Group>
-      <SimpleGrid cols={{ base: 2, md: 4 }} spacing="md">
+      <div className="curator-dashboard-summary">
         {ENABLED_CONTENT_BLOCK_IDS.map((block) => {
           const stat = counts?.blocks?.[block];
-          return <Paper withBorder p="lg" key={block} className="curator-dashboard-stat" data-block={block}>
-            <Group justify="space-between" align="flex-start" wrap="nowrap">
-              <Text size="sm" c="dimmed">{contentBlocks[block].label.zh}</Text>
-              <Text className="curator-dashboard-stat-index">0{ENABLED_CONTENT_BLOCK_IDS.indexOf(block) + 1}</Text>
-            </Group>
-            <Title order={2} mt={8} className="curator-number">{stat ? stat.active : counts ? counts[block] : <Skeleton h={28} w={48} />}</Title>
-            <Group gap="xs" mt={6} wrap="nowrap">
-              {stat
-                ? <><Text size="xs" c="dimmed">共 {stat.total}</Text>{stat.draft > 0 ? <Badge size="xs" variant="light" color="gray">{stat.draft} 草稿</Badge> : null}</>
-                : null}
-            </Group>
-          </Paper>;
+          return <Link href={`/curator/resources/?block=${block}`} key={block} className="curator-dashboard-summary-item">
+            <Text size="sm" fw={600}>{contentBlocks[block].label.zh}</Text>
+            <span className="curator-dashboard-summary-numbers">
+              <strong className="curator-number">{stat ? stat.active : counts ? counts[block] : <Skeleton component="span" h={18} w={28} />}</strong>
+              <Text component="span" size="xs" c="dimmed">/ {stat?.total ?? "—"}</Text>
+              {stat?.draft ? <Text component="span" size="xs" c="dimmed">{stat.draft} 草稿</Text> : null}
+            </span>
+          </Link>;
         })}
-      </SimpleGrid>
+      </div>
     </section>
 
     <section className="curator-dashboard-section curator-dashboard-work" aria-labelledby="curator-work-title">
-      <Group justify="space-between" mb="md" wrap="wrap" className="curator-dashboard-work-heading">
-        <Box>
-          <Text className="curator-eyebrow-mantine">待办与记录</Text>
-          <Title id="curator-work-title" order={2} mt={4}>{!data ? "读取中" : pendingTotal ? <><span className="curator-dashboard-pending-number">{pendingTotal}</span> 项等你处理</> : "没有待处理的内容"}</Title>
-        </Box>
+      <Group justify="space-between" mb="sm" wrap="wrap" className="curator-dashboard-work-heading">
+        <Title id="curator-work-title" order={2}>{!data ? "待办读取中" : pendingTotal ? <><span className="curator-dashboard-pending-number">{pendingTotal}</span> 项待处理</> : "没有待处理内容"}</Title>
         <Text size="xs" c="dimmed" className="curator-number">数据更新于 {data?.updatedAt?.replaceAll("-", ".") || "—"}</Text>
       </Group>
       {!data ? <Stack gap="xs"><Skeleton h={52} /><Skeleton h={52} /></Stack> : (

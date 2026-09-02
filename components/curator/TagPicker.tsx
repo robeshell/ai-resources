@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ActionIcon, Badge, Button, Group, Text, TextInput } from "@mantine/core";
-import { CATEGORIES, TAGS, knownTag, sortTags } from "@/lib/tags";
+import type { EnabledContentBlockId } from "@/lib/content-blocks";
+import { TAGS, categoriesForBlock, knownTag, sortTags } from "@/lib/tags";
 
 /**
  * One flat picker for the whole vocabulary. Groups only keep the vocabulary in
@@ -13,10 +14,11 @@ import { CATEGORIES, TAGS, knownTag, sortTags } from "@/lib/tags";
  * anything outside the vocabulary is kept and shown as pending rather than
  * silently dropped.
  */
-export function CategoryPicker({ value, onChange, error }: { value: string; onChange: (next: string) => void; error?: string }) {
+export function CategoryPicker({ block, value, onChange, error }: { block: EnabledContentBlockId; value: string; onChange: (next: string) => void; error?: string }) {
+  const categories = categoriesForBlock(block);
   return <div className="curator-category-picker">
     <div className="curator-category-grid" role="radiogroup" aria-label="分类" aria-invalid={error ? true : undefined} aria-describedby={error ? "curator-category-error" : undefined}>
-      {CATEGORIES.map((item) => (
+      {categories.map((item) => (
         <label key={item.id} className="curator-category-option" title={item.hint}>
           <input type="radio" name="curator-category" value={item.id} checked={value === item.id} onChange={() => onChange(item.id)} />
           {item.label.zh}
