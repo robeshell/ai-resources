@@ -36,8 +36,8 @@ const copy = {
     sourceLink: "Source",
     copyPrompt: "Copy prompt",
     copied: "Copied",
-    chineseOnly: "This article is currently available in Chinese.",
-    readChinese: "Read the Chinese version",
+    bodyUnavailable: "This article is currently available in Chinese.",
+    readOtherLocale: "Read the Chinese version",
     resourceKinds: {
       tool: "Product",
       skill: "Skill",
@@ -92,8 +92,8 @@ const copy = {
     sourceLink: "来源页面",
     copyPrompt: "复制提示词",
     copied: "已复制",
-    chineseOnly: "这篇内容目前只有中文版。",
-    readChinese: "阅读中文版",
+    bodyUnavailable: "这篇内容目前只有英文版。",
+    readOtherLocale: "阅读英文版",
     resourceKinds: {
       tool: "AI 产品",
       skill: "技能",

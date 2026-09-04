@@ -43,7 +43,9 @@ function markdownDocument(item) {
     ...(item.sourceUrl ? { sourceUrl: item.sourceUrl } : {}),
     payload,
   };
-  return `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n\n${String(payload.body || "").trim()}\n`;
+  // frontmatter 里两种语言都在；`---` 之后只写中文正文，让文件在编辑器里仍然可读。
+  const body = typeof payload.body === "object" ? payload.body?.zh : payload.body;
+  return `---\n${JSON.stringify(frontmatter, null, 2)}\n---\n\n${String(body || "").trim()}\n`;
 }
 
 async function ensureDb(file) {

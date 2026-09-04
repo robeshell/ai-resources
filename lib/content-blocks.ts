@@ -38,7 +38,8 @@ export type ToolPayload = {
 
 export type ArticlePayload = {
   summary: Localized;
-  body: string;
+  /** 正文按语言分开存。缺一侧时公开站会在该语言下显示「只有另一语言版本」的提示。 */
+  body: Localized;
   links: ContentLink[];
 };
 

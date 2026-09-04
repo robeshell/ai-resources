@@ -33,32 +33,28 @@ function ResourceLinks({ item, t, className = "" }: { item: PublicContentDocumen
   </aside>;
 }
 
-function isChineseBody(body: string) {
-  const letters = body.match(/[A-Za-z\u3400-\u9fff]/g) || [];
-  const chinese = body.match(/[\u3400-\u9fff]/g) || [];
-  return letters.length > 0 && chinese.length / letters.length > 0.2;
-}
-
+/** 正文缺当前语言、但另一语言有，就把读者引过去；两边都空则整块不渲染。 */
 function LanguageNotice({ item, locale, t }: PageProps & { t: UiCopy }) {
-  if (locale !== "en" || !isChineseBody(item.body)) return null;
+  const other: Locale = locale === "en" ? "zh" : "en";
+  if (!text(item.body, other).trim()) return null;
   return <div className="public-detail-language-notice">
-    <p>{t.chineseOnly}</p>
-    <Link href={`/zh/${item.blockType}s/${item.slug}/`}>{t.readChinese} →</Link>
+    <p>{t.bodyUnavailable}</p>
+    <Link href={`/${other}/${item.blockType}s/${item.slug}/`}>{t.readOtherLocale} →</Link>
   </div>;
 }
 
 function SkillDetail({ item, locale, t }: PageProps & { t: UiCopy }) {
-  const unavailable = locale === "en" && isChineseBody(item.body);
+  const body = text(item.body, locale).trim();
   return <div className="public-detail-skill-layout">
-    <main className="public-detail-reading">{unavailable ? <LanguageNotice item={item} locale={locale} t={t} /> : <MarkdownBody source={item.body} />}</main>
+    <main className="public-detail-reading">{body ? <MarkdownBody source={body} /> : <LanguageNotice item={item} locale={locale} t={t} />}</main>
     <ResourceLinks item={item} t={t} className="public-detail-skill-links" />
   </div>;
 }
 
 function ProjectDetail({ item, locale, t }: PageProps & { t: UiCopy }) {
-  const unavailable = locale === "en" && isChineseBody(item.body);
+  const body = text(item.body, locale).trim();
   return <div className={`public-detail-project-layout${item.links.length || item.sourceUrl ? " has-links" : ""}`}>
-    <main className="public-detail-project-body">{unavailable ? <LanguageNotice item={item} locale={locale} t={t} /> : <MarkdownBody source={item.body} />}</main>
+    <main className="public-detail-project-body">{body ? <MarkdownBody source={body} /> : <LanguageNotice item={item} locale={locale} t={t} />}</main>
     <ResourceLinks item={item} t={t} className="public-detail-project-links" />
   </div>;
 }

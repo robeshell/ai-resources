@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { buildAgentPrompt, buildPolishPrompt, canonicalResourceUrl, similarResources } from "./curator-agent-policy.mjs";
+import { buildAgentPrompt, buildPolishPrompt, buildTranslatePrompt, canonicalResourceUrl, similarResources } from "./curator-agent-policy.mjs";
 
 test("GitHub duplicate detection compares repository identity, not the shared host", () => {
   const catalog = [
@@ -101,4 +101,15 @@ test("the ingest rules keep the Agent out of this site's own published copy", ()
     assert.ok(!examples.includes(answered), `口吻示例不能给出 ${answered} 的现成答案`);
   }
   assert.match(skill, /二级分类看这个产品\*\*主要是干什么的\*\*/);
+});
+
+test("the translation pass only translates and cannot invent research", () => {
+  const prompt = buildTranslatePrompt({
+    draft: { blockType: "skill", name: "Demo", body: "## 它是什么\n\n定稿的中文正文" },
+  });
+  assert.match(prompt, /Translate only/);
+  assert.match(prompt, /Do not add facts/);
+  assert.match(prompt, /Keep every ## heading/);
+  assert.match(prompt, /Match the source's length/);
+  assert.match(prompt, /定稿的中文正文/);
 });

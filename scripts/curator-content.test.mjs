@@ -44,7 +44,7 @@ function skill(id, status, body) {
     sourceUrl: `https://github.com/example/${id}`,
     createdAt: at,
     updatedAt: at,
-    payload: { summary: { zh: "技能摘要", en: "Skill summary" }, body, links: [] },
+    payload: { summary: { zh: "技能摘要", en: "Skill summary" }, body: typeof body === "string" ? { zh: body, en: "" } : body, links: [] },
   };
 }
 
@@ -139,7 +139,7 @@ test("a batch that fails partway leaves nothing written", async () => {
         return { item: next, expectedRevisionId: current.revision?.id };
       });
       repository.saveMany(entries);
-    }, /已发布的长文必须填写正文/);
+    }, /已发布的长文必须填写中文正文/);
 
     assert.equal(repository.get("alpha").status, "draft");
     assert.equal(repository.get("beta").status, "draft");
@@ -174,7 +174,7 @@ test("publishing enforces what the public build requires", () => {
     [{ ...complete, payload: { ...complete.payload, url: "http://127.0.0.1/x" } }, /内网或保留地址/],
     [{ ...complete, category: "" }, /有效的二级分类/],
     [{ ...complete, tags: ["coding", "free"] }, /二级分类不能放在卡片标签中/],
-    [skill("empty", "active", "  "), /已发布的长文必须填写正文/],
+    [skill("empty", "active", "  "), /已发布的长文必须填写中文正文/],
     [{ ...skill("no-source", "active", "# 正文"), sourceUrl: undefined }, /来源链接或相关链接/],
   ];
   for (const [item, message] of cases) assert.throws(() => validateContentPayload(item), message);

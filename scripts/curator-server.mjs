@@ -18,7 +18,7 @@ import {
   validateContentPayload,
 } from "./curator-content-rules.mjs";
 import { exportContent } from "./curator-export.mjs";
-import { buildAgentPrompt as composeAgentPrompt, buildPolishPrompt as composePolishPrompt, similarResources } from "./curator-agent-policy.mjs";
+import { buildAgentPrompt as composeAgentPrompt, buildPolishPrompt as composePolishPrompt, buildTranslatePrompt as composeTranslatePrompt, similarResources } from "./curator-agent-policy.mjs";
 import { deletePiProjectConfig, loadPiGatewayConfig, publicPiProjectConfig, readPiProjectConfig, runCuratorConversation, runCuratorDraft, writePiProjectConfig } from "./curator-pi-agent.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -303,6 +303,18 @@ function piToolLabel(event) {
   return `调用 ${event.tool}`;
 }
 
+/** 结构化轮次偶尔会把整个 {"body":"..."} 信封当成 body 交回来。写进条目前拆一层，
+ *  否则公开页会渲染出一整行 JSON —— claude-mem 就这样坏过一次。 */
+function unwrapBody(value) {
+  const text = String(value || "").trim();
+  if (!text.startsWith('{"body"')) return text;
+  try {
+    return String(JSON.parse(text).body || "").trim();
+  } catch {
+    return text;
+  }
+}
+
 async function polishDraft(draft, model, options) {
   if (!["skill", "project"].includes(draft?.blockType) || !String(draft?.body || "").trim()) return { draft, polished: false };
   const prompt = composePolishPrompt({ draft });
@@ -316,7 +328,24 @@ async function polishDraft(draft, model, options) {
     onEvent: (event) => forwardPiDraftEvent(event, options),
   });
   options.onProgress?.("正文润色完成", { kind: "status" });
-  return { draft: { ...draft, body: result.draft.body.trim() }, polished: true };
+  return { draft: { ...draft, body: unwrapBody(result.draft.body) }, polished: true };
+}
+
+/** 英文正文单独跑一轮。失败不影响入库：英文缺失只是资料库里的一个「问题」。 */
+async function translateDraft(draft, model, options) {
+  if (!["skill", "project"].includes(draft?.blockType) || !String(draft?.body || "").trim()) return { draft, translated: false };
+  const prompt = composeTranslatePrompt({ draft });
+  options.onProgress?.("开始翻译英文正文", { kind: "status" });
+  const result = await runCuratorDraft({
+    prompt,
+    schema: POLISH_SCHEMA,
+    selectedModel: model,
+    allowNetwork: false,
+    onAgent: options.onAgent,
+    onEvent: (event) => forwardPiDraftEvent(event, options),
+  });
+  options.onProgress?.("英文正文完成", { kind: "status" });
+  return { draft: { ...draft, bodyEn: unwrapBody(result.draft.body) }, translated: true };
 }
 
 async function agentDraft(url, note, model, targetBlock = "tool", options = {}) {
@@ -337,7 +366,13 @@ async function agentDraft(url, note, model, targetBlock = "tool", options = {}) 
     } catch (error) {
       options.onProgress?.(`润色失败，保留第一稿：${error instanceof Error ? error.message : "未知错误"}`, { kind: "status" });
     }
-    return { draft: result.draft, agent: { mode: "embedded", tool: "pi", model: first.model, polished: result.polished } };
+    let translation = { draft: result.draft, translated: false };
+    try {
+      translation = await translateDraft(result.draft, model, options);
+    } catch (error) {
+      options.onProgress?.(`翻译失败，英文正文留空：${error instanceof Error ? error.message : "未知错误"}`, { kind: "status" });
+    }
+    return { draft: translation.draft, agent: { mode: "embedded", tool: "pi", model: first.model, polished: result.polished, translated: translation.translated } };
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : "Pi Agent 整理失败");
   }
@@ -956,6 +991,7 @@ function normalizeDraft(input = {}, finalUrl) {
     rationale: cleanText(input.rationale, 280),
     sourceLogoUrl: usableLogoUrl(input.logoUrl),
     body: typeof input.body === "string" ? input.body.trim().slice(0, 24000) : "",
+    bodyEn: typeof input.bodyEn === "string" ? input.bodyEn.trim().slice(0, 24000) : "",
     links,
     prompt: typeof input.prompt === "string" ? input.prompt.trim().slice(0, 16000) : "",
     variables: Array.isArray(input.variables)
@@ -1074,10 +1110,14 @@ function contentPayloadFromDraft(draft, currentPayload = {}) {
       links,
     };
   }
+  const currentBody = typeof currentPayload.body === "object" ? currentPayload.body || {} : { zh: currentPayload.body || "", en: "" };
   return {
     ...currentPayload,
     summary: draft.summary,
-    body: String(draft.body || currentPayload.body || "").trim(),
+    body: {
+      zh: String(draft.body || currentBody.zh || "").trim(),
+      en: String(draft.bodyEn || currentBody.en || "").trim(),
+    },
     links,
   };
 }
@@ -1148,7 +1188,7 @@ async function saveDraft(rawDraft, conversationId) {
         }
         : {
           summary: draft.summary,
-          body: String(draft.body || ""),
+          body: { zh: String(draft.body || "").trim(), en: String(draft.bodyEn || "").trim() },
           links,
         };
     const at = new Date().toISOString();

@@ -79,3 +79,24 @@ export function buildPolishPrompt({ draft }) {
 第一稿：
 ${String(draft.body || "").slice(0, 24000)}`;
 }
+
+/**
+ * 翻译轮次跑在润色之后，只看已经定稿的中文正文，所以它不需要资料、也不许上网。
+ * 分成独立一轮而不是让主 Agent 一次写两版：调研那一轮已经很长，再要求它输出
+ * 双语正文会同时拉低两边的质量。
+ */
+export function buildTranslatePrompt({ draft }) {
+  return `You are the English editor for a curated AI resource library. Translate the Chinese article below and output only {"body":"..."}.
+
+Rules:
+- Keep every ## heading, its order, and all links, commands, code, config values and product names exactly as they are.
+- Translate only. Do not add facts, numbers, features, platforms or licences that are absent from the Chinese text, and never claim first-hand use.
+- Write the plain, concrete English of a technical editor: say what the thing does and what happens when you run it. No marketing voice, no padding.
+- Keep multi-command blocks as fenced code blocks with their language tag.
+- Match the source's length. Do not summarise it and do not expand it.
+
+Resource type: ${draft.blockType}
+Title: ${draft.name}
+Chinese article:
+${String(draft.body || "").slice(0, 24000)}`;
+}

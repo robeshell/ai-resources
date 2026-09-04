@@ -19,7 +19,7 @@ export type PublicContentDocument = PublicContentSummary & {
   sourceUrl?: string;
   url?: string;
   description?: Localized;
-  body: string;
+  body: Localized;
   links: ContentLink[];
   prompt?: string;
   variables?: PromptVariable[];
@@ -31,6 +31,15 @@ const PUBLIC_BLOCKS = ["skill", "project", "site", "prompt"] as const;
 
 function directory(block: (typeof PUBLIC_BLOCKS)[number]) {
   return path.join(ROOT, "content", `${block}s`);
+}
+
+/** 正文早期是单个中文字符串，也允许 `---` 之后的正文作为唯一来源。两种旧形态都折进 zh。 */
+function readBody(value: unknown, trailing: string): Localized {
+  if (value && typeof value === "object") {
+    const body = value as Partial<Localized>;
+    return { zh: String(body.zh || "").trim(), en: String(body.en || "").trim() };
+  }
+  return { zh: String(value || trailing || "").trim(), en: "" };
 }
 
 function parseFile(file: string): PublicContentDocument | null {
@@ -63,7 +72,7 @@ function parseFile(file: string): PublicContentDocument | null {
     ...(typeof payload.logo === "string" && payload.logo ? { logo: payload.logo } : {}),
     ...(typeof payload.url === "string" ? { url: payload.url } : {}),
     ...(payload.description && typeof payload.description === "object" ? { description: payload.description as Localized } : {}),
-    body: String(payload.body || match[2] || "").trim(),
+    body: readBody(payload.body, match[2]),
     links: Array.isArray(payload.links) ? payload.links as ContentLink[] : [],
     ...(typeof payload.prompt === "string" ? { prompt: payload.prompt } : {}),
     ...(Array.isArray(payload.variables) ? { variables: payload.variables as PromptVariable[] } : {}),

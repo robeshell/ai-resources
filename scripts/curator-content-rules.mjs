@@ -74,8 +74,9 @@ export function validateContentPayload(item) {
     assertUrlShape(payload.url);
   }
   if (item.blockType === "site") assertUrlShape(payload.url);
-  if (LONG_FORM_BLOCKS.includes(item.blockType) && !String(payload.body || "").trim()) {
-    throw new Error("已发布的长文必须填写正文");
+  // 中文正文是发布门槛；英文正文缺失不拦保存，只在 contentIssueCount 里记一笔。
+  if (LONG_FORM_BLOCKS.includes(item.blockType) && !String(payload.body?.zh || "").trim()) {
+    throw new Error("已发布的长文必须填写中文正文");
   }
   if (["skill", "project"].includes(item.blockType) && !String(item.sourceUrl || "").trim() && !(payload.links || []).length) {
     throw new Error("已发布的技能或项目必须填写来源链接或相关链接");
@@ -100,7 +101,8 @@ export function contentIssueCount(item) {
   if (!knownCategory(String(item.category || ""), item.blockType)) count += 1;
   // Agent 提的新标签不会自动进词表，留在这里等人处理。
   if (tags.some((tag) => !knownTag(tag))) count += 1;
-  if (["skill", "project"].includes(item.blockType) && !String(payload.body || "").trim()) count += 1;
+  if (["skill", "project"].includes(item.blockType) && !String(payload.body?.zh || "").trim()) count += 1;
+  if (["skill", "project"].includes(item.blockType) && !String(payload.body?.en || "").trim()) count += 1;
   if (["skill", "project"].includes(item.blockType) && !String(item.sourceUrl || "").trim() && !(payload.links || []).length) count += 1;
   if (item.blockType === "prompt" && !String(payload.prompt || "").trim()) count += 1;
   return count;

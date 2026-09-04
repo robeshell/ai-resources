@@ -620,7 +620,7 @@ function migrateLegacyItem(item, defaultBlockType, sortOrder = 0) {
       }
     : {
         summary,
-        body: "",
+        body: { zh: "", en: "" },
         links: item.url ? [{ label: "Official link", url: String(item.url), kind: "official" }] : [],
       };
   const at = now();

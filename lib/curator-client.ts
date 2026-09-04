@@ -92,7 +92,9 @@ export type CuratorDraft = {
   confidence: number;
   rationale: string;
   sourceLogoUrl?: string;
+  /** Agent 写的是中文正文；bodyEn 由服务端的翻译轮次补上，可能为空。 */
   body?: string;
+  bodyEn?: string;
   links?: ContentLink[];
   prompt?: string;
   variables?: PromptVariable[];
@@ -209,7 +211,14 @@ export function draftPayload(draft: CuratorDraft, current: Record<string, unknow
   if (block === "prompt") {
     return { ...base, summary: draft.summary, prompt: (draft.prompt || "").trim(), variables: draft.variables || [], examples: draft.examples || [], links: draft.links?.length ? draft.links : base.links || [] };
   }
-  return { ...base, summary: draft.summary, body: (draft.body || "").trim(), links: draft.links?.length ? draft.links : base.links || [] };
+  const currentBody = current.body as { zh?: string; en?: string } | string | undefined;
+  const keptEn = typeof currentBody === "object" ? currentBody?.en || "" : "";
+  return {
+    ...base,
+    summary: draft.summary,
+    body: { zh: (draft.body || "").trim(), en: (draft.bodyEn || keptEn).trim() },
+    links: draft.links?.length ? draft.links : base.links || [],
+  };
 }
 
 export type RunRecordStats = {
