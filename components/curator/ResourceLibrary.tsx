@@ -50,6 +50,9 @@ function ContentIdentity({ item }: { item: LibraryItem }) {
   </Link>;
 }
 
+// counts 来自 curator 服务端进程，curatorRequest<T> 只是类型断言、不做运行时校验。
+// 那个进程可能比页面旧（板块列表加过 site 之后没重启就会少一个键），所以这里按缺省读，
+// 少一个板块只是数字显示 0，而不是整页白屏。
 const EMPTY_COUNTS: LibraryCounts = {
   all: 0, active: 0, draft: 0, archived: 0, issues: 0, issueTotal: 0,
   blocks: { tool: { total: 0, active: 0, draft: 0 }, skill: { total: 0, active: 0, draft: 0 }, project: { total: 0, active: 0, draft: 0 }, site: { total: 0, active: 0, draft: 0 }, prompt: { total: 0, active: 0, draft: 0 } },
@@ -150,7 +153,7 @@ export function ResourceLibrary() {
     </section>
 
     <Tabs value={block} onChange={(value) => updateParams({ block: value || "all", page: 1 })} variant="pills" keepMounted={false}>
-      <Tabs.List className="curator-block-tabs" aria-label="按内容类型筛选">{BLOCKS.map((item) => <Tabs.Tab value={item.value} key={item.value}>{item.label}<span className="curator-tab-count">{item.value === "all" ? result.counts.all : result.counts.blocks[item.value].total}</span></Tabs.Tab>)}</Tabs.List>
+      <Tabs.List className="curator-block-tabs" aria-label="按内容类型筛选">{BLOCKS.map((item) => <Tabs.Tab value={item.value} key={item.value}>{item.label}<span className="curator-tab-count">{item.value === "all" ? result.counts.all : (result.counts.blocks?.[item.value]?.total ?? 0)}</span></Tabs.Tab>)}</Tabs.List>
     </Tabs>
 
     <Paper component="form" withBorder p="md" onSubmit={submitSearch} className="curator-library-filters">

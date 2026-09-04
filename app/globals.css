@@ -904,6 +904,7 @@ html[data-theme="dark"] .theme-toggle-moon {
   color: var(--muted-dim);
   font: inherit;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition-property: color, background-color, transform;
   transition-duration: 130ms;
@@ -940,6 +941,21 @@ html[data-theme="dark"] .theme-toggle-moon {
 
 .tool-directory-logo .logo-frame img { padding: 0.08rem; }
 
+.tool-directory-logo .logo-fallback {
+  border-radius: 0.24rem;
+  background: color-mix(in srgb, var(--color-muted) 88%, transparent);
+  color: var(--muted-dim);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.tool-directory-row:hover .tool-directory-logo .logo-fallback {
+  background: var(--color-muted);
+  color: var(--ink);
+}
+
 .tool-directory-name {
   overflow: hidden;
   font-size: 0.82rem;
@@ -968,6 +984,638 @@ html[data-theme="dark"] .theme-toggle-moon {
   .tool-directory-group { min-height: 0; }
   .tool-directory-group--wide { padding-top: 1.5rem; }
   .tool-directory-group--wide .tool-directory-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Technical Workbench - Toolbar & Dual View (List & Cards) */
+.tech-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tech-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.tech-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tech-filter-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 1.8rem;
+  padding: 0 0.55rem;
+  border: 0;
+  background: transparent;
+  color: var(--muted-dim);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 520;
+  cursor: pointer;
+  transition: color 130ms ease;
+}
+
+.tech-filter-tab:hover {
+  color: var(--ink);
+  background: transparent;
+}
+
+.tech-filter-tab.is-active {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.tech-filter-tab::after {
+  position: absolute;
+  right: 0.35rem;
+  bottom: -0.75rem;
+  left: 0.35rem;
+  height: 2px;
+  border-radius: 999px;
+  background: transparent;
+  content: "";
+  transition: background-color 140ms ease;
+}
+
+.tech-filter-tab.is-active::after {
+  background: var(--accent);
+}
+
+.tech-filter-tab em {
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  font-style: normal;
+}
+
+.tech-view-switcher {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  background: transparent;
+}
+
+.tech-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.65rem;
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--muted-dim);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 540;
+  cursor: pointer;
+  transition: color 130ms ease;
+}
+
+.tech-view-btn:hover {
+  color: var(--ink);
+  background: transparent;
+}
+
+.tech-view-btn.is-active {
+  background: transparent;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.tech-view-btn svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* 视图平滑切换容器（消除跳变与重绘抖动） */
+.tech-view-container {
+  position: relative;
+  min-height: 15rem;
+}
+
+.tech-view-panel {
+  animation: techViewFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes techViewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 方案 A: 极简工程清单行 (Technical Ledger List) */
+.tech-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.tech-list-row {
+  display: grid;
+  grid-template-columns: minmax(13.5rem, 17.5rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.05rem 1.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 45%, transparent);
+  border-radius: 0.45rem;
+  color: inherit;
+  text-decoration: none;
+  background: transparent;
+  transition: border-color 150ms ease;
+}
+
+.tech-list-row:last-child {
+  border-bottom-color: transparent;
+}
+
+.tech-list-row:hover {
+  background: transparent;
+  border-bottom-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.tech-list-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.tech-list-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.tech-list-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.tech-list-row:hover .tech-list-title {
+  color: var(--accent-ink);
+}
+
+.tech-list-category {
+  padding: 0.12rem 0.45rem;
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--color-muted) 85%, transparent);
+  color: var(--muted-dim);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.67rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tech-list-summary {
+  margin: 0;
+  color: var(--muted-dim);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tech-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.tech-list-arrow {
+  color: var(--muted);
+  font-size: 0.92rem;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms ease;
+}
+
+.tech-list-row:hover .tech-list-arrow {
+  color: var(--accent);
+  transform: translateX(4px);
+}
+
+@media (max-width: 58rem) {
+  .tech-list-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    padding: 0.95rem 1rem;
+  }
+  .tech-list-summary {
+    display: none;
+  }
+}
+
+/* 方案 B: 极简通透工程卡片 (Lean Spec Cards - Zero Background Stacking) */
+.tech-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+.tech-card-compact {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  border-radius: 0.65rem;
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: none;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms ease;
+}
+
+.tech-card-compact:hover {
+  transform: translateY(-2px);
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.tech-card-compact:active {
+  transform: translateY(0);
+}
+
+.tech-card-compact:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] .tech-card-compact {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .tech-card-compact:hover {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent-on-dark) 45%, rgba(255, 255, 255, 0.14));
+}
+
+.tech-card-logo {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.tech-card-logo .logo-frame {
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tech-card-logo .logo-frame img {
+  padding: 0.08rem;
+}
+
+.tech-card-logo .logo-fallback {
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--color-muted) 88%, transparent);
+  color: var(--muted-dim);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.tech-card-compact:hover .tech-card-logo .logo-fallback {
+  background: var(--color-muted);
+  color: var(--ink);
+}
+
+.tech-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tech-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.tech-card-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 140ms ease;
+}
+
+.tech-card-compact:hover .tech-card-title {
+  color: var(--accent-ink);
+}
+
+.tech-card-category {
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tech-card-summary {
+  margin: 0;
+  color: var(--muted-dim);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 64rem) {
+  .tech-grid-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 38rem) {
+  .tech-grid-compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Prompt Showcase - Recipe Cards */
+.prompt-showcase {
+  display: grid;
+  gap: 3.25rem;
+}
+
+.prompt-showcase-group {
+  min-width: 0;
+}
+
+.prompt-showcase-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.prompt-showcase-heading h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+}
+
+.prompt-showcase-heading span {
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+}
+
+.prompt-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.prompt-recipe-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.35rem 1.4rem 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  border-radius: 0.65rem;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms ease;
+}
+
+.prompt-recipe-card:hover {
+  transform: translateY(-2px);
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+html[data-theme="dark"] .prompt-recipe-card {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+html[data-theme="dark"] .prompt-recipe-card:hover {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent-on-dark) 45%, rgba(255, 255, 255, 0.14));
+}
+
+.prompt-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.prompt-card-header-left {
+  min-width: 0;
+}
+
+.prompt-card-category {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.prompt-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+
+.prompt-card-title a {
+  color: var(--ink);
+  text-decoration: none;
+  transition: color 130ms ease;
+}
+
+.prompt-card-title a:hover {
+  color: var(--accent-ink);
+}
+
+.prompt-card-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 1.85rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 130ms ease, color 130ms ease;
+}
+
+.prompt-card-copy-btn:hover {
+  border-color: var(--accent);
+  background: transparent;
+  color: var(--accent-ink);
+}
+
+.prompt-card-summary {
+  margin: 0 0 0.75rem;
+  color: var(--muted-dim);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.prompt-card-window {
+  margin: 0 0 0.85rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--color-muted) 60%, transparent);
+}
+
+.prompt-window-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  background: color-mix(in srgb, var(--color-muted) 90%, transparent);
+}
+
+.prompt-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--line-strong);
+  opacity: 0.7;
+}
+
+.prompt-window-label {
+  margin-left: 0.3rem;
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+}
+
+.prompt-window-content {
+  position: relative;
+  max-height: 5.5rem;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  overflow-y: hidden;
+  color: var(--muted-dim);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.prompt-window-content::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1.5rem;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-muted) 90%, transparent));
+  content: "";
+  pointer-events: none;
+}
+
+.prompt-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.prompt-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.prompt-tag-badge {
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+}
+
+.prompt-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--accent-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 130ms ease;
+}
+
+.prompt-card-link:hover {
+  transform: translateX(2px);
+}
+
+@media (max-width: 52rem) {
+  .prompt-showcase-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .t-tilt {
@@ -1270,6 +1918,29 @@ html[data-theme="dark"] .theme-toggle-moon {
   text-transform: uppercase;
 }
 
+.site-dialog-eyebrow-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.25rem;
+}
+
+.site-dialog-eyebrow-row .dialog-eyebrow {
+  margin-bottom: 0;
+}
+
+.site-dialog-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.25rem;
+  background: var(--color-muted);
+  color: var(--muted-dim);
+  font-size: 0.65rem;
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+}
+
 .dialog-header h2 {
   margin: 0;
   max-width: 100%;
@@ -1279,6 +1950,14 @@ html[data-theme="dark"] .theme-toggle-moon {
   letter-spacing: -0.02em;
   line-height: 1.3;
   overflow-wrap: anywhere;
+}
+
+.site-dialog-hostname {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
 }
 
 .dialog-close {
@@ -1647,8 +2326,7 @@ html[data-theme="dark"] .theme-toggle-moon {
   }
 
   .catalog-only .tool-grid,
-  .tool-grid,
-  .public-content-grid {
+  .tool-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1667,97 +2345,6 @@ html[data-theme="dark"] .theme-toggle-moon {
   }
 }
 
-
-.public-content-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-
-.public-content-directory { min-width: 0; }
-.public-category-filter {
-  display: flex;
-  gap: 0.35rem;
-  overflow-x: auto;
-  width: max-content;
-  max-width: 100%;
-  margin-bottom: 2.25rem;
-  padding: 0.25rem;
-  border-radius: 0.7rem;
-  background: color-mix(in srgb, var(--color-muted) 72%, transparent);
-  scrollbar-width: none;
-}
-.public-category-filter::-webkit-scrollbar { display: none; }
-.public-category-filter button {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 0.45rem;
-  min-height: 2.25rem;
-  padding: 0 0.75rem;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted-dim);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8125rem;
-  font-weight: 620;
-}
-.public-category-filter button span { color: var(--muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
-.public-category-filter button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 0.1rem 0.35rem rgba(75, 48, 30, 0.06); }
-.public-category-filter button[aria-selected="true"] span { color: var(--accent-ink); }
-.public-content-groups { display: grid; gap: 2.75rem; }
-.public-content-group > header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  justify-content: flex-start;
-  margin-bottom: 1rem;
-}
-.public-content-group > header::before {
-  width: 0.32rem;
-  height: 0.32rem;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--accent);
-  content: "";
-}
-.public-content-group > header h3 { margin: 0; font-size: 0.95rem; font-weight: 700; }
-.public-content-group > header span { margin-left: 0.15rem; color: var(--muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
-
-.public-content-card {
-  position: relative;
-  display: grid;
-  min-height: 11rem;
-  align-content: start;
-  overflow: hidden;
-  padding: 1.15rem 1.15rem 1rem;
-  border: 1px solid transparent;
-  border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--surface) 72%, var(--color-muted));
-  color: var(--ink);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-
-.public-content-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 24%, transparent);
-  background: var(--surface);
-}
-
-.public-content-card-topline {
-  display: flex;
-  min-height: 1.75rem;
-  align-items: center;
-  gap: 0.6rem;
-}
-.public-content-card-topline img {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 0.42rem;
-  object-fit: contain;
-}
 .public-detail-title-row { display: flex; align-items: center; gap: 1rem; }
 .public-detail-title-row img { width: 3rem; height: 3rem; border-radius: 0.7rem; object-fit: contain; }
 .public-detail-language-notice {
@@ -1768,10 +2355,6 @@ html[data-theme="dark"] .theme-toggle-moon {
 }
 .public-detail-language-notice p { margin: 0 0 0.35rem; color: var(--muted-dim); }
 .public-detail-language-notice a { color: var(--accent-ink); font-weight: 650; }
-
-.public-content-card h3 { margin: 0.7rem 0 0.4rem; font-size: 1.05rem; font-weight: 700; }
-.public-content-card p { margin: 0; color: var(--muted-dim); font-size: 0.875rem; line-height: 1.6; }
-.public-content-card em { margin-top: auto; padding-top: 1.1rem; color: var(--accent-ink); font-style: normal; font-weight: 650; }
 .public-content-empty { color: var(--muted); }
 
 .public-detail {
@@ -2028,7 +2611,6 @@ html[data-theme="dark"] .theme-toggle-moon {
 .public-not-found a { width: max-content; margin-top: 0.5rem; color: var(--accent-ink); font-weight: 650; }
 
 @media (max-width: 42rem) {
-  .public-content-grid { grid-template-columns: 1fr; }
   .public-detail { padding-top: 1rem; }
   .public-detail-header { margin-top: 1.15rem; padding: 1.9rem 0 2rem; }
   .public-detail-header h1 { font-size: 2rem; }
