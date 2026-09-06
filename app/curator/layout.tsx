@@ -4,6 +4,9 @@ import { CuratorProvider } from "@/components/curator/CuratorProvider";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "./curator.css";
+import "./workspace.css";
+import "./typography.css";
+import "./home.css";
 
 export const metadata: Metadata = {
   title: "Curator",

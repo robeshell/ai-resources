@@ -1,0 +1,51 @@
+/* The home page is a working queue, with library context kept beside it. */
+.curator-home-main { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; gap: 3rem; margin-top: 1rem; }
+.curator-home-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; min-height: 2rem; margin-bottom: 1rem; }
+.curator-home-section-heading h2 { margin: 0; }
+.curator-home-queue { min-width: 0; }
+.curator-home-tabs { flex-wrap: nowrap; gap: 1.5rem; }
+.curator-home-tabs::before { border-color: var(--line); border-width: 0 0 1px; }
+.curator-workspace .curator-home-tabs .mantine-Tabs-tab { flex: 0 0 auto; min-width: 0; padding: .875rem .125rem; border-radius: 0; background: transparent; color: var(--muted); font-weight: 400; }
+.curator-workspace .curator-home-tabs .mantine-Tabs-tab:hover { color: var(--ink); background: transparent; }
+.curator-workspace .curator-home-tabs .mantine-Tabs-tab[data-active] { color: var(--ink); font-weight: 500; background: transparent; }
+.curator-home-tabs .mantine-Tabs-tabLabel { display: flex; align-items: baseline; gap: .5rem; white-space: nowrap; }
+.curator-home-tabs .mantine-Tabs-tabLabel span { font-size: var(--mantine-font-size-xs); color: var(--muted); font-weight: 400; }
+.curator-home-queue-description { margin: 1rem 0 .5rem; }
+.curator-home-queue-rows { min-height: 17rem; }
+.curator-home .curator-dashboard-row { min-height: 4.25rem; border-top: 0; border-bottom: 1px solid var(--line); }
+.curator-home .curator-dashboard-row .mantine-Button-root { color: var(--muted-dim); font-weight: 400; }
+.curator-home .curator-dashboard-row .mantine-Button-root:hover { color: var(--accent-ink); }
+.curator-home-queue-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3rem; }
+.curator-home-empty { display: flex; align-items: center; justify-content: center; min-height: 17rem; padding: 2rem; color: var(--muted); font-size: var(--mantine-font-size-sm); }
+.curator-home-library { min-width: 0; padding-left: 2rem; border-left: 1px solid var(--line); }
+.curator-home-library-summary { margin-bottom: 1.5rem; }
+.curator-home-library-label { display: flex; justify-content: space-between; padding-bottom: .5rem; color: var(--muted); font-size: var(--mantine-font-size-xs); }
+.curator-home-library-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 2.625rem; border-top: 1px solid var(--line); color: var(--ink); text-decoration: none; }
+.curator-home-library-row small { color: var(--muted); font-size: var(--mantine-font-size-xs); }
+.curator-home-library-row:hover { color: var(--accent-ink); }
+.curator-home-build { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1.25rem; margin-top: 1rem; border-top: 1px solid var(--line); }
+.curator-home-build p + p { margin-top: .25rem; }
+.curator-home-recent { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.curator-home-recent-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem; }
+.curator-home-recent-item { min-width: 0; padding: .875rem 0; color: var(--ink); text-decoration: none; }
+.curator-home-recent-title { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; font-weight: 500; overflow-wrap: anywhere; }
+.curator-home-recent-title > span { color: var(--muted); font-weight: 400; }
+.curator-home-recent-item:hover .curator-home-recent-title { color: var(--accent-ink); }
+.curator-home-recent-meta { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .625rem; color: var(--muted); font-size: var(--mantine-font-size-xs); }
+.curator-home-updated { margin-top: 2rem; }
+.curator-home-skeleton-row { display: flex; align-items: center; gap: 2rem; min-height: 4.25rem; border-bottom: 1px solid var(--line); }
+@media (max-width: 75rem) {
+  .curator-home-main { grid-template-columns: minmax(0, 1fr) 16rem; gap: 1.5rem; }
+  .curator-home-library { padding-left: 1.5rem; }
+}
+@media (max-width: 64rem) {
+  .curator-home-main { grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+  .curator-home-library { padding: 1.5rem 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .curator-home-recent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 36rem) {
+  .curator-home-tabs { gap: 1rem; }
+  .curator-home-tabs .mantine-Tabs-tabLabel { gap: .25rem; }
+  .curator-home-recent-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .curator-home-recent-item + .curator-home-recent-item { border-top: 1px solid var(--line); }
+}

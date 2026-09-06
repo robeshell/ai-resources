@@ -464,7 +464,7 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
     if (data.status === "failed" || data.status === "cancelled") {
       return <Stack gap="xs" className="curator-msg-run">
         <Group gap="xs" align="baseline" wrap="nowrap">
-          <Text fw={600} size="sm" c={data.status === "cancelled" ? "dimmed" : "red"}>{data.status === "cancelled" ? "已停止" : "整理失败"}</Text>
+          <Text fw={500} size="sm" c={data.status === "cancelled" ? "dimmed" : "red"}>{data.status === "cancelled" ? "已停止" : "整理失败"}</Text>
           {data.elapsedMs ? <Text size="xs" c="dimmed" className="curator-number">{durationLabel(data.elapsedMs)}</Text> : null}
         </Group>
         {data.error ? <Text size="sm" c="dimmed">{data.error}</Text> : null}
@@ -484,7 +484,7 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
     return <Stack gap="sm" className="curator-msg-run">
       <Group justify="space-between" align="center">
         <Group gap="xs" align="baseline" wrap="nowrap">
-          <Text fw={600} size="sm">整理完成</Text>
+          <Text fw={500} size="sm">整理完成</Text>
           {data.elapsedMs ? <Text size="xs" c="dimmed" className="curator-number">
             {durationLabel(data.elapsedMs)}{data.polished ? " · 含润色" : ""}
           </Text> : null}
@@ -501,7 +501,7 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
           <div className="curator-suggestion-attachment">
             {changes.map((field) => <details key={field} className="curator-diff-row">
               <summary className="curator-diff-summary">
-                <Text component="span" size="sm" fw={600}>{FIELD_LABEL[field] || field}</Text>
+                <Text component="span" size="sm" fw={500}>{FIELD_LABEL[field] || field}</Text>
                 <Text component="span" size="xs" c="dimmed" className="curator-diff-preview">
                   {readableValue(proposed[field]).replace(/\s+/g, " ")}
                 </Text>
@@ -519,7 +519,7 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
               </div>
             </details>)}
           </div>
-        </> : <Text size="sm" c="dimmed">{adopted ? "这份建议已经在编辑器里了，记得保存。" : "Agent 没有改变任何字段。"}</Text>}
+        </> : <Text size="sm" c="dimmed">{adopted ? "这份建议与当前内容一致。" : "Agent 没有改变任何字段。"}</Text>}
         {changes.length ? <Group mt={4}><Button size="xs" disabled={busy} onClick={() => onAdopt?.(Object.fromEntries(changes.map((field) => [field, proposed[field]])))}>全部采用</Button><Text size="xs" c="dimmed">采用后仍需保存编辑器</Text></Group> : null}
       </Stack> : <article className="curator-ingest-draft">
         <div className="curator-ingest-draft-heading">
@@ -564,7 +564,6 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
       <div className="curator-conversation-controls">
         {error ? <Alert color="red" title="出错了" role="alert" mb="xs">{error}</Alert> : null}
         {mode === "standalone" && ingestBlock === "prompt" && !hasMessages ? <div className="curator-prompt-capture-note">
-          <Text size="sm" fw={600}>粘贴要保存的提示词</Text>
           <Text size="xs" c="dimmed">AI 只整理标题、摘要、变量和示例，不会执行提示词，也不会联网。</Text>
           <TextInput
             mt="sm"
@@ -598,7 +597,7 @@ export function ConversationPanel({ contentId, conversationId, ingestBlock, curr
                 {option.value === "__default__" ? <Badge size="xs" variant="light" color="curator" radius="sm">默认</Badge> : null}
               </Group>}
             />
-            <Box style={{ flex: 1 }} />
+            <Box className="curator-composer-spacer" style={{ flex: 1 }} />
             {running ? <ComposerPrimitive.Cancel asChild><Button size="xs" variant="default" loading={busy}>停止整理</Button></ComposerPrimitive.Cancel> : <ComposerPrimitive.Send asChild><Button size="xs" loading={busy}>{mode === "standalone" && ingestBlock === "prompt" && !hasMessages ? "整理提示词" : mode === "standalone" && !hasMessages ? "开始整理" : "发送"}</Button></ComposerPrimitive.Send>}
           </Group>
         </ComposerPrimitive.Root>

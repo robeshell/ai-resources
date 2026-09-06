@@ -21,7 +21,7 @@
   min-height: 100dvh;
   background: #f5f6f6;
   color: #2a3033;
-  font-size: 0.875rem;
+  font-size: var(--mantine-font-size-sm);
 }
 
 .curator-root::before {
@@ -49,8 +49,8 @@
   display: inline-flex;
   align-items: center;
   color: #2a3033;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -60,13 +60,13 @@
   line-height: 1.1;
 }
 
-.curator-brand-link strong { font-size: 0.9rem; font-weight: 700; }
-.curator-brand-link small { color: #7b8085; font-size: 0.64rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.curator-brand-link strong { font-size: var(--mantine-font-size-sm); font-weight: 500; }
+.curator-brand-link small { color: #7b8085; font-size: var(--mantine-font-size-xs); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .curator-nav-link {
   position: relative;
   color: #7b8085;
-  font-size: 0.875rem;
+  font-size: var(--mantine-font-size-sm);
   font-weight: 500;
   text-decoration: none;
 }
@@ -153,7 +153,7 @@
 
 .curator-dashboard-hero h1 {
   max-width: 13ch;
-  font-size: clamp(2.1rem, 5vw, 3.55rem);
+  font-size: var(--mantine-font-size-xl);
   line-height: 1.04;
   text-wrap: balance;
 }
@@ -209,14 +209,14 @@
 }
 
 .curator-dashboard-stat h2 {
-  font-size: 2rem;
+  font-size: var(--mantine-font-size-xl);
   line-height: 1;
 }
 
 .curator-dashboard-stat-index {
   color: color-mix(in srgb, var(--accent) 55%, #7b8085);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.68rem;
+  font-size: var(--mantine-font-size-xs);
   letter-spacing: 0.08em;
 }
 
@@ -236,8 +236,8 @@
 .curator-dashboard-pending-number {
   color: var(--accent);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 1.25em;
-  font-weight: 600;
+  font-size: var(--mantine-font-size-xl);
+  font-weight: 500;
   letter-spacing: -0.06em;
 }
 
@@ -289,7 +289,7 @@
   gap: 0.45rem;
   color: var(--mantine-color-curator-8);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -364,17 +364,17 @@
 
 .curator-markdown-preview {
   padding: 1rem 1.25rem;
-  font-size: 0.9375rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.7;
 }
 
 .curator-markdown-preview .markdown-body > * { margin-block: 0 0.9rem; }
 .curator-markdown-preview .markdown-body > :last-child { margin-bottom: 0; }
-.curator-markdown-preview .markdown-body h2 { margin-top: 1.5rem; font-size: 1.15rem; }
-.curator-markdown-preview .markdown-body h3 { margin-top: 1.25rem; font-size: 1rem; }
+.curator-markdown-preview .markdown-body h2 { margin-top: 1.5rem; font-size: var(--mantine-font-size-sm); }
+.curator-markdown-preview .markdown-body h3 { margin-top: 1.25rem; font-size: var(--mantine-font-size-sm); }
 .curator-markdown-preview .markdown-body h4,
 .curator-markdown-preview .markdown-body h5,
-.curator-markdown-preview .markdown-body h6 { margin-top: 1.1rem; font-size: 0.9375rem; }
+.curator-markdown-preview .markdown-body h6 { margin-top: 1.1rem; font-size: var(--mantine-font-size-sm); }
 .curator-markdown-preview .markdown-body ul,
 .curator-markdown-preview .markdown-body ol { padding-left: 1.4rem; }
 .curator-markdown-preview .markdown-body li { margin-block: 0.25rem; }
@@ -384,7 +384,7 @@
   border-radius: 0.3rem;
   background: #eef0f0;
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.875em;
+  font-size: var(--mantine-font-size-sm);
 }
 .curator-markdown-preview .markdown-body pre {
   overflow-x: auto;
@@ -449,7 +449,7 @@
   background: #f5f6f6;
   color: #565c60;
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   line-height: 1.55;
   white-space: pre-wrap;
 }
@@ -470,7 +470,7 @@
 .curator-root .mantine-Button-root,
 .curator-root .mantine-Select-input,
 .curator-root .mantine-Textarea-input {
-  font-size: 0.875rem;
+  font-size: var(--mantine-font-size-sm);
 }
 
 .curator-root .mantine-Input-input,
@@ -495,7 +495,7 @@
 }
 
 .curator-root .mantine-Button-root {
-  font-weight: 600;
+  font-weight: 500;
   transition-property: color, background-color, border-color, transform;
   transition-duration: 140ms;
 }
@@ -517,7 +517,7 @@
 .curator-root .mantine-Checkbox-label,
 .curator-root .mantine-Textarea-label {
   color: #565c60;
-  font-size: 0.8125rem;
+  font-size: var(--mantine-font-size-sm);
   font-weight: 500;
 }
 
@@ -533,7 +533,7 @@
   box-shadow: 0 1px 2px rgba(42, 48, 51, 0.045);
 }
 
-.curator-root .mantine-Badge-root { font-weight: 600; letter-spacing: 0.01em; }
+.curator-root .mantine-Badge-root { font-weight: 500; letter-spacing: 0.01em; }
 
 .curator-root .mantine-Alert-root {
   position: relative;
@@ -565,15 +565,15 @@
 
 .curator-root .mantine-Alert-label {
   color: currentColor;
-  font-size: 0.8125rem;
-  font-weight: 650;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
   line-height: 1.45;
 }
 
 .curator-root .mantine-Alert-message {
   min-width: min(18rem, 100%);
   color: var(--muted-dim);
-  font-size: 0.8125rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.5;
 }
 
@@ -618,8 +618,8 @@
 
 .mantine-Notification-description {
   color: var(--ink);
-  font-size: 0.78rem;
-  font-weight: 540;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -650,7 +650,7 @@
 .curator-root .mantine-Table-thead {
   background: #f8f9f9;
   color: #565c60;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   letter-spacing: 0.04em;
 }
 
@@ -661,7 +661,7 @@
   gap: 1.5rem;
 }
 
-.curator-empty-state { padding: 0.75rem 0; color: #7b8085; font-size: 0.8125rem; }
+.curator-empty-state { padding: 0.75rem 0; color: #7b8085; font-size: var(--mantine-font-size-sm); }
 .curator-agent-stream {
   max-height: 22rem;
   overflow: auto;
@@ -671,7 +671,7 @@
   background: #2a3033;
   color: #d8d6d0;
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -723,7 +723,7 @@
 }
 
 .curator-editor-section-heading h2 {
-  font-size: 1rem;
+  font-size: var(--mantine-font-size-sm);
   letter-spacing: -0.015em;
 }
 
@@ -785,8 +785,8 @@
   padding-block-start: 0;
   color: #7b8085;
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
   letter-spacing: 0.08em;
   line-height: 1.4;
 }
@@ -838,7 +838,7 @@
   border-radius: 0.45rem;
   background: #f5f6f6;
   color: #565c60;
-  font-size: 0.8rem;
+  font-size: var(--mantine-font-size-sm);
   font-weight: 500;
   line-height: 1.4;
   text-align: center;
@@ -857,7 +857,7 @@
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .curator-category-option:active { transform: scale(0.96); }
@@ -876,7 +876,7 @@
   border-radius: 0.45rem;
   background: #fff;
   color: #565c60;
-  font-size: 0.78rem;
+  font-size: var(--mantine-font-size-sm);
   font-weight: 500;
   line-height: 1.4;
   transition-property: color, background-color, border-color, transform;
@@ -918,7 +918,7 @@
   border-radius: 0;
   background: #fff;
   color: #7b8085;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   font-weight: 500;
   text-align: left;
 }
@@ -977,7 +977,7 @@
   min-width: 0;
   overflow-wrap: anywhere;
   color: #2a3033;
-  font-size: 1rem;
+  font-size: var(--mantine-font-size-sm);
   letter-spacing: -0.02em;
 }
 
@@ -1024,7 +1024,7 @@
 .curator-agent-live-text .markdown-body {
   max-width: 68ch;
   color: #303639;
-  font-size: 0.875rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.72;
   overflow-wrap: break-word;
 }
@@ -1051,7 +1051,7 @@
 .curator-agent-live-text .markdown-body h6 {
   margin-block: 1.15rem 0.45rem;
   color: #24292c;
-  font-size: 0.9375rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.35;
   letter-spacing: -0.01em;
 }
@@ -1072,7 +1072,7 @@
 .curator-msg-assistant .markdown-body strong,
 .curator-agent-live-text .markdown-body strong {
   color: #252a2d;
-  font-weight: 650;
+  font-weight: 500;
 }
 
 .curator-msg-assistant .markdown-body a,
@@ -1088,7 +1088,7 @@
   border: 1px solid #e1e4e4;
   border-radius: 0.3rem;
   background: #f6f7f7;
-  font-size: 0.88em;
+  font-size: var(--mantine-font-size-sm);
 }
 
 .curator-msg-assistant .markdown-code-block,
@@ -1104,7 +1104,7 @@
   padding: 0.35rem 0.7rem;
   border-bottom: 1px solid #e3e6e6;
   color: #7b8085;
-  font-size: 0.6875rem;
+  font-size: var(--mantine-font-size-xs);
 }
 
 .curator-msg-assistant .markdown-body pre,
@@ -1137,7 +1137,7 @@
   width: fit-content;
   cursor: pointer;
   color: #7b8085;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   line-height: 1.75rem;
   list-style-position: inside;
 }
@@ -1220,8 +1220,8 @@
 
 .curator-prompt-capture-note .mantine-InputWrapper-label {
   color: #565c60;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
 }
 
 .curator-composer-input {
@@ -1273,7 +1273,7 @@
   width: 0.75rem;
   color: #8b9195;
   content: "›";
-  font-size: 1rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1;
   transform: rotate(0deg);
   transition: transform 140ms ease;
@@ -1302,8 +1302,8 @@
 
 .curator-diff-label {
   color: #7b8085;
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
   letter-spacing: 0.02em;
   line-height: 1.25;
 }
@@ -1321,7 +1321,7 @@
   border-radius: 0.4rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 0.8125rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.65;
   scrollbar-gutter: stable;
 }
@@ -1356,7 +1356,7 @@
   min-height: 2rem;
   cursor: pointer;
   color: #7b8085;
-  font-size: 0.75rem;
+  font-size: var(--mantine-font-size-xs);
   line-height: 2rem;
 }
 
@@ -1456,7 +1456,7 @@
 .curator-page-header h1 {
   margin: 0;
   color: var(--ink);
-  font-size: clamp(1.25rem, 1.7vw, 1.55rem);
+  font-size: var(--mantine-font-size-xl);
   line-height: 1.2;
   letter-spacing: -0.03em;
   text-wrap: balance;
@@ -1464,7 +1464,7 @@
 .curator-page-header-copy > [data-dimmed="true"] {
   max-width: 42rem;
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: var(--mantine-font-size-sm);
   line-height: 1.5;
 }
 .curator-page-header-meta {
@@ -1473,7 +1473,7 @@
   margin-bottom: 0;
 }
 .curator-page-header-actions { flex: 0 0 auto; }
-.curator-eyebrow-mantine { color: var(--accent-ink); font-size: 0.7rem; letter-spacing: 0.08em; }
+.curator-eyebrow-mantine { color: var(--accent-ink); font-size: var(--mantine-font-size-xs); letter-spacing: 0.08em; }
 .curator-eyebrow-mantine::before { width: 1.35rem; height: 2px; border-radius: 0; }
 
 /* Workbench: operational overview, not a landing-page hero. */
@@ -1500,7 +1500,7 @@
 .curator-dashboard-section { padding-top: 0.35rem; }
 .curator-dashboard-section > .mantine-Group-root:first-child { padding-inline: 0; }
 .curator-compact-section-heading h2,
-.curator-dashboard-work-heading h2 { margin: 0; font-size: 0.95rem; letter-spacing: -0.015em; }
+.curator-dashboard-work-heading h2 { margin: 0; font-size: var(--mantine-font-size-sm); letter-spacing: -0.015em; }
 .curator-dashboard-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1522,7 +1522,7 @@
 .curator-dashboard-summary-item:hover { background: color-mix(in srgb, var(--accent-soft) 22%, transparent); }
 .curator-dashboard-summary-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .curator-dashboard-summary-numbers { display: inline-flex; align-items: baseline; gap: 0.35rem; white-space: nowrap; }
-.curator-dashboard-summary-numbers strong { font-size: 1rem; }
+.curator-dashboard-summary-numbers strong { font-size: var(--mantine-font-size-sm); }
 .curator-dashboard-stat {
   min-height: 7.5rem;
   padding-inline: 0 !important;
@@ -1534,7 +1534,7 @@
 }
 .curator-dashboard-stat::after { display: none; }
 .curator-dashboard-stat:hover { transform: none; border-color: var(--accent); box-shadow: none; }
-.curator-dashboard-stat h2 { font-size: 1.8rem; }
+.curator-dashboard-stat h2 { font-size: var(--mantine-font-size-xl); }
 .curator-dashboard-work {
   padding: 1rem 0 0;
   border: 0;
@@ -1578,8 +1578,8 @@
   padding: 0.55rem 0.75rem;
   border-radius: 0.35rem;
   color: var(--muted-dim);
-  font-size: 0.8rem;
-  font-weight: 560;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
   transition-property: background-color, color;
   transition-duration: 140ms;
   transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
@@ -1603,7 +1603,7 @@
 .curator-library-stat-value {
   min-width: 1.25rem;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--mantine-font-size-xs);
   font-weight: 500;
   line-height: 1;
   text-align: end;
@@ -1622,7 +1622,7 @@
   margin-inline-start: 0.45rem;
   color: var(--muted);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.7rem;
+  font-size: var(--mantine-font-size-xs);
   font-variant-numeric: tabular-nums;
 }
 .curator-library-filters {
@@ -1712,8 +1712,8 @@
   padding-inline: 0.75rem;
   border-radius: 0.35rem;
   color: var(--muted-dim);
-  font-size: 0.875rem;
-  font-weight: 550;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
   text-decoration: none;
   transition: color 140ms ease, background-color 140ms ease;
 }
@@ -1721,7 +1721,7 @@
 .curator-settings-nav a span {
   color: var(--muted);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.65rem;
+  font-size: var(--mantine-font-size-xs);
 }
 
 .curator-settings-nav a:hover,
@@ -1760,15 +1760,15 @@
 
 .curator-settings-section-heading h2 {
   margin-block: 0.15rem 0.2rem;
-  font-size: 1.05rem;
+  font-size: var(--mantine-font-size-sm);
   letter-spacing: -0.025em;
 }
 
 .curator-settings-index {
   color: var(--accent-ink);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 500;
   letter-spacing: 0.08em;
 }
 
@@ -1936,7 +1936,7 @@
   border-radius: 50%;
   background: var(--color-card);
   font-family: var(--font-plex-mono), ui-monospace, monospace;
-  font-size: 0.62rem;
+  font-size: var(--mantine-font-size-xs);
 }
 .curator-ingest-steps li[data-active="true"] { color: var(--ink); }
 .curator-ingest-steps li[data-active="true"] > span {
@@ -1970,8 +1970,8 @@
 .curator-conversation-empty h2 {
   margin: 0;
   color: var(--ink);
-  font-size: clamp(1.2rem, 2.5vw, 1.65rem);
-  font-weight: 600;
+  font-size: var(--mantine-font-size-xl);
+  font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 1.25;
 }
@@ -1986,7 +1986,7 @@
   border: 1px solid var(--line);
   border-radius: 0.35rem;
   color: var(--muted-dim);
-  font-size: 0.68rem;
+  font-size: var(--mantine-font-size-xs);
 }
 .curator-conversation[data-mode="standalone"] .curator-composer {
   border: 1px solid var(--line-strong);
@@ -2027,7 +2027,7 @@
   align-items: flex-start;
   gap: 1rem;
 }
-.curator-ingest-draft-heading h3 { margin-top: 0.15rem; color: var(--ink); font-size: 1rem; }
+.curator-ingest-draft-heading h3 { margin-top: 0.15rem; color: var(--ink); font-size: var(--mantine-font-size-sm); }
 .curator-ingest-draft-summary { max-width: 60ch; color: var(--muted-dim); line-height: 1.65; }
 .curator-ingest-draft-meta { color: var(--muted); }
 .curator-ingest-draft-meta > * + *::before { margin-inline-end: 0.45rem; color: var(--line-strong); content: "·"; }
@@ -2047,7 +2047,7 @@
   box-shadow: none !important;
 }
 .curator-editor-section::before { display: none; }
-.curator-editor-section-heading h2 { flex: 0 0 8rem; font-size: 0.9rem; }
+.curator-editor-section-heading h2 { flex: 0 0 8rem; font-size: var(--mantine-font-size-sm); }
 .curator-editor-section-heading > [data-dimmed="true"] { max-width: 44rem; }
 .curator-tag-picker {
   border-color: var(--line);

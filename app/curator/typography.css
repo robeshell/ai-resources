@@ -1,0 +1,34 @@
+/* Curator has three text sizes (12 / 14 / 20px) and two weights (400 / 500).
+   Mantine theme aliases are shared by pages and portalled overlays. */
+.curator-workspace { font-weight: 400; }
+.curator-workspace :is(strong, b, h1, h2, h3, h4, h5, h6) { font-weight: 500; }
+.curator-workspace h1 { font-size: var(--mantine-font-size-xl); }
+.curator-workspace :is(h2, h3, h4, h5, h6) { font-size: var(--mantine-font-size-sm); }
+
+/* These components calculate smaller sizes independently of the theme scale.
+   Scope to the active workspace so menus, dialogs and notifications are covered. */
+body:has(.curator-workspace) :is(
+  .mantine-Badge-root,
+  .mantine-Pill-root,
+  .mantine-InputWrapper-description,
+  .mantine-InputWrapper-error,
+  .mantine-InputWrapper-success,
+  .mantine-Combobox-groupLabel,
+  .mantine-Menu-label,
+  .mantine-Tooltip-tooltip
+) { font-size: var(--mantine-font-size-xs); }
+
+body:has(.curator-workspace) :is(.mantine-Modal-title, .mantine-Drawer-title) {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+}
+
+.curator-workspace .markdown-body,
+.curator-workspace .markdown-body :is(h2, h3, h4, h5, h6, table),
+.curator-workspace .markdown-body .markdown-code-block pre code {
+  font-size: var(--mantine-font-size-sm);
+}
+.curator-workspace .markdown-body h1 { font-size: var(--mantine-font-size-xl); }
+.curator-workspace .markdown-body :is(code, th),
+.curator-workspace .markdown-code-header { font-size: var(--mantine-font-size-xs); }
+.curator-workspace .markdown-body li::marker { font-weight: 500; }

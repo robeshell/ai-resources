@@ -49,7 +49,7 @@ export function CuratorStudio() {
 
     <div className="curator-ingest-workspace">
       <div className="curator-ingest-typebar">
-        <Text size="sm" fw={600}>内容类型</Text>
+        <Text size="sm" fw={500}>内容类型</Text>
         <SegmentedControl
           aria-label="内容类型"
           value={block || "auto"}

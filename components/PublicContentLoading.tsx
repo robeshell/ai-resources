@@ -1,30 +1,54 @@
 import type { PublicContentDocument } from "@/lib/public-content";
+import styles from "./PublicContentLoading.module.css";
 
 type BlockType = PublicContentDocument["blockType"];
 
 function ReadingSkeleton() {
-  return <div className="public-detail-loading-reading">
-    {Array.from({ length: 3 }, (_, index) => <section key={index}>
-      <span className="skeleton-line public-detail-loading-heading" />
-      <span className="skeleton-line" />
-      <span className="skeleton-line" />
-      <span className="skeleton-line public-detail-loading-copy-short" />
-    </section>)}
+  return <div className={styles.reading}>
+    {Array.from({ length: 3 }, (_, index) => <div className={styles.paragraph} key={index}>
+      <span className={`${styles.line} ${styles.heading}`} />
+      <span className={styles.line} />
+      <span className={styles.line} />
+      <span className={`${styles.line} ${styles.short}`} />
+    </div>)}
+  </div>;
+}
+
+function LinksSkeleton() {
+  return <div className={styles.links}>
+    <span className={`${styles.line} ${styles.heading}`} />
+    <span className={styles.line} />
+    <span className={`${styles.line} ${styles.short}`} />
   </div>;
 }
 
 export function PublicContentLoading({ block }: { block: BlockType }) {
-  return <article className={`public-detail public-detail--${block} public-detail-loading`} aria-hidden="true">
-    <span className="skeleton-line public-detail-loading-back" />
+  return <article className={`public-detail public-detail--${block} ${styles.loading}`} aria-busy="true" aria-hidden="true">
+    <div className={styles.back}><span className={styles.line} /></div>
     <header className="public-detail-header">
-      <span className="skeleton-line public-detail-loading-title" />
-      <span className="skeleton-line public-detail-loading-summary" />
-      <span className="skeleton-line public-detail-loading-summary public-detail-loading-summary-short" />
+      <div className={styles.titleRow}><span className={`${styles.line} ${styles.title}`} /></div>
+      <div className={styles.summary}><span className={styles.line} /><span className={`${styles.line} ${styles.short}`} /></div>
     </header>
-    {block === "prompt" ? <div className="public-detail-loading-prompt">
-      <span className="skeleton-line public-detail-loading-prompt-title" />
-      <span className="skeleton-line public-detail-loading-prompt-box" />
-      <div><ReadingSkeleton /><ReadingSkeleton /></div>
-    </div> : block === "site" ? <div className="public-detail-loading-site"><span className="skeleton-line public-detail-loading-prompt-box" /></div> : <div className={`public-detail-loading-${block}`}><ReadingSkeleton />{block === "project" ? <span className="skeleton-line public-detail-loading-aside" /> : null}</div>}
+    {block === "prompt" ? (
+      <div className="public-detail-prompt-layout">
+        <section className="public-detail-prompt-copy">
+          <div className={styles.promptHeading}>
+            <span className={`${styles.line} ${styles.heading}`} />
+            <span className={`${styles.line} ${styles.button}`} />
+          </div>
+          <div className={styles.promptBody}><ReadingSkeleton /></div>
+        </section>
+      </div>
+    ) : block === "site" ? (
+      <div className="public-detail-site-layout">
+        <ReadingSkeleton />
+        <span className={`${styles.line} ${styles.button}`} />
+      </div>
+    ) : (
+      <div className={block === "project" ? "public-detail-project-layout has-links" : "public-detail-skill-layout"}>
+        <ReadingSkeleton />
+        <LinksSkeleton />
+      </div>
+    )}
   </article>;
 }

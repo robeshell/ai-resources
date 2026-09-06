@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Accordion, Alert, Badge, Box, Button, Group, Skeleton, Stack, Text, Title } from "@mantine/core";
+import { Alert, Box, Button, Group, Skeleton, Stack, Tabs, Text, Title } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { CuratorPageHeader } from "@/components/curator/CuratorPageHeader";
-import { curatorRequest, type ActivityEntry, type BuildJob, type CuratorIngestBlock, type CuratorRun } from "@/lib/curator-client";
+import { curatorRequest, type BuildJob, type CuratorIngestBlock, type CuratorRun } from "@/lib/curator-client";
 import { contentBlocks, ENABLED_CONTENT_BLOCK_IDS } from "@/lib/content-blocks";
 import { useBuildJob } from "@/components/curator/useBuildJob";
 import { curatorEditorHref } from "@/lib/curator-routes";
@@ -21,17 +21,16 @@ type ListItem = { id: string; slug: string; title: string; blockType: CuratorIng
 type DashboardData = {
   issueItems: ListItem[]; issuesTotal: number; counts: ContentCounts;
   draftItems: ListItem[]; draftsTotal: number;
-  runs: CuratorRun[]; activity: ActivityEntry[]; updatedAt: string;
+  runs: CuratorRun[]; recent: ListItem[]; updatedAt: string;
 };
 
 type QueueTone = "error" | "warn" | "info";
 type QueueRow = { key: string; tone: QueueTone; title: string; detail: string; action: string; href: string };
-/** A folded group: the label and count are always readable, the rows are not. */
-type Bucket = { id: string; label: string; total: number; rows: QueueRow[]; moreHref?: string };
+/** Each queue is a separate workflow; their totals may overlap. */
+type Bucket = { id: string; label: string; description: string; total: number; rows: QueueRow[]; moreHref?: string };
 
 const TONE_COLOR: Record<QueueTone, string> = { error: "red", warn: "yellow", info: "gray" };
-/** How many rows an expanded group shows before deferring to the library. */
-const BUCKET_PREVIEW = 5;
+const QUEUE_PAGE_SIZE = 4;
 
 function relativeTime(value: string) {
   const at = Date.parse(value); if (Number.isNaN(at)) return "—";
@@ -61,10 +60,10 @@ function runHref(run: CuratorRun) {
 
 function QueueItemRow({ tone, title, detail, action, href }: QueueRow) {
   return <Group justify="space-between" align="center" wrap="nowrap" py="sm" className="curator-dashboard-row">
-    <Group wrap="nowrap" gap="sm">
+    <Group wrap="nowrap" gap="sm" miw={0} flex={1}>
       <Box className="curator-state-dot" data-color={TONE_COLOR[tone]} />
       <Box maw="100%" miw={0}>
-        <Text fw={600} size="sm" truncate="end">{title}</Text>
+        <Text fw={500} size="sm" truncate="end">{title}</Text>
         <Text size="xs" c="dimmed" mt={2} truncate="end">{detail}</Text>
       </Box>
     </Group>
@@ -72,29 +71,39 @@ function QueueItemRow({ tone, title, detail, action, href }: QueueRow) {
   </Group>;
 }
 
+function QueueSkeleton() {
+  return <div aria-label="正在读取待办" role="status">{Array.from({ length: QUEUE_PAGE_SIZE }, (_, index) => <div className="curator-home-skeleton-row" key={index}><Stack gap={8} flex={1}><Skeleton h={12} w={`${52 + index * 7}%`} /><Skeleton h={12} w="34%" /></Stack><Skeleton h={12} w={48} /></div>)}</div>;
+}
+
 export function CuratorDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [selectedQueue, setSelectedQueue] = useState<string | null>(null);
+  const [queuePage, setQueuePage] = useState(0);
   const [buildBusy, setBuildBusy] = useState(false);
   const { build, setBuild } = useBuildJob();
 
   useEffect(() => {
+    let active = true;
     Promise.all([
-      curatorRequest<{ items: ListItem[]; total: number; counts: ContentCounts }>("/content?pageSize=6&issues=true&sort=updated-desc"),
-      curatorRequest<{ items: ListItem[]; total: number }>("/content?status=draft&sort=updated-desc").catch(() => ({ items: [], total: 0 })),
-      curatorRequest<{ items: CuratorRun[] }>("/runs").catch(() => ({ items: [] })),
-      curatorRequest<{ items: ActivityEntry[] }>("/activity?limit=8").catch(() => ({ items: [] })),
+      curatorRequest<{ items: ListItem[]; total: number; counts: ContentCounts }>("/content?pageSize=20&issues=true&sort=updated-desc"),
+      curatorRequest<{ items: ListItem[]; total: number }>("/content?pageSize=20&status=draft&sort=updated-desc"),
+      curatorRequest<{ items: CuratorRun[] }>("/runs"),
+      curatorRequest<{ items: ListItem[] }>("/content?pageSize=20&sort=updated-desc"),
       curatorRequest<{ updatedAt: string }>("/site"),
       curatorRequest<{ build: BuildJob }>("/health"),
-    ]).then(([content, drafts, runs, activity, site, health]) => {
+    ]).then(([content, drafts, runs, recent, site, health]) => {
+      if (!active) return;
       setBuild(health.build || { status: "idle" });
       setData({
         issueItems: content.items || [], issuesTotal: content.total || 0, counts: content.counts,
         draftItems: drafts.items || [], draftsTotal: drafts.total || 0,
-        runs: runs.items || [], activity: activity.items || [], updatedAt: site.updatedAt || "",
+        runs: runs.items || [], recent: (recent.items || []).slice(0, 4), updatedAt: site.updatedAt || "",
       });
-    }).catch((caught) => setError(caught instanceof Error ? caught.message : "无法读取工作台"));
-  }, [setBuild]);
+    }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "无法读取工作台"); });
+    return () => { active = false; };
+  }, [setBuild, revision]);
 
   const runBuildCheck = useCallback(async () => {
     setBuildBusy(true);
@@ -106,149 +115,65 @@ export function CuratorDashboard() {
     } finally { setBuildBusy(false); }
   }, [setBuild]);
 
-  // Failures stay in the open — everything else is folded away behind a labelled
-  // count, so the page reads the same whether the library holds six items or six
-  // hundred.
   const failedRuns = data?.runs.filter((item) => item.status === "failed") ?? [];
   const pendingRuns = data?.runs.filter((item) => item.status === "awaiting_review") ?? [];
-  // Drafts and content issues are two separate queries over the same library, so
-  // an unpublished draft with empty fields matches both. Publishing it would be
-  // refused, so it belongs in one bucket only — 待补齐, the step that unblocks it.
-  const issueIds = new Set((data?.issueItems ?? []).map((item) => item.id));
-  const pureDrafts = (data?.draftItems ?? []).filter((item) => !issueIds.has(item.id));
-
-  const buckets: Bucket[] = [];
-  if (failedRuns.length) {
-    buckets.push({
-      id: "failed-runs", label: "分析失败", total: failedRuns.length,
-      rows: failedRuns.slice(0, BUCKET_PREVIEW).map((run) => ({
-        key: `failed:${run.id}`, tone: "error", title: runTitle(run),
-        detail: `${run.error || "分析没有完成"} · ${relativeTime(run.updatedAt)}`,
-        action: run.input?.contentId ? "去编辑器重试" : "继续这次收录", href: runHref(run),
-      })),
-    });
-  }
-  if (data?.issueItems.length) {
-    buckets.push({
-      id: "issues", label: "内容待补齐", total: data.issuesTotal, moreHref: "/curator/resources/?issues=true",
-      rows: data.issueItems.slice(0, BUCKET_PREVIEW).map((issue) => ({
-        key: `issue:${issue.id}`, tone: "warn", title: issue.title,
-        detail: `${issue.issueCount} 个字段需要补齐 · ${relativeTime(issue.updatedAt)}`,
-        action: "去补齐", href: curatorEditorHref(issue.blockType, issue.slug),
-      })),
-    });
-  }
-  if (pureDrafts.length) {
-    buckets.push({
-      id: "drafts", label: "草稿未发布", total: pureDrafts.length, moreHref: "/curator/resources/?status=draft",
-      rows: pureDrafts.slice(0, BUCKET_PREVIEW).map((draft) => ({
-        key: `draft:${draft.id}`, tone: "info", title: draft.title,
-        detail: `${contentBlocks[draft.blockType]?.label.zh ?? draft.blockType}草稿，发布后公开可见 · ${relativeTime(draft.updatedAt)}`,
-        action: "去发布", href: curatorEditorHref(draft.blockType, draft.slug),
-      })),
-    });
-  }
-  if (pendingRuns.length) {
-    buckets.push({
-      id: "runs", label: "分析待确认", total: pendingRuns.length,
-      rows: pendingRuns.slice(0, BUCKET_PREVIEW).map((run) => ({
-        key: `run:${run.id}`, tone: "warn", title: runTitle(run),
-        detail: `分析完成 · ${relativeTime(run.updatedAt)}`,
-        action: "继续处理", href: runHref(run),
-      })),
-    });
-  }
-  const pendingTotal = buckets.reduce((total, bucket) => total + bucket.total, 0);
+  const buckets: Bucket[] = [
+    {
+      id: "runs", label: "待确认", description: "核对 Agent 整理的结果，再保存到资源库。", total: pendingRuns.length,
+      rows: pendingRuns.map((run) => ({ key: run.id, tone: "info", title: runTitle(run), detail: `分析完成 · ${relativeTime(run.updatedAt)}`, action: "查看结果", href: runHref(run) })),
+    },
+    {
+      id: "issues", label: "待补齐", description: "补充缺失字段，让资源具备完整的展示内容。", total: data?.issuesTotal ?? 0, moreHref: "/curator/resources/?issues=true",
+      rows: (data?.issueItems ?? []).map((item) => ({ key: item.id, tone: "warn", title: item.title, detail: `${item.issueCount ?? 0} 个字段需要补齐 · ${relativeTime(item.updatedAt)}`, action: "去补齐", href: curatorEditorHref(item.blockType, item.slug) })),
+    },
+    {
+      id: "drafts", label: "草稿", description: "继续编辑尚未发布的资源，检查完成后再发布。", total: data?.draftsTotal ?? 0, moreHref: "/curator/resources/?status=draft",
+      rows: (data?.draftItems ?? []).map((item) => ({ key: item.id, tone: "info", title: item.title, detail: `${contentBlocks[item.blockType]?.label.zh ?? item.blockType} · ${relativeTime(item.updatedAt)}`, action: "继续编辑", href: curatorEditorHref(item.blockType, item.slug) })),
+    },
+    {
+      id: "failed-runs", label: "分析失败", description: "查看失败原因，回到原来的收录或编辑任务继续处理。", total: failedRuns.length,
+      rows: failedRuns.map((run) => ({ key: run.id, tone: "error", title: runTitle(run), detail: `${run.error || "分析没有完成"} · ${relativeTime(run.updatedAt)}`, action: "查看原因", href: runHref(run) })),
+    },
+  ];
+  const current = buckets.find((bucket) => bucket.id === selectedQueue) ?? buckets.find((bucket) => bucket.total > 0) ?? buckets[0];
+  const visibleRows = current.rows.slice(queuePage * QUEUE_PAGE_SIZE, (queuePage + 1) * QUEUE_PAGE_SIZE);
   const counts = data?.counts;
+  const buildLabel = build.status === "running" ? "校验进行中" : build.status === "ok" ? "上次校验通过" : build.status === "error" ? "上次校验失败" : "尚未校验";
 
-  return <Stack gap="lg" className="curator-dashboard">
-    <CuratorPageHeader title="工作台" description="待办、内容状态和最近记录。" className="curator-dashboard-hero" actions={<Group gap="xs" wrap="wrap" className="curator-dashboard-actions">
-        <Button component={Link} href="/curator/ingest/">收录新资源</Button>
-        <Button variant="default" disabled={buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>
-          {build.status === "running" ? "校验中…" : "构建校验"}
-        </Button>
-        <Button component="a" href={build.publicUrl || "http://localhost:3000/zh/"} target="_blank" variant="subtle">打开公开站</Button>
-      </Group>} />
+  return <Stack gap={0} className="curator-home">
+    <CuratorPageHeader title="工作台" description="接着上次的工作，或者收录一个新资源。" actions={<Button component={Link} href="/curator/ingest/">收录新资源</Button>} />
+    {error ? <Alert color="red" title="工作台读取失败" role="alert" mb="lg"><Group justify="space-between"><Text size="sm">{error}</Text><Button variant="default" size="xs" onClick={() => { setError(""); setRevision((value) => value + 1); }}>重新读取</Button></Group></Alert> : null}
 
-    {error ? <Alert color="red" title="工作台读取失败" role="alert">{error}</Alert> : null}
+    <div className="curator-home-main">
+      <section className="curator-home-queue" aria-labelledby="curator-queue-title" aria-busy={!data && !error}>
+        <div className="curator-home-section-heading"><Title order={2} id="curator-queue-title">待处理</Title></div>
+        <Tabs value={current.id} onChange={(value) => { setSelectedQueue(value); setQueuePage(0); }}>
+          <Tabs.List className="curator-home-tabs" aria-label="待处理类型">{buckets.map((bucket) => <Tabs.Tab key={bucket.id} value={bucket.id}>{bucket.label}<span>{data ? bucket.total : "—"}</span></Tabs.Tab>)}</Tabs.List>
+          {buckets.map((bucket) => <Tabs.Panel key={bucket.id} value={bucket.id}>
+            {bucket.id === current.id ? <>
+              <Text size="xs" c="dimmed" className="curator-home-queue-description">{bucket.description}</Text>
+              {!data ? error ? <div className="curator-home-empty">待办暂时无法显示，请重新读取。</div> : <QueueSkeleton /> : visibleRows.length ? <div className="curator-home-queue-rows">{visibleRows.map(({ key, ...row }) => <QueueItemRow key={key} {...row} />)}</div> : <div className="curator-home-empty">{bucket.id === "failed-runs" ? "没有失败的分析任务" : bucket.id === "runs" ? "没有等待确认的分析结果" : bucket.id === "issues" ? "资源字段已补齐" : "没有未发布的草稿"}</div>}
+              {!data && !error ? <div className="curator-home-queue-footer" aria-hidden="true"><Skeleton h={12} w={64} /></div> : null}
+              {data && bucket.total > 0 ? <div className="curator-home-queue-footer"><Text size="xs" c="dimmed">{queuePage * QUEUE_PAGE_SIZE + 1}–{queuePage * QUEUE_PAGE_SIZE + visibleRows.length} / {bucket.total}</Text>{bucket.moreHref ? <Link className="curator-inline-link" href={bucket.moreHref}>查看全部 →</Link> : bucket.rows.length > QUEUE_PAGE_SIZE ? <Group gap="xs"><Button size="xs" variant="subtle" disabled={queuePage === 0} onClick={() => setQueuePage((page) => page - 1)}>上一页</Button><Button size="xs" variant="subtle" disabled={(queuePage + 1) * QUEUE_PAGE_SIZE >= bucket.rows.length} onClick={() => setQueuePage((page) => page + 1)}>下一页</Button></Group> : null}</div> : null}
+            </> : null}
+          </Tabs.Panel>)}
+        </Tabs>
+      </section>
 
-    {build.status === "error" ? <Alert color="red" title="上次构建校验失败" role="alert">
-      <Group justify="space-between" wrap="nowrap" gap="md">
-        <Text size="sm" lineClamp={2}>{build.error || "构建没有完成"}</Text>
-        <Button component={Link} href="/curator/settings/" size="xs" variant="white" color="red" style={{ flex: "0 0 auto" }}>查看日志</Button>
-      </Group>
-    </Alert> : null}
+      <aside className="curator-home-library" aria-labelledby="curator-library-title">
+        <div className="curator-home-section-heading"><Title order={2} id="curator-library-title">资源库</Title><Link href="/curator/resources/" className="curator-inline-link">全部资源 →</Link></div>
+        <Text size="xs" c="dimmed" className="curator-home-library-summary">{counts ? `${counts.all} 条资源 · ${counts.active} 已发布` : error ? "概览暂不可用" : "正在读取资源概览"}</Text>
+        <div className="curator-home-library-label"><span>内容类型</span><span>已发布 / 全部</span></div>
+        {ENABLED_CONTENT_BLOCK_IDS.map((block) => <Link className="curator-home-library-row" href={`/curator/resources/?block=${block}`} key={block}><span>{contentBlocks[block].label.zh}</span><span className="curator-number">{counts ? <>{counts.blocks?.[block]?.active ?? counts[block]}<small> / {counts.blocks?.[block]?.total ?? counts[block]}</small></> : error ? "—" : <Skeleton component="span" h={12} w={48} />}</span></Link>)}
+        <div className="curator-home-build"><div><Text size="sm" fw={500}>构建校验</Text><Text size="xs" c={build.status === "error" ? "red" : "dimmed"} role="status">{!data && !error ? "正在读取校验状态" : buildLabel}</Text></div><Button variant="default" size="xs" disabled={!data || buildBusy || build.status === "running"} onClick={() => void runBuildCheck()}>{build.status === "running" ? "校验中…" : "运行校验"}</Button></div>
+        {build.status === "error" ? <Link className="curator-inline-link" href="/curator/settings/#site-build">查看失败日志 →</Link> : null}
+      </aside>
+    </div>
 
-    <section className="curator-dashboard-section" aria-labelledby="curator-overview-title">
-      <Group justify="space-between" mb="xs" wrap="wrap" className="curator-compact-section-heading">
-        <Title id="curator-overview-title" order={2}>内容概览</Title>
-        {counts ? <Group gap="xs"><Badge variant="light" color="curator">发布中 {counts.active}</Badge><Badge variant="light" color="gray">草稿 {counts.draft ?? "—"}</Badge><Badge variant="light" color="red">归档 {counts.archived}</Badge></Group> : null}
-      </Group>
-      <div className="curator-dashboard-summary">
-        {ENABLED_CONTENT_BLOCK_IDS.map((block) => {
-          const stat = counts?.blocks?.[block];
-          return <Link href={`/curator/resources/?block=${block}`} key={block} className="curator-dashboard-summary-item">
-            <Text size="sm" fw={600}>{contentBlocks[block].label.zh}</Text>
-            <span className="curator-dashboard-summary-numbers">
-              <strong className="curator-number">{stat ? stat.active : counts ? counts[block] : <Skeleton component="span" h={18} w={28} />}</strong>
-              <Text component="span" size="xs" c="dimmed">/ {stat?.total ?? "—"}</Text>
-              {stat?.draft ? <Text component="span" size="xs" c="dimmed">{stat.draft} 草稿</Text> : null}
-            </span>
-          </Link>;
-        })}
-      </div>
+    <section className="curator-home-recent" aria-labelledby="curator-recent-title" aria-busy={!data && !error}>
+      <div className="curator-home-section-heading"><Title order={2} id="curator-recent-title">继续编辑</Title><Link href="/curator/resources/?sort=updated-desc" className="curator-inline-link">最近修改 →</Link></div>
+      {!data ? error ? <Text size="sm" c="dimmed">最近编辑的资源暂时无法显示。</Text> : <div className="curator-home-recent-grid">{Array.from({ length: 4 }, (_, index) => <Stack gap={12} py="md" key={index}><Skeleton h={14} w="60%" /><Skeleton h={12} w="40%" /></Stack>)}</div> : data.recent.length ? <div className="curator-home-recent-grid">{data.recent.map((item) => <Link className="curator-home-recent-item" key={item.id} href={curatorEditorHref(item.blockType, item.slug)}><span className="curator-home-recent-title">{item.title}<span aria-hidden="true">↗</span></span><span className="curator-home-recent-meta">{contentBlocks[item.blockType]?.label.zh ?? item.blockType}<span>{relativeTime(item.updatedAt)}</span></span></Link>)}</div> : <Text size="sm" c="dimmed">还没有资源，收录第一个资源后会显示在这里。</Text>}
     </section>
-
-    <section className="curator-dashboard-section curator-dashboard-work" aria-labelledby="curator-work-title">
-      <Group justify="space-between" mb="sm" wrap="wrap" className="curator-dashboard-work-heading">
-        <Title id="curator-work-title" order={2}>{!data ? "待办读取中" : pendingTotal ? <><span className="curator-dashboard-pending-number">{pendingTotal}</span> 项待处理</> : "没有待处理内容"}</Title>
-        <Text size="xs" c="dimmed" className="curator-number">数据更新于 {data?.updatedAt?.replaceAll("-", ".") || "—"}</Text>
-      </Group>
-      {!data ? <Stack gap="xs"><Skeleton h={52} /><Skeleton h={52} /></Stack> : (
-        <Accordion variant="separated" multiple chevronPosition="right" className="curator-dashboard-accordion">
-          {buckets.map((bucket) => (
-            <Accordion.Item value={bucket.id} key={bucket.id}>
-              <Accordion.Control>
-                <Group justify="space-between" wrap="nowrap" pr="sm">
-                  <Text fw={600} size="sm">{bucket.label}</Text>
-                  <Badge variant="light" color={bucket.id === "failed-runs" ? "red" : "orange"}>{bucket.total}</Badge>
-                </Group>
-              </Accordion.Control>
-              <Accordion.Panel>
-                <Stack gap={0}>
-                  {bucket.rows.map(({ key, ...row }) => <QueueItemRow key={key} {...row} />)}
-                  {bucket.moreHref && bucket.total > bucket.rows.length ? (
-                    <Group py="sm" className="curator-dashboard-row">
-                      <Button component={Link} href={bucket.moreHref} variant="subtle" size="xs" px={0}>在资源库看全部 {bucket.total} 条</Button>
-                    </Group>
-                  ) : null}
-                  {bucket.id === "failed-runs" && bucket.total > bucket.rows.length ? (
-                    <Group py="sm" className="curator-dashboard-row">
-                      <Button component={Link} href="/curator/settings/" variant="subtle" color="red" size="xs" px={0}>在系统页查看全部 {bucket.total} 次</Button>
-                    </Group>
-                  ) : null}
-                </Stack>
-              </Accordion.Panel>
-            </Accordion.Item>
-          ))}
-          <Accordion.Item value="activity">
-            <Accordion.Control>
-              <Group justify="space-between" wrap="nowrap" pr="sm">
-                <Text fw={600} size="sm">最近修改</Text>
-                <Badge variant="light" color="gray">{data.activity.length}</Badge>
-              </Group>
-            </Accordion.Control>
-            <Accordion.Panel>
-              {data.activity.length ? <Stack gap={0}>
-                {data.activity.slice(0, 6).map((entry, index) => <Group justify="space-between" align="center" wrap="nowrap" py="sm" className="curator-dashboard-row" key={`${entry.at}-${index}`}>
-                  <Group wrap="nowrap" gap="sm"><Box className="curator-state-dot" data-color="curator" /><Box maw="100%" miw={0}><Text fw={600} size="sm" truncate="end">{entry.message}</Text><Text size="xs" c="dimmed" mt={2} truncate="end">{entry.slug || entry.type}</Text></Box></Group>
-                  <Text size="xs" c="dimmed" style={{ flex: "0 0 auto" }}>{relativeTime(entry.at)}</Text>
-                </Group>)}
-              </Stack> : <Text size="sm" c="dimmed" py="sm">还没有写入记录</Text>}
-            </Accordion.Panel>
-          </Accordion.Item>
-        </Accordion>
-      )}
-    </section>
+    {data?.updatedAt ? <Text size="xs" c="dimmed" className="curator-home-updated">内容更新于 {data.updatedAt.replaceAll("-", ".")}</Text> : null}
   </Stack>;
 }

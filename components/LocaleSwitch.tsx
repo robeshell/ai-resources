@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSlidingPill } from "@/components/Transitions";
 import { switchLocalePath, ui } from "@/lib/i18n";
 import type { Locale } from "@/lib/types";
 
@@ -13,28 +12,19 @@ export function LocaleSwitch({
   pathname: string;
 }) {
   const t = ui(locale);
-  const { barRef, pillRef } = useSlidingPill(locale);
+  const nextLocale = locale === "zh" ? "en" : "zh";
+  const label = locale === "zh" ? "切换为英文 (EN)" : "Switch to Chinese (中文)";
 
   return (
-    <div ref={barRef} className="pill-switch">
-      <span ref={pillRef} className="t-tabs-pill" aria-hidden="true" />
-      <Link
-        href={switchLocalePath(locale, "en", pathname)}
-        className={locale === "en" ? "is-active" : undefined}
-        aria-current={locale === "en" ? true : undefined}
-        hrefLang="en"
-      >
-        {t.langEn}
-      </Link>
-      <span aria-hidden>/</span>
-      <Link
-        href={switchLocalePath(locale, "zh", pathname)}
-        className={locale === "zh" ? "is-active" : undefined}
-        aria-current={locale === "zh" ? true : undefined}
-        hrefLang="zh"
-      >
-        {t.langZh}
-      </Link>
-    </div>
+    <Link
+      href={switchLocalePath(locale, nextLocale, pathname)}
+      className="locale-switch"
+      hrefLang={nextLocale}
+      lang={nextLocale}
+      aria-label={label}
+      title={label}
+    >
+      {nextLocale === "en" ? t.langEn : t.langZh}
+    </Link>
   );
 }

@@ -1,0 +1,8 @@
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3.5rem; }
+.heading, .logo, .line { display: block; background: var(--line); border-radius: .1875rem; }
+.heading { width: 4rem; height: .875rem; margin-bottom: 1rem; }
+.row { display: flex; align-items: center; gap: .75rem; min-height: 3rem; }
+.logo { width: 1.375rem; height: 1.375rem; }
+.line { width: 60%; height: .875rem; }
+@media (max-width: 64rem) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 38rem) { .grid { grid-template-columns: minmax(0, 1fr); gap: 2rem; } }

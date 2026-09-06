@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Box, Group, SegmentedControl, Text } from "@mantine/core";
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
+import { defaultHighlightStyle, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { MarkdownBody } from "@/components/MarkdownBody";
@@ -12,7 +13,7 @@ import { MarkdownBody } from "@/components/MarkdownBody";
  *  second theme. Heading and emphasis weights come from the Markdown parser, so
  *  structure is visible while the text stays plain Markdown. */
 const theme = EditorView.theme({
-  "&": { fontSize: "0.875rem", backgroundColor: "transparent" },
+  "&": { fontSize: "var(--mantine-font-size-sm)", backgroundColor: "transparent" },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": { fontFamily: "var(--font-plex-mono), ui-monospace, monospace", lineHeight: "1.7" },
   ".cm-content": { padding: "0.75rem 0" },
@@ -23,8 +24,12 @@ const theme = EditorView.theme({
   ".cm-cursor": { borderLeftColor: "#ce5214" },
 });
 
+const highlighting = syntaxHighlighting(HighlightStyle.define(
+  defaultHighlightStyle.specs.map((spec) => spec.fontWeight ? { ...spec, fontWeight: "500" } : spec),
+));
+
 export function MarkdownEditor({
-  value,
+  value = "",
   onChange,
   label = "Markdown",
   minHeight = "26rem",
@@ -38,7 +43,7 @@ export function MarkdownEditor({
 }) {
   const [view, setView] = useState<"edit" | "preview" | "split">("edit");
   const extensions = useMemo(
-    () => [markdown({ base: markdownLanguage, codeLanguages: languages }), EditorView.lineWrapping, theme],
+    () => [markdown({ base: markdownLanguage, codeLanguages: languages }), EditorView.lineWrapping, theme, highlighting],
     [],
   );
 

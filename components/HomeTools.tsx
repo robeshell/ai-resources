@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CopyPromptButton } from "@/components/CopyPromptButton";
-import { useRovingKeys, useSlidingPill } from "@/components/Transitions";
+import { PromptCard } from "@/components/PromptCard";
+import { useCatalog } from "@/components/CatalogNavigation";
+import { ResourceDirectory } from "@/components/ResourceDirectory";
+import { ResourceCard } from "@/components/ResourceCard";
 import { ToolList } from "@/components/ToolList";
 import { ToolLogo } from "@/components/ToolLogo";
 import { SiteDialog } from "@/components/SiteDialog";
 import { ui } from "@/lib/i18n";
 import type { PublicContentDocument } from "@/lib/public-content";
-import { categoriesForBlock, categoryOf, tagLabel } from "@/lib/tags";
+import { categoriesForBlock, categoryOf } from "@/lib/tags";
 import { text, type Locale, type Tool } from "@/lib/types";
-
-type PublicBoard = "tool" | "site" | "skill" | "project" | "prompt";
-
-function boardFromLocation(): PublicBoard {
-  const kind = new URLSearchParams(window.location.search).get("kind");
-  return kind === "site" || kind === "skill" || kind === "project" || kind === "prompt" ? kind : "tool";
-}
 
 function CatalogEmpty({ locale }: { locale: Locale }) {
   const t = ui(locale);
@@ -30,72 +25,25 @@ function CatalogEmpty({ locale }: { locale: Locale }) {
   );
 }
 
-/**
- * 站点目录：与工具栏（ToolList）完全一致的 4 列瑞士目录排版，点击呼出 SiteDialog 预览弹窗
- */
 function SiteDirectory({
-  items,
-  locale,
-  onSelectSite,
+  items, locale, onSelectSite,
 }: {
   items: PublicContentDocument[];
   locale: Locale;
   onSelectSite: (site: PublicContentDocument) => void;
 }) {
-  const groups = useMemo(() => {
-    const known = categoriesForBlock("site").map((category) => ({
-      id: category.id,
-      label: category.label[locale],
-      items: items.filter((item) => categoryOf(item, "site") === category.id),
-    })).filter((group) => group.items.length);
-    const uncategorized = items.filter((item) => !categoryOf(item, "site"));
-    return uncategorized.length
-      ? [...known, { id: "uncategorized", label: locale === "zh" ? "未分类" : "Other", items: uncategorized }]
-      : known;
-  }, [locale, items]);
-
   return (
-    <div className="tool-directory">
-      {groups.map((group) => (
-        <section
-          key={group.id}
-          className={`tool-directory-group${group.id === "uncategorized" ? " tool-directory-group--wide" : ""}`}
-          aria-labelledby={`site-group-${group.id}`}
-        >
-          <header className="tool-directory-heading">
-            <h3 id={`site-group-${group.id}`}>{group.label}</h3>
-            <span>{group.items.length}</span>
-          </header>
-          <div className="tool-directory-list">
-            {group.items.map((site) => (
-              <button
-                key={site.id}
-                type="button"
-                className="tool-directory-row"
-                onClick={() => onSelectSite(site)}
-              >
-                <span className="tool-directory-logo">
-                  <ToolLogo
-                    tool={{
-                      id: site.id,
-                      name: site.title,
-                      logo: site.logo,
-                    }}
-                    size={20}
-                  />
-                </span>
-                <span className="tool-directory-name">{site.title}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <ResourceDirectory
+      items={items.map((site) => ({ ...site, name: site.title }))}
+      block="site"
+      locale={locale}
+      onSelect={onSelectSite}
+    />
   );
 }
 
 /**
- * 技能与开源项目专属展示：支持方案 A（紧凑清单行）与方案 B（紧凑微型卡片）无缝切换
+ * 技能与开源项目共用分类筛选、卡片和清单视图。
  */
 function TechnicalLedger({
   items,
@@ -167,6 +115,7 @@ function TechnicalLedger({
           <button
             type="button"
             className={`tech-view-btn${viewMode === "grid" ? " is-active" : ""}`}
+            aria-pressed={viewMode === "grid"}
             onClick={(e) => {
               e.preventDefault();
               setViewMode("grid");
@@ -181,6 +130,7 @@ function TechnicalLedger({
           <button
             type="button"
             className={`tech-view-btn${viewMode === "list" ? " is-active" : ""}`}
+            aria-pressed={viewMode === "list"}
             onClick={(e) => {
               e.preventDefault();
               setViewMode("list");
@@ -201,7 +151,7 @@ function TechnicalLedger({
             <div className="tech-list">
               {visibleItems.map((item) => {
                 const cat = categories.find((c) => c.id === categoryOf(item, block));
-                const catLabel = cat ? cat.label : (locale === "zh" ? "项目" : "Project");
+                const catLabel = cat ? cat.label : (locale === "zh" ? "未分类" : "Other");
 
                 return (
                   <Link
@@ -235,32 +185,10 @@ function TechnicalLedger({
             <div className="tech-grid-compact">
               {visibleItems.map((item) => {
                 const cat = categories.find((c) => c.id === categoryOf(item, block));
-                const catLabel = cat ? cat.label : (locale === "zh" ? "项目" : "Project");
+                const catLabel = cat ? cat.label : (locale === "zh" ? "未分类" : "Other");
 
                 return (
-                  <Link
-                    key={item.id}
-                    href={`/${locale}/${item.blockType}s/${item.slug}/`}
-                    className="tech-card-compact"
-                  >
-                    <div className="tech-card-header">
-                      <div className="tech-card-identity">
-                        <span className="tech-card-logo">
-                          <ToolLogo
-                            tool={{
-                              id: item.id,
-                              name: item.title,
-                              logo: item.logo,
-                            }}
-                            size={22}
-                          />
-                        </span>
-                        <h4 className="tech-card-title">{item.title}</h4>
-                      </div>
-                      <span className="tech-card-category">{catLabel}</span>
-                    </div>
-                    <p className="tech-card-summary">{text(item.summary, locale)}</p>
-                  </Link>
+                  <ResourceCard key={item.id} item={item} category={catLabel} locale={locale} />
                 );
               })}
             </div>
@@ -272,7 +200,7 @@ function TechnicalLedger({
 }
 
 /**
- * 提示词专属展台：配方卡（Recipe Card），内嵌等宽代码视窗与一键复制按钮
+ * 提示词按用途分组，卡片提供全文入口与直接复制。
  */
 function PromptShowcase({
   items,
@@ -306,66 +234,9 @@ function PromptShowcase({
             <span>{group.items.length}</span>
           </header>
           <div className="prompt-showcase-grid">
-            {group.items.map((item) => {
-              const cleanPrompt = (item.prompt || "")
-                .replace(/^完整提示词[:：]?\s*/i, "")
-                .replace(/^```[\w-]*\s*/, "")
-                .replace(/```$/, "")
-                .trim();
-              const snippet = cleanPrompt.length > 200 ? `${cleanPrompt.slice(0, 200)}...` : cleanPrompt;
-
-              return (
-                <div key={item.id} className="prompt-recipe-card">
-                  <div className="prompt-card-top">
-                    <div className="prompt-card-header-left">
-                      <span className="prompt-card-category">{group.label}</span>
-                      <h4 className="prompt-card-title">
-                        <Link href={`/${locale}/prompts/${item.slug}/`}>
-                          {item.title}
-                        </Link>
-                      </h4>
-                    </div>
-                    {item.prompt ? (
-                      <CopyPromptButton
-                        value={item.prompt}
-                        locale={locale}
-                        className="prompt-card-copy-btn"
-                      />
-                    ) : null}
-                  </div>
-                  <p className="prompt-card-summary">{text(item.summary, locale)}</p>
-                  {snippet ? (
-                    <div className="prompt-card-window">
-                      <div className="prompt-window-chrome">
-                        <span className="prompt-dot" />
-                        <span className="prompt-dot" />
-                        <span className="prompt-dot" />
-                        <span className="prompt-window-label">prompt.txt</span>
-                      </div>
-                      <pre className="prompt-window-content">
-                        <code>{snippet}</code>
-                      </pre>
-                    </div>
-                  ) : null}
-                  <div className="prompt-card-foot">
-                    <div className="prompt-card-tags">
-                      {item.tags.map((tag) => (
-                        <span key={tag} className="prompt-tag-badge">
-                          #{tagLabel(tag, locale)}
-                        </span>
-                      ))}
-                    </div>
-                    <Link
-                      href={`/${locale}/prompts/${item.slug}/`}
-                      className="prompt-card-link"
-                    >
-                      <span>{locale === "zh" ? "完整参数与示例" : "Full prompt & examples"}</span>
-                      <span aria-hidden="true">→</span>
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            {group.items.map((item) => (
+              <PromptCard key={item.id} item={item} locale={locale} />
+            ))}
           </div>
         </section>
       ))}
@@ -383,66 +254,15 @@ export function HomeTools({
   locale: Locale;
 }) {
   const t = ui(locale);
-  const kinds: Array<{ kind: PublicBoard; label: string }> = [
-    { kind: "tool", label: t.kindTool },
-    { kind: "site", label: t.kindSite },
-    { kind: "skill", label: t.kindSkill },
-    { kind: "project", label: t.kindOpenSource },
-    { kind: "prompt", label: t.kindPrompt },
-  ];
-  const [activeKind, setActiveKind] = useState<PublicBoard>("tool");
+  const { activeKind } = useCatalog();
   const [selectedSite, setSelectedSite] = useState<PublicContentDocument | null>(null);
-  const { barRef: kindBarRef, pillRef: kindPillRef } = useSlidingPill(activeKind);
-  useRovingKeys(kindBarRef);
-
-  useEffect(() => {
-    const restoreBoard = () => {
-      setActiveKind(boardFromLocation());
-    };
-    restoreBoard();
-    window.addEventListener("popstate", restoreBoard);
-    return () => window.removeEventListener("popstate", restoreBoard);
-  }, []);
-
-  function selectKind(kind: PublicBoard) {
-    setActiveKind(kind);
-    const url = new URL(window.location.href);
-    url.searchParams.set("kind", kind);
-    url.searchParams.delete("category");
-    url.hash = "catalog";
-    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-  }
 
   const boardTools = activeKind === "tool" ? all : [];
   const boardContent = content.filter((item) => item.blockType === activeKind);
 
   return (
     <section id="catalog" className="catalog-only" aria-label={t.catalogKinds}>
-      <div className="library-shell">
-        <aside className="scene-rail">
-          <p>{t.catalogKinds}</p>
-          <nav ref={kindBarRef} role="tablist" aria-label={t.catalogKinds}>
-            <span ref={kindPillRef} className="t-tabs-pill" aria-hidden="true" />
-            {kinds.map((item) => {
-              const boardCount = item.kind === "tool" ? all.length : content.filter((entry) => entry.blockType === item.kind).length;
-              return (
-                <button
-                  key={item.kind}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeKind === item.kind}
-                  tabIndex={activeKind === item.kind ? 0 : -1}
-                  onClick={() => selectKind(item.kind)}
-                >
-                  <span>{item.label}</span>
-                  <em>{boardCount}</em>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-        <div className="library-main">
-          <div role="tabpanel" className="content-panel">
+      <div id="catalog-panel" role="tabpanel" aria-labelledby={`catalog-tab-${activeKind}`} tabIndex={0} className="content-panel">
             {activeKind === "tool" ? (
               boardTools.length ? <ToolList tools={boardTools} locale={locale} /> : <CatalogEmpty locale={locale} />
             ) : activeKind === "site" ? (
@@ -453,7 +273,7 @@ export function HomeTools({
               )
             ) : activeKind === "skill" || activeKind === "project" ? (
               boardContent.length ? (
-                <TechnicalLedger items={boardContent} locale={locale} />
+                <TechnicalLedger key={activeKind} items={boardContent} locale={locale} />
               ) : (
                 <CatalogEmpty locale={locale} />
               )
@@ -466,8 +286,6 @@ export function HomeTools({
             ) : (
               <CatalogEmpty locale={locale} />
             )}
-          </div>
-        </div>
       </div>
       <SiteDialog site={selectedSite} locale={locale} onClose={() => setSelectedSite(null)} />
     </section>
